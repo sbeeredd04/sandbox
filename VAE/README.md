@@ -129,11 +129,11 @@ graph TD
 
 ```mermaid
 graph LR
-    A[Input Image x<br/>28×28 pixels] --> B[Encoder q_φ(z|x)]
-    B --> C[Latent Variables<br/>μ, log(σ²)]
+    A[Input Image x<br/>28×28 pixels] --> B[Encoder q_φ z|x]
+    B --> C[Latent Variables<br/>μ, log σ²]
     C --> D[Reparameterization<br/>z = μ + σε]
     D --> E[Latent Code z<br/>20 dimensions]
-    E --> F[Decoder p_θ(x|z)]
+    E --> F[Decoder p_θ x|z]
     F --> G[Reconstructed Image x̂<br/>28×28 pixels]
 ```
 
@@ -173,16 +173,16 @@ class VAE(nn.Module):
 ```mermaid
 classDiagram
     class VAE {
-        +img_to_hidden: Linear(784→400)
-        +hidden_to_mean: Linear(400→20)
-        +hidden_to_logvar: Linear(400→20)
-        +latent_to_hidden: Linear(20→400)
-        +hidden_to_img: Linear(400→784)
-        +encode(x)
-        +decode(z)
-        +reparameterize(μ, logvar)
-        +forward(x)
-        +loss_function(x, x̂, μ, logvar)
+        +img_to_hidden: Linear 784→400
+        +hidden_to_mean: Linear 400→20
+        +hidden_to_logvar: Linear 400→20
+        +latent_to_hidden: Linear 20→400
+        +hidden_to_img: Linear 400→784
+        +encode x
+        +decode z
+        +reparameterize μ, logvar
+        +forward x
+        +loss_function x, x̂, μ, logvar
     }
 ```
 
@@ -254,11 +254,11 @@ L_KL = ½ Σ[μ_j² + σ_j² - 1 - log(σ_j²)]
 ```mermaid
 graph TD
     subgraph "Forward Pass"
-        A[Input x] --> B[encode(x)]
+        A[Input x] --> B[encode x]
         B --> C[μ, log σ²]
-        C --> D[reparameterize(μ, log σ²)]
+        C --> D[reparameterize μ, log σ²]
         D --> E[z]
-        E --> F[decode(z)]
+        E --> F[decode z]
         F --> G[x̂]
     end
     
@@ -363,18 +363,18 @@ classDiagram
         +learning_rate: float
         +optimizer: Adam
         +dataloader: DataLoader
-        +train(fixed_x)
-        -visualize_reconstruction()
-        -compute_average_loss()
+        +train fixed_x
+        -visualize_reconstruction
+        -compute_average_loss
     }
     
     class GridSearch {
-        +epochs: [10,20,30,40,50]
-        +batch_sizes: [100,200,300,400,500]
-        +learning_rates: [0.001,0.005,0.01,0.05,0.1]
-        +hidden_dims: [400,500,600,700,800]
-        +latent_dims: [8,16,32,64,128]
-        +best_model_selection()
+        +epochs: 10,20,30,40,50
+        +batch_sizes: 100,200,300,400,500
+        +learning_rates: 0.001,0.005,0.01,0.05,0.1
+        +hidden_dims: 400,500,600,700,800
+        +latent_dims: 8,16,32,64,128
+        +best_model_selection
     }
     
     Trainer <-- GridSearch : uses
