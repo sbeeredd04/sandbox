@@ -129,11 +129,11 @@ graph TD
 
 ```mermaid
 graph LR
-    A[Input Image x<br/>28×28 pixels] --> B[Encoder q_φ z|x]
+    A[Input Image x<br/>28×28 pixels] --> B[Encoder q_φ z/x]
     B --> C[Latent Variables<br/>μ, log σ²]
     C --> D[Reparameterization<br/>z = μ + σε]
     D --> E[Latent Code z<br/>20 dimensions]
-    E --> F[Decoder p_θ x|z]
+    E --> F[Decoder p_θ x/z]
     F --> G[Reconstructed Image x̂<br/>28×28 pixels]
 ```
 
