@@ -71,6 +71,163 @@ graph LR
     style E fill:#fff2cc
 ```
 
+### ResNet-34 Detailed Architecture
+
+The following diagram shows the complete ResNet-34 architecture with all 34 layers, including the residual connections and feature map dimensions:
+
+```mermaid
+flowchart TD
+    Conv1[["7x7 conv, 64, /2"]] --> Pool1[["3x3 max pool, /2"]]
+    Pool1 --> O1["o"]
+    O1 --> L1B1["Block 1<br>3x3 conv, 64"]
+    L1B1 --> L1B2["Block 2<br>3x3 conv, 64"]
+    L1B2 --> O2["o"]
+    O2 --> L1B3["Block 3<br>3x3 conv, 64"]
+    L1B3 --> L1B4["Block 4<br>3x3 conv, 64"]
+    L1B4 --> O3["o"]
+    O3 --> L1B5["Block 5<br>3x3 conv, 64"]
+    L1B5 --> L1B6["Block 6<br>3x3 conv, 64"]
+    L1B6 --> O4["o"]
+    O4 --> L2B1["Block 7<br>3x3 conv, 128"]
+    L2B1 --> L2B2["Block 8<br>3x3 conv, 128"]
+    L2B2 --> O5["o"]
+    O5 --> L2B3["Block 9<br>3x3 conv, 128"]
+    L2B3 --> L2B4["Block 10<br>3x3 conv, 128"]
+    L2B4 --> O6["o"]
+    O6 --> L2B5["Block 11<br>3x3 conv, 128"]
+    L2B5 --> L2B6["Block 12<br>3x3 conv, 128"]
+    L2B6 --> O7["o"]
+    O7 --> L2B7["Block 13<br>3x3 conv, 128"]
+    L2B7 --> L2B8["Block 14<br>3x3 conv, 128"]
+    L2B8 --> O8["o"]
+    O8 --> L3B1["Block 15<br>3x3 conv, 256"]
+    L3B1 --> L3B2["Block 16<br>3x3 conv, 256"]
+    L3B2 --> O9["o"]
+    O9 --> L3B3["Block 17<br>3x3 conv, 256"]
+    L3B3 --> L3B4["Block 18<br>3x3 conv, 256"]
+    L3B4 --> O10["o"]
+    O10 --> L3B5["Block 19<br>3x3 conv, 256"]
+    L3B5 --> L3B6["Block 20<br>3x3 conv, 256"]
+    L3B6 --> O11["o"]
+    O11 --> L3B7["Block 21<br>3x3 conv, 256"]
+    L3B7 --> L3B8["Block 22<br>3x3 conv, 256"]
+    L3B8 --> O12["o"]
+    O12 --> L3B9["Block 23<br>3x3 conv, 256"]
+    L3B9 --> L3B10["Block 24<br>3x3 conv, 256"]
+    L3B10 --> O13["o"]
+    O13 --> L3B11["Block 25<br>3x3 conv, 256"]
+    L3B11 --> L3B12["Block 26<br>3x3 conv, 256"]
+    L3B12 --> O14["o"]
+    O14 --> L4B1["Block 27<br>3x3 conv, 512"]
+    L4B1 --> L4B2["Block 28<br>3x3 conv, 512"]
+    L4B2 --> O15["o"]
+    O15 --> L4B3["Block 29<br>3x3 conv, 512"]
+    L4B3 --> L4B4["Block 30<br>3x3 conv, 512"]
+    L4B4 --> O16["o"]
+    O16 --> L4B5["Block 31<br>3x3 conv, 512"]
+    L4B5 --> L4B6["Block 32<br>3x3 conv, 512"]
+    L4B6 --> O17["o"]
+    O17 --> AvgPool[["avg pool"]]
+    AvgPool --> FC["fc 1000"]
+    Input(["Input"]) --> Conv1
+    O1 -- "y = F(x) + x" --> O2
+    O2 -- "y = F(x) + x" --> O3
+    O3 -- "y = F(x) + x" --> O4
+    O4 -- "y = F(x) + W_s x" --> O5
+    O5 -- "y = F(x) + x" --> O6
+    O6 -- "y = F(x) + x" --> O7
+    O7 -- "y = F(x) + x" --> O8
+    O8 -- "y = F(x) + W_s x" --> O9
+    O9 -- "y = F(x) + x" --> O10
+    O10 -- "y = F(x) + x" --> O11
+    O11 -- "y = F(x) + x" --> O12
+    O12 -- "y = F(x) + x" --> O13
+    O13 -- "y = F(x) + x" --> O14
+    O14 -- "y = F(x) + W_s x" --> O15
+    O15 -- "y = F(x) + x" --> O16
+    O16 -- "y = F(x) + x" --> O17
+
+    O1@{ shape: sm-circ}
+    O2@{ shape: sm-circ}
+    O3@{ shape: sm-circ}
+    O4@{ shape: sm-circ}
+    O5@{ shape: sm-circ}
+    O6@{ shape: sm-circ}
+    O7@{ shape: sm-circ}
+    O8@{ shape: sm-circ}
+    O9@{ shape: sm-circ}
+    O10@{ shape: sm-circ}
+    O11@{ shape: sm-circ}
+    O12@{ shape: sm-circ}
+    O13@{ shape: sm-circ}
+    O14@{ shape: sm-circ}
+    O15@{ shape: sm-circ}
+    O16@{ shape: sm-circ}
+    O17@{ shape: sm-circ}
+     L1B1:::blue
+     L1B2:::blue
+     O2:::blue
+     L1B3:::blue
+     L1B4:::blue
+     O3:::blue
+     L1B5:::blue
+     L1B6:::blue
+     O4:::green
+     L2B1:::green
+     L2B2:::green
+     O5:::green
+     L2B3:::green
+     L2B4:::green
+     O6:::green
+     L2B5:::green
+     L2B6:::green
+     O7:::green
+     L2B7:::green
+     L2B8:::green
+     O8:::orange
+     L3B1:::orange
+     L3B2:::orange
+     O9:::orange
+     L3B3:::orange
+     L3B4:::orange
+     O10:::orange
+     L3B5:::orange
+     L3B6:::orange
+     O11:::orange
+     L3B7:::orange
+     L3B8:::orange
+     O12:::orange
+     L3B9:::orange
+     L3B10:::orange
+     O13:::orange
+     L3B11:::orange
+     L3B12:::orange
+     O14:::red
+     L4B1:::red
+     L4B2:::red
+     O15:::red
+     L4B3:::red
+     L4B4:::red
+     O16:::red
+     L4B5:::red
+     L4B6:::red
+     O17:::red
+    classDef blue fill:#b3c6ff,stroke:#333
+    classDef green fill:#b3ffb3,stroke:#333
+    classDef orange fill:#ffd699,stroke:#333
+    classDef red fill:#ff9999,stroke:#333
+```
+
+**Architecture Breakdown:**
+- **Blue Layer (Layer 1)**: 3 BasicBlocks, 64 filters, 56×56 feature maps
+- **Green Layer (Layer 2)**: 4 BasicBlocks, 128 filters, 28×28 feature maps  
+- **Orange Layer (Layer 3)**: 6 BasicBlocks, 256 filters, 14×14 feature maps
+- **Red Layer (Layer 4)**: 3 BasicBlocks, 512 filters, 7×7 feature maps
+
+**Residual Connection Types:**
+- `y = F(x) + x`: Identity shortcut (no dimension change)
+- `y = F(x) + W_s x`: Projection shortcut (dimension change via 1×1 conv)
+
 ## Implementation Details
 
 ### 1. Basic Block (ResNet-18/34)
