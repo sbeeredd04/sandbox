@@ -393,7 +393,27 @@ class GAN:
         fig, axes = plt.subplots(4, 4, figsize=(8, 8))
         for i in range(min(16, num_samples)):
             row, col = i // 4, i % 4
-            axes[row, col].imshow(samples[i].squeeze().numpy(), cmap='gray')
+            
+            # Get the sample and convert to numpy
+            sample = samples[i].numpy()
+            
+            # Handle different channel configurations
+            if sample.ndim == 3:  # (C, H, W) format
+                if sample.shape[0] == 1:  # Grayscale
+                    img = sample.squeeze(0)  # Remove channel dimension
+                    axes[row, col].imshow(img, cmap='gray')
+                elif sample.shape[0] == 3:  # RGB
+                    img = sample.transpose(1, 2, 0)  # Convert to (H, W, C)
+                    # Denormalize from [-1, 1] to [0, 1] range
+                    img = (img + 1) / 2
+                    axes[row, col].imshow(img)
+                else:
+                    # Handle other channel configurations
+                    img = sample.transpose(1, 2, 0)
+                    axes[row, col].imshow(img)
+            else:  # Already 2D (H, W)
+                axes[row, col].imshow(sample, cmap='gray')
+            
             axes[row, col].axis('off')
         plt.tight_layout()
         plt.show()
