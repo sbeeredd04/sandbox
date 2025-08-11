@@ -1,0 +1,539 @@
+2025-08-10 21:35:22,748 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-10 21:35:22,750 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-10 21:35:22,888 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-10 21:35:22,889 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-10 21:35:22,890 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 21:35:22,908 - HybridVQVAE_WGAN - INFO - 📊 DataSetLoader class created successfully!
+2025-08-10 21:35:22,922 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 21:35:22,937 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-10 21:35:42,560 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-10 21:35:48,043 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-10 21:35:48,044 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-10 21:35:48,046 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-10 21:35:48,047 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-10 21:35:48,047 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 21:35:48,061 - HybridVQVAE_WGAN - INFO - 📊 DataSetLoader class created successfully!
+2025-08-10 21:35:48,076 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 21:35:48,094 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-10 21:36:09,583 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-10 21:36:09,584 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-10 21:36:09,586 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-10 21:36:09,587 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-10 21:36:09,588 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 21:36:14,406 - HybridVQVAE_WGAN - INFO - 📊 DataSetLoader class created successfully!
+2025-08-10 21:36:21,803 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 21:36:27,078 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-10 21:36:29,435 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 21:36:33,168 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-10 21:36:45,771 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-10 21:36:48,185 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-10 21:36:51,208 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-10 21:36:57,373 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-10 21:36:57,375 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 21:36:57,376 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-10 21:36:57,377 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-10 21:36:58,395 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=781 | img_size=[64, 64] | channels=3
+2025-08-10 21:36:58,431 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-10 21:36:58,444 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-10 21:36:58,444 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-10 21:36:58,445 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-10 21:36:58,446 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-10 21:36:58,446 - __main__.VQVAE - INFO -    Base channels: 32
+2025-08-10 21:36:58,447 - __main__.VQVAE - INFO -    Total params: 987,843
+2025-08-10 21:36:58,460 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-10 21:36:58,460 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-10 21:36:58,461 - __main__.WGANCritic - INFO -    Base channels: 32
+2025-08-10 21:36:58,462 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-10 21:36:58,462 - __main__.WGANCritic - INFO -    Total params: 694,656
+2025-08-10 21:36:58,463 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-10 21:36:58,463 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-10 21:36:58,464 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-10 21:36:58,464 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-10 21:36:58,465 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-10 21:36:58,465 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 1,682,499
+2025-08-10 21:36:58,466 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 987,843
+2025-08-10 21:36:58,467 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 694,656
+2025-08-10 21:36:58,689 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-10 21:36:58,690 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-10 21:36:58,691 - __main__.HybridTrainer - INFO - Critic learning rate: 5e-05
+2025-08-10 21:36:58,692 - __main__.HybridTrainer - INFO - Loss weights: {'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-10 21:36:58,693 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-10 21:36:58,693 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-10 21:36:58,694 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-10 21:36:58,695 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 21:36:58,698 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:36:58,698 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-10 21:36:58,699 - __main__.HybridTrainer - INFO - Training for 10 epochs | 781 steps/epoch
+2025-08-10 21:36:58,699 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:37:00,227 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: Generator_total_loss=2.7282 Reconstruction_loss=0.2867 Adversarial_loss=1.7385 Codebook_loss=0.4949 Commitment_loss=0.4949 W_dist=0.6219
+2025-08-10 21:37:21,639 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: Generator_total_loss=72.5575 Reconstruction_loss=0.4011 Adversarial_loss=71.6100 Codebook_loss=0.4737 Commitment_loss=0.4737 W_dist=88.3535
+2025-08-10 21:37:42,859 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: Generator_total_loss=128.4333 Reconstruction_loss=0.5486 Adversarial_loss=127.3906 Codebook_loss=0.5213 Commitment_loss=0.5213 W_dist=199.4184
+2025-08-10 21:38:03,259 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: Generator_total_loss=53.1431 Reconstruction_loss=0.5173 Adversarial_loss=51.6666 Codebook_loss=0.7382 Commitment_loss=0.7382 W_dist=140.1908
+2025-08-10 21:38:24,952 - __main__.HybridTrainer - INFO - Epoch 0 Step 400: Generator_total_loss=143.9884 Reconstruction_loss=0.5473 Adversarial_loss=142.9798 Codebook_loss=0.5043 Commitment_loss=0.5043 W_dist=200.8311
+2025-08-10 21:38:45,478 - __main__.HybridTrainer - INFO - Epoch 0 Step 500: Generator_total_loss=67.3060 Reconstruction_loss=0.3526 Adversarial_loss=66.2186 Codebook_loss=0.5437 Commitment_loss=0.5437 W_dist=127.9649
+2025-08-10 21:39:07,268 - __main__.HybridTrainer - INFO - Epoch 0 Step 600: Generator_total_loss=87.5126 Reconstruction_loss=0.5696 Adversarial_loss=86.4124 Codebook_loss=0.5501 Commitment_loss=0.5501 W_dist=127.8078
+2025-08-10 21:39:28,851 - __main__.HybridTrainer - INFO - Epoch 0 Step 700: Generator_total_loss=36.4125 Reconstruction_loss=0.3719 Adversarial_loss=35.5720 Codebook_loss=0.4203 Commitment_loss=0.4203 W_dist=104.3191
+2025-08-10 21:39:44,993 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:39:44,995 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 166.3s
+2025-08-10 21:39:44,995 - __main__.HybridTrainer - INFO - Generator_total_loss: 67.8056
+2025-08-10 21:39:44,996 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4839
+2025-08-10 21:39:44,996 - __main__.HybridTrainer - INFO - Adversarial_loss: 66.7812
+2025-08-10 21:39:44,997 - __main__.HybridTrainer - INFO - Codebook_loss: 0.5122
+2025-08-10 21:39:44,997 - __main__.HybridTrainer - INFO - Commitment_loss: 0.5122
+2025-08-10 21:39:44,998 - __main__.HybridTrainer - INFO - Wasserstein_distance: 125.7800
+2025-08-10 21:39:44,998 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:39:44,999 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-10 21:39:46,024 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: Generator_total_loss=32.4702 Reconstruction_loss=0.3630 Adversarial_loss=31.7561 Codebook_loss=0.3571 Commitment_loss=0.3571 W_dist=96.5816
+2025-08-10 21:40:07,671 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: Generator_total_loss=39.3571 Reconstruction_loss=0.5011 Adversarial_loss=38.7220 Codebook_loss=0.3176 Commitment_loss=0.3176 W_dist=49.4901
+2025-08-10 21:40:28,937 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: Generator_total_loss=39.8655 Reconstruction_loss=0.3291 Adversarial_loss=39.2135 Codebook_loss=0.3260 Commitment_loss=0.3260 W_dist=67.3202
+2025-08-10 21:40:49,601 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: Generator_total_loss=37.1763 Reconstruction_loss=0.4458 Adversarial_loss=36.5353 Codebook_loss=0.3205 Commitment_loss=0.3205 W_dist=58.9586
+2025-08-10 21:41:11,271 - __main__.HybridTrainer - INFO - Epoch 1 Step 400: Generator_total_loss=39.6415 Reconstruction_loss=0.5011 Adversarial_loss=39.0278 Codebook_loss=0.3068 Commitment_loss=0.3068 W_dist=30.4559
+2025-08-10 21:41:31,553 - __main__.HybridTrainer - INFO - Epoch 1 Step 500: Generator_total_loss=29.1703 Reconstruction_loss=0.3955 Adversarial_loss=28.6249 Codebook_loss=0.2727 Commitment_loss=0.2727 W_dist=21.8810
+2025-08-10 21:41:53,275 - __main__.HybridTrainer - INFO - Epoch 1 Step 600: Generator_total_loss=25.2679 Reconstruction_loss=0.3676 Adversarial_loss=24.7698 Codebook_loss=0.2491 Commitment_loss=0.2491 W_dist=22.7713
+2025-08-10 21:42:15,040 - __main__.HybridTrainer - INFO - Epoch 1 Step 700: Generator_total_loss=27.7433 Reconstruction_loss=0.3686 Adversarial_loss=27.3085 Codebook_loss=0.2174 Commitment_loss=0.2174 W_dist=19.9216
+2025-08-10 21:42:30,968 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:42:30,969 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 165.2s
+2025-08-10 21:42:30,969 - __main__.HybridTrainer - INFO - Generator_total_loss: 33.2115
+2025-08-10 21:42:30,970 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3991
+2025-08-10 21:42:30,970 - __main__.HybridTrainer - INFO - Adversarial_loss: 32.6144
+2025-08-10 21:42:30,971 - __main__.HybridTrainer - INFO - Codebook_loss: 0.2985
+2025-08-10 21:42:30,971 - __main__.HybridTrainer - INFO - Commitment_loss: 0.2985
+2025-08-10 21:42:30,972 - __main__.HybridTrainer - INFO - Wasserstein_distance: 46.5749
+2025-08-10 21:42:30,972 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:42:30,973 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 1...
+2025-08-10 21:42:31,539 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: Generator_total_loss=30.8563 Reconstruction_loss=0.3467 Adversarial_loss=30.3563 Codebook_loss=0.2500 Commitment_loss=0.2500 W_dist=28.9997
+2025-08-10 21:42:53,119 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: Generator_total_loss=26.7983 Reconstruction_loss=0.2976 Adversarial_loss=26.3232 Codebook_loss=0.2375 Commitment_loss=0.2375 W_dist=24.2408
+2025-08-10 21:43:13,633 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: Generator_total_loss=21.2724 Reconstruction_loss=0.3429 Adversarial_loss=20.7505 Codebook_loss=0.2609 Commitment_loss=0.2609 W_dist=29.0643
+2025-08-10 21:43:35,279 - __main__.HybridTrainer - INFO - Epoch 2 Step 300: Generator_total_loss=20.1431 Reconstruction_loss=0.3276 Adversarial_loss=19.6401 Codebook_loss=0.2515 Commitment_loss=0.2515 W_dist=21.2589
+2025-08-10 21:43:56,855 - __main__.HybridTrainer - INFO - Epoch 2 Step 400: Generator_total_loss=15.9780 Reconstruction_loss=0.3607 Adversarial_loss=15.4749 Codebook_loss=0.2515 Commitment_loss=0.2515 W_dist=25.1014
+2025-08-10 21:44:17,519 - __main__.HybridTrainer - INFO - Epoch 2 Step 500: Generator_total_loss=11.1863 Reconstruction_loss=0.4418 Adversarial_loss=10.7340 Codebook_loss=0.2262 Commitment_loss=0.2262 W_dist=13.3793
+2025-08-10 21:44:39,256 - __main__.HybridTrainer - INFO - Epoch 2 Step 600: Generator_total_loss=13.5860 Reconstruction_loss=0.4255 Adversarial_loss=13.1570 Codebook_loss=0.2145 Commitment_loss=0.2145 W_dist=14.2977
+2025-08-10 21:44:59,631 - __main__.HybridTrainer - INFO - Epoch 2 Step 700: Generator_total_loss=14.9404 Reconstruction_loss=0.4527 Adversarial_loss=14.5087 Codebook_loss=0.2158 Commitment_loss=0.2158 W_dist=14.7676
+2025-08-10 21:45:16,706 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:45:16,709 - __main__.HybridTrainer - INFO - EPOCH 2 COMPLETED in 165.3s
+2025-08-10 21:45:16,710 - __main__.HybridTrainer - INFO - Generator_total_loss: 17.3808
+2025-08-10 21:45:16,710 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3764
+2025-08-10 21:45:16,711 - __main__.HybridTrainer - INFO - Adversarial_loss: 16.9048
+2025-08-10 21:45:16,711 - __main__.HybridTrainer - INFO - Codebook_loss: 0.2380
+2025-08-10 21:45:16,712 - __main__.HybridTrainer - INFO - Commitment_loss: 0.2380
+2025-08-10 21:45:16,712 - __main__.HybridTrainer - INFO - Wasserstein_distance: 21.3213
+2025-08-10 21:45:16,713 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:45:16,713 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 2...
+2025-08-10 21:45:17,424 - __main__.HybridTrainer - INFO - Epoch 3 Step 0: Generator_total_loss=9.5590 Reconstruction_loss=0.4512 Adversarial_loss=9.1037 Codebook_loss=0.2277 Commitment_loss=0.2277 W_dist=10.1835
+2025-08-10 21:45:39,002 - __main__.HybridTrainer - INFO - Epoch 3 Step 100: Generator_total_loss=17.6678 Reconstruction_loss=0.3985 Adversarial_loss=17.2357 Codebook_loss=0.2160 Commitment_loss=0.2160 W_dist=19.9744
+2025-08-10 21:45:59,537 - __main__.HybridTrainer - INFO - Epoch 3 Step 200: Generator_total_loss=17.1927 Reconstruction_loss=0.5829 Adversarial_loss=16.7522 Codebook_loss=0.2202 Commitment_loss=0.2202 W_dist=16.2586
+2025-08-10 21:46:21,102 - __main__.HybridTrainer - INFO - Epoch 3 Step 300: Generator_total_loss=13.3873 Reconstruction_loss=0.4342 Adversarial_loss=12.9628 Codebook_loss=0.2123 Commitment_loss=0.2123 W_dist=13.7648
+2025-08-10 21:46:42,676 - __main__.HybridTrainer - INFO - Epoch 3 Step 400: Generator_total_loss=6.8953 Reconstruction_loss=0.4613 Adversarial_loss=6.4544 Codebook_loss=0.2204 Commitment_loss=0.2204 W_dist=14.4012
+2025-08-10 21:47:03,271 - __main__.HybridTrainer - INFO - Epoch 3 Step 500: Generator_total_loss=11.4565 Reconstruction_loss=0.4451 Adversarial_loss=11.0501 Codebook_loss=0.2032 Commitment_loss=0.2032 W_dist=16.1303
+2025-08-10 21:47:24,991 - __main__.HybridTrainer - INFO - Epoch 3 Step 600: Generator_total_loss=9.6349 Reconstruction_loss=0.4688 Adversarial_loss=9.1661 Codebook_loss=0.2344 Commitment_loss=0.2344 W_dist=12.2231
+2025-08-10 21:47:45,215 - __main__.HybridTrainer - INFO - Epoch 3 Step 700: Generator_total_loss=9.5833 Reconstruction_loss=0.3850 Adversarial_loss=9.1487 Codebook_loss=0.2173 Commitment_loss=0.2173 W_dist=13.8439
+2025-08-10 21:48:02,734 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:48:02,735 - __main__.HybridTrainer - INFO - EPOCH 3 COMPLETED in 165.6s
+2025-08-10 21:48:02,737 - __main__.HybridTrainer - INFO - Generator_total_loss: 11.9554
+2025-08-10 21:48:02,738 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4446
+2025-08-10 21:48:02,738 - __main__.HybridTrainer - INFO - Adversarial_loss: 11.5274
+2025-08-10 21:48:02,739 - __main__.HybridTrainer - INFO - Codebook_loss: 0.2140
+2025-08-10 21:48:02,739 - __main__.HybridTrainer - INFO - Commitment_loss: 0.2140
+2025-08-10 21:48:02,740 - __main__.HybridTrainer - INFO - Wasserstein_distance: 16.8218
+2025-08-10 21:48:02,740 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:48:02,741 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 3...
+2025-08-10 21:48:03,373 - __main__.HybridTrainer - INFO - Epoch 4 Step 0: Generator_total_loss=5.4696 Reconstruction_loss=0.3902 Adversarial_loss=5.0583 Codebook_loss=0.2056 Commitment_loss=0.2056 W_dist=16.8674
+2025-08-10 21:48:25,003 - __main__.HybridTrainer - INFO - Epoch 4 Step 100: Generator_total_loss=9.9780 Reconstruction_loss=0.4123 Adversarial_loss=9.5492 Codebook_loss=0.2144 Commitment_loss=0.2144 W_dist=10.1293
+2025-08-10 21:48:45,374 - __main__.HybridTrainer - INFO - Epoch 4 Step 200: Generator_total_loss=13.2793 Reconstruction_loss=0.3781 Adversarial_loss=12.8981 Codebook_loss=0.1906 Commitment_loss=0.1906 W_dist=11.1719
+2025-08-10 21:49:06,900 - __main__.HybridTrainer - INFO - Epoch 4 Step 300: Generator_total_loss=13.6634 Reconstruction_loss=0.3780 Adversarial_loss=13.3020 Codebook_loss=0.1807 Commitment_loss=0.1807 W_dist=13.5419
+2025-08-10 21:49:27,844 - __main__.HybridTrainer - INFO - Epoch 4 Step 400: Generator_total_loss=5.5154 Reconstruction_loss=0.3125 Adversarial_loss=5.1486 Codebook_loss=0.1834 Commitment_loss=0.1834 W_dist=13.6950
+2025-08-10 21:49:48,769 - __main__.HybridTrainer - INFO - Epoch 4 Step 500: Generator_total_loss=14.9210 Reconstruction_loss=0.3528 Adversarial_loss=14.5693 Codebook_loss=0.1758 Commitment_loss=0.1758 W_dist=11.8434
+2025-08-10 21:50:10,271 - __main__.HybridTrainer - INFO - Epoch 4 Step 600: Generator_total_loss=9.4061 Reconstruction_loss=0.3617 Adversarial_loss=9.0576 Codebook_loss=0.1743 Commitment_loss=0.1743 W_dist=14.1160
+2025-08-10 21:50:30,419 - __main__.HybridTrainer - INFO - Epoch 4 Step 700: Generator_total_loss=11.5928 Reconstruction_loss=0.3424 Adversarial_loss=11.2647 Codebook_loss=0.1640 Commitment_loss=0.1640 W_dist=14.4306
+2025-08-10 21:50:47,922 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:50:47,923 - __main__.HybridTrainer - INFO - EPOCH 4 COMPLETED in 164.8s
+2025-08-10 21:50:47,923 - __main__.HybridTrainer - INFO - Generator_total_loss: 12.6001
+2025-08-10 21:50:47,924 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3684
+2025-08-10 21:50:47,924 - __main__.HybridTrainer - INFO - Adversarial_loss: 12.2547
+2025-08-10 21:50:47,925 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1727
+2025-08-10 21:50:47,925 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1727
+2025-08-10 21:50:47,926 - __main__.HybridTrainer - INFO - Wasserstein_distance: 14.8083
+2025-08-10 21:50:47,926 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:50:47,927 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 4...
+2025-08-10 21:50:48,481 - __main__.HybridTrainer - INFO - Epoch 5 Step 0: Generator_total_loss=10.9834 Reconstruction_loss=0.3160 Adversarial_loss=10.6661 Codebook_loss=0.1586 Commitment_loss=0.1586 W_dist=20.5466
+2025-08-10 21:51:10,078 - __main__.HybridTrainer - INFO - Epoch 5 Step 100: Generator_total_loss=10.7048 Reconstruction_loss=0.3022 Adversarial_loss=10.3718 Codebook_loss=0.1665 Commitment_loss=0.1665 W_dist=13.3029
+2025-08-10 21:51:30,536 - __main__.HybridTrainer - INFO - Epoch 5 Step 200: Generator_total_loss=6.3319 Reconstruction_loss=0.2682 Adversarial_loss=6.0278 Codebook_loss=0.1521 Commitment_loss=0.1521 W_dist=13.4759
+2025-08-10 21:51:52,322 - __main__.HybridTrainer - INFO - Epoch 5 Step 300: Generator_total_loss=8.4010 Reconstruction_loss=0.3126 Adversarial_loss=8.1204 Codebook_loss=0.1403 Commitment_loss=0.1403 W_dist=12.7577
+2025-08-10 21:52:12,623 - __main__.HybridTrainer - INFO - Epoch 5 Step 400: Generator_total_loss=1.6675 Reconstruction_loss=0.2902 Adversarial_loss=1.3331 Codebook_loss=0.1672 Commitment_loss=0.1672 W_dist=9.1207
+2025-08-10 21:52:34,130 - __main__.HybridTrainer - INFO - Epoch 5 Step 500: Generator_total_loss=9.8437 Reconstruction_loss=0.3161 Adversarial_loss=9.5398 Codebook_loss=0.1520 Commitment_loss=0.1520 W_dist=20.6011
+2025-08-10 21:52:55,897 - __main__.HybridTrainer - INFO - Epoch 5 Step 600: Generator_total_loss=12.9456 Reconstruction_loss=0.3385 Adversarial_loss=12.6129 Codebook_loss=0.1664 Commitment_loss=0.1664 W_dist=17.0892
+2025-08-10 21:53:16,234 - __main__.HybridTrainer - INFO - Epoch 5 Step 700: Generator_total_loss=7.5349 Reconstruction_loss=0.2676 Adversarial_loss=7.2584 Codebook_loss=0.1383 Commitment_loss=0.1383 W_dist=11.6094
+2025-08-10 21:53:33,389 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:53:33,391 - __main__.HybridTrainer - INFO - EPOCH 5 COMPLETED in 165.1s
+2025-08-10 21:53:33,392 - __main__.HybridTrainer - INFO - Generator_total_loss: 9.9771
+2025-08-10 21:53:33,392 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3096
+2025-08-10 21:53:33,393 - __main__.HybridTrainer - INFO - Adversarial_loss: 9.6619
+2025-08-10 21:53:33,393 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1576
+2025-08-10 21:53:33,394 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1576
+2025-08-10 21:53:33,394 - __main__.HybridTrainer - INFO - Wasserstein_distance: 14.7294
+2025-08-10 21:53:33,394 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:53:33,395 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 5...
+2025-08-10 21:53:34,339 - __main__.HybridTrainer - INFO - Epoch 6 Step 0: Generator_total_loss=15.4176 Reconstruction_loss=0.2993 Adversarial_loss=15.1362 Codebook_loss=0.1407 Commitment_loss=0.1407 W_dist=12.9886
+2025-08-10 21:53:55,579 - __main__.HybridTrainer - INFO - Epoch 6 Step 100: Generator_total_loss=13.2890 Reconstruction_loss=0.2959 Adversarial_loss=12.9588 Codebook_loss=0.1651 Commitment_loss=0.1651 W_dist=21.1327
+2025-08-10 21:54:16,044 - __main__.HybridTrainer - INFO - Epoch 6 Step 200: Generator_total_loss=11.3357 Reconstruction_loss=0.2825 Adversarial_loss=11.0424 Codebook_loss=0.1467 Commitment_loss=0.1467 W_dist=11.9465
+2025-08-10 21:54:37,753 - __main__.HybridTrainer - INFO - Epoch 6 Step 300: Generator_total_loss=8.2954 Reconstruction_loss=0.2689 Adversarial_loss=8.0033 Codebook_loss=0.1461 Commitment_loss=0.1461 W_dist=25.7312
+2025-08-10 21:54:57,956 - __main__.HybridTrainer - INFO - Epoch 6 Step 400: Generator_total_loss=14.9532 Reconstruction_loss=0.2667 Adversarial_loss=14.6228 Codebook_loss=0.1652 Commitment_loss=0.1652 W_dist=24.9386
+2025-08-10 21:55:19,959 - __main__.HybridTrainer - INFO - Epoch 6 Step 500: Generator_total_loss=15.6607 Reconstruction_loss=0.2924 Adversarial_loss=15.3520 Codebook_loss=0.1544 Commitment_loss=0.1544 W_dist=13.5584
+2025-08-10 21:55:41,800 - __main__.HybridTrainer - INFO - Epoch 6 Step 600: Generator_total_loss=13.2159 Reconstruction_loss=0.2436 Adversarial_loss=12.9276 Codebook_loss=0.1441 Commitment_loss=0.1441 W_dist=10.0468
+2025-08-10 21:56:01,806 - __main__.HybridTrainer - INFO - Epoch 6 Step 700: Generator_total_loss=20.7990 Reconstruction_loss=0.2846 Adversarial_loss=20.4863 Codebook_loss=0.1564 Commitment_loss=0.1564 W_dist=17.6620
+2025-08-10 21:56:19,397 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:56:19,399 - __main__.HybridTrainer - INFO - EPOCH 6 COMPLETED in 165.4s
+2025-08-10 21:56:19,399 - __main__.HybridTrainer - INFO - Generator_total_loss: 12.5896
+2025-08-10 21:56:19,400 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.2806
+2025-08-10 21:56:19,400 - __main__.HybridTrainer - INFO - Adversarial_loss: 12.2820
+2025-08-10 21:56:19,401 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1538
+2025-08-10 21:56:19,401 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1538
+2025-08-10 21:56:19,402 - __main__.HybridTrainer - INFO - Wasserstein_distance: 15.6786
+2025-08-10 21:56:19,402 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:56:19,403 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 6...
+2025-08-10 21:56:20,115 - __main__.HybridTrainer - INFO - Epoch 7 Step 0: Generator_total_loss=9.9099 Reconstruction_loss=0.2415 Adversarial_loss=9.6160 Codebook_loss=0.1470 Commitment_loss=0.1470 W_dist=8.6135
+2025-08-10 21:56:40,164 - __main__.HybridTrainer - INFO - Epoch 7 Step 100: Generator_total_loss=14.0454 Reconstruction_loss=0.2862 Adversarial_loss=13.7520 Codebook_loss=0.1467 Commitment_loss=0.1467 W_dist=31.0887
+2025-08-10 21:57:01,863 - __main__.HybridTrainer - INFO - Epoch 7 Step 200: Generator_total_loss=15.3242 Reconstruction_loss=0.2655 Adversarial_loss=15.0363 Codebook_loss=0.1440 Commitment_loss=0.1440 W_dist=13.1848
+2025-08-10 21:57:23,442 - __main__.HybridTrainer - INFO - Epoch 7 Step 300: Generator_total_loss=4.3374 Reconstruction_loss=0.2826 Adversarial_loss=4.0741 Codebook_loss=0.1316 Commitment_loss=0.1316 W_dist=7.9339
+2025-08-10 21:57:43,919 - __main__.HybridTrainer - INFO - Epoch 7 Step 400: Generator_total_loss=25.9491 Reconstruction_loss=0.2669 Adversarial_loss=25.6465 Codebook_loss=0.1513 Commitment_loss=0.1513 W_dist=13.2402
+2025-08-10 21:58:05,378 - __main__.HybridTrainer - INFO - Epoch 7 Step 500: Generator_total_loss=13.2469 Reconstruction_loss=0.2497 Adversarial_loss=12.9578 Codebook_loss=0.1446 Commitment_loss=0.1446 W_dist=6.4924
+2025-08-10 21:58:26,749 - __main__.HybridTrainer - INFO - Epoch 7 Step 600: Generator_total_loss=8.2304 Reconstruction_loss=0.2648 Adversarial_loss=7.9245 Codebook_loss=0.1530 Commitment_loss=0.1530 W_dist=12.3867
+2025-08-10 21:58:47,691 - __main__.HybridTrainer - INFO - Epoch 7 Step 700: Generator_total_loss=15.0355 Reconstruction_loss=0.2480 Adversarial_loss=14.7516 Codebook_loss=0.1419 Commitment_loss=0.1419 W_dist=16.1777
+2025-08-10 21:59:04,864 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:59:04,866 - __main__.HybridTrainer - INFO - EPOCH 7 COMPLETED in 165.0s
+2025-08-10 21:59:04,867 - __main__.HybridTrainer - INFO - Generator_total_loss: 15.6326
+2025-08-10 21:59:04,867 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.2598
+2025-08-10 21:59:04,868 - __main__.HybridTrainer - INFO - Adversarial_loss: 15.3453
+2025-08-10 21:59:04,868 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1437
+2025-08-10 21:59:04,868 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1437
+2025-08-10 21:59:04,869 - __main__.HybridTrainer - INFO - Wasserstein_distance: 14.0240
+2025-08-10 21:59:04,870 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 21:59:04,870 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 7...
+2025-08-10 21:59:05,454 - __main__.HybridTrainer - INFO - Epoch 8 Step 0: Generator_total_loss=20.7001 Reconstruction_loss=0.2536 Adversarial_loss=20.4280 Codebook_loss=0.1361 Commitment_loss=0.1361 W_dist=9.2932
+2025-08-10 21:59:25,928 - __main__.HybridTrainer - INFO - Epoch 8 Step 100: Generator_total_loss=21.8066 Reconstruction_loss=0.2509 Adversarial_loss=21.5264 Codebook_loss=0.1401 Commitment_loss=0.1401 W_dist=14.5230
+2025-08-10 21:59:47,623 - __main__.HybridTrainer - INFO - Epoch 8 Step 200: Generator_total_loss=21.6451 Reconstruction_loss=0.2544 Adversarial_loss=21.3818 Codebook_loss=0.1316 Commitment_loss=0.1316 W_dist=38.1835
+2025-08-10 22:00:09,124 - __main__.HybridTrainer - INFO - Epoch 8 Step 300: Generator_total_loss=15.1978 Reconstruction_loss=0.2525 Adversarial_loss=14.9217 Codebook_loss=0.1381 Commitment_loss=0.1381 W_dist=11.5739
+2025-08-10 22:00:29,594 - __main__.HybridTrainer - INFO - Epoch 8 Step 400: Generator_total_loss=20.5036 Reconstruction_loss=0.2486 Adversarial_loss=20.2155 Codebook_loss=0.1440 Commitment_loss=0.1440 W_dist=7.9374
+2025-08-10 22:00:51,229 - __main__.HybridTrainer - INFO - Epoch 8 Step 500: Generator_total_loss=12.6179 Reconstruction_loss=0.2515 Adversarial_loss=12.3457 Codebook_loss=0.1361 Commitment_loss=0.1361 W_dist=11.4630
+2025-08-10 22:01:11,764 - __main__.HybridTrainer - INFO - Epoch 8 Step 600: Generator_total_loss=22.5751 Reconstruction_loss=0.2135 Adversarial_loss=22.3248 Codebook_loss=0.1252 Commitment_loss=0.1252 W_dist=12.0945
+2025-08-10 22:01:33,333 - __main__.HybridTrainer - INFO - Epoch 8 Step 700: Generator_total_loss=11.4260 Reconstruction_loss=0.2062 Adversarial_loss=11.1626 Codebook_loss=0.1317 Commitment_loss=0.1317 W_dist=5.1660
+2025-08-10 22:01:50,886 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 22:01:50,886 - __main__.HybridTrainer - INFO - EPOCH 8 COMPLETED in 165.6s
+2025-08-10 22:01:50,887 - __main__.HybridTrainer - INFO - Generator_total_loss: 16.2000
+2025-08-10 22:01:50,888 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.2400
+2025-08-10 22:01:50,888 - __main__.HybridTrainer - INFO - Adversarial_loss: 15.9305
+2025-08-10 22:01:50,889 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1348
+2025-08-10 22:01:50,889 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1348
+2025-08-10 22:01:50,889 - __main__.HybridTrainer - INFO - Wasserstein_distance: 12.5221
+2025-08-10 22:01:50,890 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 22:01:50,890 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 8...
+2025-08-10 22:01:51,499 - __main__.HybridTrainer - INFO - Epoch 9 Step 0: Generator_total_loss=17.6206 Reconstruction_loss=0.2053 Adversarial_loss=17.3696 Codebook_loss=0.1255 Commitment_loss=0.1255 W_dist=7.7809
+2025-08-10 22:02:11,781 - __main__.HybridTrainer - INFO - Epoch 9 Step 100: Generator_total_loss=14.4458 Reconstruction_loss=0.1994 Adversarial_loss=14.1876 Codebook_loss=0.1291 Commitment_loss=0.1291 W_dist=6.5453
+2025-08-10 22:02:33,620 - __main__.HybridTrainer - INFO - Epoch 9 Step 200: Generator_total_loss=25.0502 Reconstruction_loss=0.2233 Adversarial_loss=24.7909 Codebook_loss=0.1297 Commitment_loss=0.1297 W_dist=8.4044
+2025-08-10 22:02:55,369 - __main__.HybridTrainer - INFO - Epoch 9 Step 300: Generator_total_loss=13.6613 Reconstruction_loss=0.2238 Adversarial_loss=13.4000 Codebook_loss=0.1306 Commitment_loss=0.1306 W_dist=12.6060
+2025-08-10 22:03:15,969 - __main__.HybridTrainer - INFO - Epoch 9 Step 400: Generator_total_loss=23.2902 Reconstruction_loss=0.2215 Adversarial_loss=23.0201 Codebook_loss=0.1350 Commitment_loss=0.1350 W_dist=9.7100
+2025-08-10 22:03:37,551 - __main__.HybridTrainer - INFO - Epoch 9 Step 500: Generator_total_loss=24.4908 Reconstruction_loss=0.2206 Adversarial_loss=24.2246 Codebook_loss=0.1331 Commitment_loss=0.1331 W_dist=10.4286
+2025-08-10 22:03:57,985 - __main__.HybridTrainer - INFO - Epoch 9 Step 600: Generator_total_loss=26.6121 Reconstruction_loss=0.2061 Adversarial_loss=26.3424 Codebook_loss=0.1349 Commitment_loss=0.1349 W_dist=15.7206
+2025-08-10 22:04:19,642 - __main__.HybridTrainer - INFO - Epoch 9 Step 700: Generator_total_loss=27.0025 Reconstruction_loss=0.2063 Adversarial_loss=26.7348 Codebook_loss=0.1338 Commitment_loss=0.1338 W_dist=12.1237
+2025-08-10 22:04:36,953 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 22:04:36,955 - __main__.HybridTrainer - INFO - EPOCH 9 COMPLETED in 165.6s
+2025-08-10 22:04:36,956 - __main__.HybridTrainer - INFO - Generator_total_loss: 19.2529
+2025-08-10 22:04:36,956 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.2230
+2025-08-10 22:04:36,957 - __main__.HybridTrainer - INFO - Adversarial_loss: 18.9869
+2025-08-10 22:04:36,958 - __main__.HybridTrainer - INFO - Codebook_loss: 0.1330
+2025-08-10 22:04:36,958 - __main__.HybridTrainer - INFO - Commitment_loss: 0.1330
+2025-08-10 22:04:36,959 - __main__.HybridTrainer - INFO - Wasserstein_distance: 12.3855
+2025-08-10 22:04:36,959 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 22:04:36,960 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 9...
+2025-08-10 22:04:37,373 - __main__.HybridTrainer - INFO - TRAINING COMPLETED in 27.6 minutes!
+2025-08-10 23:32:00,098 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-10 23:32:00,100 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-10 23:32:00,250 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-10 23:32:00,251 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-10 23:32:00,252 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 23:32:01,176 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-10 23:32:04,586 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 23:32:08,250 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-10 23:32:11,255 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-10 23:34:40,193 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-10 23:34:53,979 - HybridVQVAE_WGAN - INFO - 🎯 MNIST TRAINING EXAMPLE
+2025-08-10 23:34:53,981 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 23:35:10,903 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-10 23:35:13,892 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-10 23:35:16,601 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-10 23:35:20,143 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-10 23:35:23,135 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-10 23:35:26,130 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-10 23:35:32,861 - HybridVQVAE_WGAN - INFO - 🎯 MNIST TRAINING EXAMPLE
+2025-08-10 23:35:32,863 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 23:36:24,002 - HybridVQVAE_WGAN - INFO - 🎯 MNIST TRAINING EXAMPLE
+2025-08-10 23:36:24,004 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 23:36:24,005 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-10 23:36:24,006 - __main__.DataSetLoader - INFO - 🔄 Loading MNIST dataset...
+2025-08-10 23:36:32,866 - __main__.DataSetLoader - INFO - MNIST loaded | Dataset=mnist | batches=937 | img_size=[64, 64] | channels=1
+2025-08-10 23:36:32,873 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-10 23:36:32,882 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-10 23:36:32,883 - __main__.VQVAE - INFO -    Input: 1 channels, [64, 64]
+2025-08-10 23:36:32,883 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-10 23:36:32,884 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-10 23:36:32,884 - __main__.VQVAE - INFO -    Base channels: 32
+2025-08-10 23:36:32,885 - __main__.VQVAE - INFO -    Total params: 625,153
+2025-08-10 23:36:32,897 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-10 23:36:32,897 - __main__.WGANCritic - INFO -    Input: 1 channels, [64, 64]
+2025-08-10 23:36:32,897 - __main__.WGANCritic - INFO -    Base channels: 32
+2025-08-10 23:36:32,898 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-10 23:36:32,898 - __main__.WGANCritic - INFO -    Total params: 693,632
+2025-08-10 23:36:32,899 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-10 23:36:32,899 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 1
+2025-08-10 23:36:32,899 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-10 23:36:32,900 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-10 23:36:32,900 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-10 23:36:32,901 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 1,318,785
+2025-08-10 23:36:32,901 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 625,153
+2025-08-10 23:36:32,901 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 693,632
+2025-08-10 23:36:33,029 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-10 23:36:33,029 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-10 23:36:33,030 - __main__.HybridTrainer - INFO - Critic learning rate: 5e-05
+2025-08-10 23:36:33,030 - __main__.HybridTrainer - INFO - Loss weights: {'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-10 23:36:33,030 - __main__.HybridTrainer - INFO - Critic iterations per step: 2
+2025-08-10 23:36:33,031 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-10 23:36:33,031 - HybridVQVAE_WGAN - INFO - To train on MNIST, run:
+2025-08-10 23:36:33,032 - HybridVQVAE_WGAN - INFO -    mnist_trainer.train(mnist_dataloader, num_epochs=10)
+2025-08-10 23:38:24,058 - HybridVQVAE_WGAN - INFO - 🎯 MNIST TRAINING EXAMPLE
+2025-08-10 23:38:24,060 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-10 23:38:24,061 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-10 23:38:24,062 - __main__.DataSetLoader - INFO - 🔄 Loading MNIST dataset...
+2025-08-10 23:38:24,134 - __main__.DataSetLoader - INFO - MNIST loaded | Dataset=mnist | batches=937 | img_size=[64, 64] | channels=1
+2025-08-10 23:38:24,144 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-10 23:38:24,153 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-10 23:38:24,153 - __main__.VQVAE - INFO -    Input: 1 channels, [64, 64]
+2025-08-10 23:38:24,153 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-10 23:38:24,154 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-10 23:38:24,154 - __main__.VQVAE - INFO -    Base channels: 32
+2025-08-10 23:38:24,155 - __main__.VQVAE - INFO -    Total params: 625,153
+2025-08-10 23:38:24,167 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-10 23:38:24,168 - __main__.WGANCritic - INFO -    Input: 1 channels, [64, 64]
+2025-08-10 23:38:24,168 - __main__.WGANCritic - INFO -    Base channels: 32
+2025-08-10 23:38:24,168 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-10 23:38:24,169 - __main__.WGANCritic - INFO -    Total params: 693,632
+2025-08-10 23:38:24,169 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-10 23:38:24,170 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 1
+2025-08-10 23:38:24,170 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-10 23:38:24,170 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-10 23:38:24,170 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-10 23:38:24,171 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 1,318,785
+2025-08-10 23:38:24,171 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 625,153
+2025-08-10 23:38:24,172 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 693,632
+2025-08-10 23:38:24,248 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-10 23:38:24,249 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-10 23:38:24,249 - __main__.HybridTrainer - INFO - Critic learning rate: 5e-05
+2025-08-10 23:38:24,249 - __main__.HybridTrainer - INFO - Loss weights: {'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-10 23:38:24,250 - __main__.HybridTrainer - INFO - Critic iterations per step: 2
+2025-08-10 23:38:24,250 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-10 23:38:24,251 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:38:24,251 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-10 23:38:24,252 - __main__.HybridTrainer - INFO - Training for 10 epochs | 937 steps/epoch
+2025-08-10 23:38:24,252 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:38:25,739 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: Generator_total_loss=1.6941 Reconstruction_loss=0.9484 Adversarial_loss=0.7157 Codebook_loss=0.4892 Commitment_loss=0.4892 W_dist=0.4968
+2025-08-10 23:38:35,157 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: Generator_total_loss=28.5894 Reconstruction_loss=0.9774 Adversarial_loss=27.4734 Codebook_loss=0.5580 Commitment_loss=0.5580 W_dist=48.8366
+2025-08-10 23:38:44,381 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: Generator_total_loss=34.4707 Reconstruction_loss=0.5650 Adversarial_loss=33.5972 Codebook_loss=0.4368 Commitment_loss=0.4368 W_dist=58.5661
+2025-08-10 23:38:54,219 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: Generator_total_loss=50.6363 Reconstruction_loss=0.4018 Adversarial_loss=49.9269 Codebook_loss=0.3547 Commitment_loss=0.3547 W_dist=86.0882
+2025-08-10 23:39:04,245 - __main__.HybridTrainer - INFO - Epoch 0 Step 400: Generator_total_loss=43.9093 Reconstruction_loss=0.3097 Adversarial_loss=43.1354 Codebook_loss=0.3869 Commitment_loss=0.3869 W_dist=85.7394
+2025-08-10 23:39:14,218 - __main__.HybridTrainer - INFO - Epoch 0 Step 500: Generator_total_loss=46.7217 Reconstruction_loss=0.4790 Adversarial_loss=45.5023 Codebook_loss=0.6097 Commitment_loss=0.6097 W_dist=91.2832
+2025-08-10 23:39:23,957 - __main__.HybridTrainer - INFO - Epoch 0 Step 600: Generator_total_loss=93.5681 Reconstruction_loss=0.7282 Adversarial_loss=92.8295 Codebook_loss=0.3693 Commitment_loss=0.3693 W_dist=171.3165
+2025-08-10 23:39:32,845 - __main__.HybridTrainer - INFO - Epoch 0 Step 700: Generator_total_loss=71.4874 Reconstruction_loss=0.8208 Adversarial_loss=70.2314 Codebook_loss=0.6280 Commitment_loss=0.6280 W_dist=162.5601
+2025-08-10 23:39:42,807 - __main__.HybridTrainer - INFO - Epoch 0 Step 800: Generator_total_loss=54.0689 Reconstruction_loss=0.4458 Adversarial_loss=52.9057 Codebook_loss=0.5816 Commitment_loss=0.5816 W_dist=189.3264
+2025-08-10 23:39:52,817 - __main__.HybridTrainer - INFO - Epoch 0 Step 900: Generator_total_loss=135.0996 Reconstruction_loss=0.4201 Adversarial_loss=134.1007 Codebook_loss=0.4995 Commitment_loss=0.4995 W_dist=288.7223
+2025-08-10 23:39:56,268 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:39:56,269 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 92.0s
+2025-08-10 23:39:56,269 - __main__.HybridTrainer - INFO - Generator_total_loss: 57.7141
+2025-08-10 23:39:56,270 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5311
+2025-08-10 23:39:56,270 - __main__.HybridTrainer - INFO - Adversarial_loss: 56.7262
+2025-08-10 23:39:56,270 - __main__.HybridTrainer - INFO - Codebook_loss: 0.4940
+2025-08-10 23:39:56,271 - __main__.HybridTrainer - INFO - Commitment_loss: 0.4940
+2025-08-10 23:39:56,271 - __main__.HybridTrainer - INFO - Wasserstein_distance: 122.9600
+2025-08-10 23:39:56,272 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:39:56,272 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-10 23:39:56,797 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: Generator_total_loss=167.9330 Reconstruction_loss=0.3722 Adversarial_loss=166.8959 Codebook_loss=0.5185 Commitment_loss=0.5185 W_dist=346.8237
+2025-08-10 23:40:06,806 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: Generator_total_loss=202.5094 Reconstruction_loss=0.4172 Adversarial_loss=201.4689 Codebook_loss=0.5202 Commitment_loss=0.5202 W_dist=418.2443
+2025-08-10 23:40:16,558 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: Generator_total_loss=229.9357 Reconstruction_loss=0.8959 Adversarial_loss=228.8729 Codebook_loss=0.5314 Commitment_loss=0.5314 W_dist=476.6422
+2025-08-10 23:40:25,424 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: Generator_total_loss=270.3109 Reconstruction_loss=1.5455 Adversarial_loss=269.3853 Codebook_loss=0.4628 Commitment_loss=0.4628 W_dist=553.8234
+2025-08-10 23:40:35,420 - __main__.HybridTrainer - INFO - Epoch 1 Step 400: Generator_total_loss=299.3646 Reconstruction_loss=1.8165 Adversarial_loss=298.4878 Codebook_loss=0.4384 Commitment_loss=0.4384 W_dist=615.6467
+2025-08-10 23:40:45,417 - __main__.HybridTrainer - INFO - Epoch 1 Step 500: Generator_total_loss=309.5979 Reconstruction_loss=0.3692 Adversarial_loss=308.5630 Codebook_loss=0.5174 Commitment_loss=0.5174 W_dist=629.4771
+2025-08-10 23:40:55,354 - __main__.HybridTrainer - INFO - Epoch 1 Step 600: Generator_total_loss=312.3324 Reconstruction_loss=0.4301 Adversarial_loss=311.3826 Codebook_loss=0.4749 Commitment_loss=0.4749 W_dist=614.6704
+2025-08-10 23:41:05,154 - __main__.HybridTrainer - INFO - Epoch 1 Step 700: Generator_total_loss=275.5366 Reconstruction_loss=0.5884 Adversarial_loss=274.6382 Codebook_loss=0.4492 Commitment_loss=0.4492 W_dist=585.3228
+2025-08-10 23:41:13,780 - __main__.HybridTrainer - INFO - Epoch 1 Step 800: Generator_total_loss=340.4856 Reconstruction_loss=0.5453 Adversarial_loss=339.1505 Codebook_loss=0.6675 Commitment_loss=0.6675 W_dist=676.9380
+2025-08-10 23:41:23,491 - __main__.HybridTrainer - INFO - Epoch 1 Step 900: Generator_total_loss=334.8348 Reconstruction_loss=0.3950 Adversarial_loss=333.8059 Codebook_loss=0.5144 Commitment_loss=0.5144 W_dist=660.2375
+2025-08-10 23:41:27,114 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:41:27,117 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 90.4s
+2025-08-10 23:41:27,118 - __main__.HybridTrainer - INFO - Generator_total_loss: 273.2974
+2025-08-10 23:41:27,118 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.7989
+2025-08-10 23:41:27,119 - __main__.HybridTrainer - INFO - Adversarial_loss: 272.2915
+2025-08-10 23:41:27,119 - __main__.HybridTrainer - INFO - Codebook_loss: 0.5030
+2025-08-10 23:41:27,120 - __main__.HybridTrainer - INFO - Commitment_loss: 0.5030
+2025-08-10 23:41:27,120 - __main__.HybridTrainer - INFO - Wasserstein_distance: 546.7861
+2025-08-10 23:41:27,120 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:41:27,121 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 1...
+2025-08-10 23:41:27,679 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: Generator_total_loss=353.7931 Reconstruction_loss=0.5862 Adversarial_loss=352.4147 Codebook_loss=0.6892 Commitment_loss=0.6892 W_dist=690.8916
+2025-08-10 23:41:37,604 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: Generator_total_loss=388.8834 Reconstruction_loss=0.4490 Adversarial_loss=387.7586 Codebook_loss=0.5624 Commitment_loss=0.5624 W_dist=743.3389
+2025-08-10 23:41:47,337 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: Generator_total_loss=359.3575 Reconstruction_loss=0.4810 Adversarial_loss=357.8109 Codebook_loss=0.7733 Commitment_loss=0.7733 W_dist=701.6052
+2025-08-10 23:41:57,220 - __main__.HybridTrainer - INFO - Epoch 2 Step 300: Generator_total_loss=371.7717 Reconstruction_loss=0.4519 Adversarial_loss=370.3182 Codebook_loss=0.7267 Commitment_loss=0.7267 W_dist=686.8780
+2025-08-10 23:42:05,857 - __main__.HybridTrainer - INFO - Epoch 2 Step 400: Generator_total_loss=461.6503 Reconstruction_loss=0.4408 Adversarial_loss=460.3885 Codebook_loss=0.6309 Commitment_loss=0.6309 W_dist=526.7669
+2025-08-10 23:42:15,707 - __main__.HybridTrainer - INFO - Epoch 2 Step 500: Generator_total_loss=358.2198 Reconstruction_loss=0.4145 Adversarial_loss=356.9868 Codebook_loss=0.6165 Commitment_loss=0.6165 W_dist=709.0721
+2025-08-10 23:42:25,605 - __main__.HybridTrainer - INFO - Epoch 2 Step 600: Generator_total_loss=314.8851 Reconstruction_loss=0.3957 Adversarial_loss=313.6820 Codebook_loss=0.6015 Commitment_loss=0.6015 W_dist=758.2570
+2025-08-10 23:42:35,616 - __main__.HybridTrainer - INFO - Epoch 2 Step 700: Generator_total_loss=213.6719 Reconstruction_loss=0.4050 Adversarial_loss=212.6525 Codebook_loss=0.5097 Commitment_loss=0.5097 W_dist=661.6839
+2025-08-10 23:42:45,412 - __main__.HybridTrainer - INFO - Epoch 2 Step 800: Generator_total_loss=298.5195 Reconstruction_loss=0.3865 Adversarial_loss=297.2771 Codebook_loss=0.6212 Commitment_loss=0.6212 W_dist=523.0043
+2025-08-10 23:42:55,267 - __main__.HybridTrainer - INFO - Epoch 2 Step 900: Generator_total_loss=236.2223 Reconstruction_loss=0.4508 Adversarial_loss=234.4727 Codebook_loss=0.8748 Commitment_loss=0.8748 W_dist=544.8620
+2025-08-10 23:42:57,910 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:42:57,911 - __main__.HybridTrainer - INFO - EPOCH 2 COMPLETED in 90.4s
+2025-08-10 23:42:57,912 - __main__.HybridTrainer - INFO - Generator_total_loss: 307.2372
+2025-08-10 23:42:57,913 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4486
+2025-08-10 23:42:57,913 - __main__.HybridTrainer - INFO - Adversarial_loss: 305.9289
+2025-08-10 23:42:57,914 - __main__.HybridTrainer - INFO - Codebook_loss: 0.6541
+2025-08-10 23:42:57,914 - __main__.HybridTrainer - INFO - Commitment_loss: 0.6541
+2025-08-10 23:42:57,915 - __main__.HybridTrainer - INFO - Wasserstein_distance: 670.0492
+2025-08-10 23:42:57,915 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:42:57,916 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 2...
+2025-08-10 23:42:58,408 - __main__.HybridTrainer - INFO - Epoch 3 Step 0: Generator_total_loss=392.5381 Reconstruction_loss=0.4030 Adversarial_loss=391.1772 Codebook_loss=0.6804 Commitment_loss=0.6804 W_dist=831.0551
+2025-08-10 23:43:05,543 - __main__.HybridTrainer - INFO - Epoch 3 Step 100: Generator_total_loss=94.9479 Reconstruction_loss=0.4270 Adversarial_loss=93.5743 Codebook_loss=0.6868 Commitment_loss=0.6868 W_dist=702.8430
+2025-08-10 23:43:12,391 - __main__.HybridTrainer - INFO - Epoch 3 Step 200: Generator_total_loss=235.6519 Reconstruction_loss=0.4392 Adversarial_loss=234.3799 Codebook_loss=0.6360 Commitment_loss=0.6360 W_dist=696.8788
+2025-08-10 23:43:19,189 - __main__.HybridTrainer - INFO - Epoch 3 Step 300: Generator_total_loss=296.1160 Reconstruction_loss=0.4073 Adversarial_loss=294.8969 Codebook_loss=0.6096 Commitment_loss=0.6096 W_dist=652.7261
+2025-08-10 23:43:26,050 - __main__.HybridTrainer - INFO - Epoch 3 Step 400: Generator_total_loss=231.8480 Reconstruction_loss=0.4231 Adversarial_loss=230.5309 Codebook_loss=0.6585 Commitment_loss=0.6585 W_dist=682.1314
+2025-08-10 23:43:32,812 - __main__.HybridTrainer - INFO - Epoch 3 Step 500: Generator_total_loss=158.1377 Reconstruction_loss=0.4585 Adversarial_loss=156.6880 Codebook_loss=0.7248 Commitment_loss=0.7248 W_dist=690.8484
+2025-08-10 23:43:39,614 - __main__.HybridTrainer - INFO - Epoch 3 Step 600: Generator_total_loss=646.1807 Reconstruction_loss=0.4820 Adversarial_loss=644.8639 Codebook_loss=0.6584 Commitment_loss=0.6584 W_dist=890.7251
+2025-08-10 23:43:46,234 - __main__.HybridTrainer - INFO - Epoch 3 Step 700: Generator_total_loss=125.7357 Reconstruction_loss=0.4156 Adversarial_loss=124.3101 Codebook_loss=0.7128 Commitment_loss=0.7128 W_dist=786.2914
+2025-08-10 23:43:52,893 - __main__.HybridTrainer - INFO - Epoch 3 Step 800: Generator_total_loss=75.9366 Reconstruction_loss=0.4510 Adversarial_loss=74.6712 Codebook_loss=0.6327 Commitment_loss=0.6327 W_dist=811.7406
+2025-08-10 23:43:59,814 - __main__.HybridTrainer - INFO - Epoch 3 Step 900: Generator_total_loss=97.3746 Reconstruction_loss=0.4256 Adversarial_loss=95.9310 Codebook_loss=0.7218 Commitment_loss=0.7218 W_dist=755.1269
+2025-08-10 23:44:02,306 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:44:02,307 - __main__.HybridTrainer - INFO - EPOCH 3 COMPLETED in 64.0s
+2025-08-10 23:44:02,307 - __main__.HybridTrainer - INFO - Generator_total_loss: 243.8793
+2025-08-10 23:44:02,308 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4289
+2025-08-10 23:44:02,308 - __main__.HybridTrainer - INFO - Adversarial_loss: 242.5483
+2025-08-10 23:44:02,309 - __main__.HybridTrainer - INFO - Codebook_loss: 0.6655
+2025-08-10 23:44:02,309 - __main__.HybridTrainer - INFO - Commitment_loss: 0.6655
+2025-08-10 23:44:02,310 - __main__.HybridTrainer - INFO - Wasserstein_distance: 738.9741
+2025-08-10 23:44:02,310 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:44:02,311 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 3...
+2025-08-10 23:44:02,811 - __main__.HybridTrainer - INFO - Epoch 4 Step 0: Generator_total_loss=279.5179 Reconstruction_loss=0.4278 Adversarial_loss=278.1413 Codebook_loss=0.6883 Commitment_loss=0.6883 W_dist=862.6152
+2025-08-10 23:44:09,555 - __main__.HybridTrainer - INFO - Epoch 4 Step 100: Generator_total_loss=811.5844 Reconstruction_loss=0.4050 Adversarial_loss=810.1683 Codebook_loss=0.7080 Commitment_loss=0.7080 W_dist=683.3528
+2025-08-10 23:44:16,314 - __main__.HybridTrainer - INFO - Epoch 4 Step 200: Generator_total_loss=199.0402 Reconstruction_loss=0.4727 Adversarial_loss=197.6077 Codebook_loss=0.7163 Commitment_loss=0.7163 W_dist=870.5678
+2025-08-10 23:44:23,118 - __main__.HybridTrainer - INFO - Epoch 4 Step 300: Generator_total_loss=179.5452 Reconstruction_loss=0.4412 Adversarial_loss=178.1071 Codebook_loss=0.7190 Commitment_loss=0.7190 W_dist=978.0913
+2025-08-10 23:44:32,327 - __main__.HybridTrainer - INFO - Epoch 4 Step 400: Generator_total_loss=385.8478 Reconstruction_loss=0.4501 Adversarial_loss=384.3529 Codebook_loss=0.7474 Commitment_loss=0.7474 W_dist=998.5897
+2025-08-10 23:44:42,367 - __main__.HybridTrainer - INFO - Epoch 4 Step 500: Generator_total_loss=212.4142 Reconstruction_loss=0.4176 Adversarial_loss=210.8296 Codebook_loss=0.7923 Commitment_loss=0.7923 W_dist=1085.7083
+2025-08-10 23:44:52,402 - __main__.HybridTrainer - INFO - Epoch 4 Step 600: Generator_total_loss=206.5887 Reconstruction_loss=0.4307 Adversarial_loss=204.9721 Codebook_loss=0.8083 Commitment_loss=0.8083 W_dist=1018.7437
+2025-08-10 23:45:02,412 - __main__.HybridTrainer - INFO - Epoch 4 Step 700: Generator_total_loss=377.0806 Reconstruction_loss=0.4211 Adversarial_loss=375.5563 Codebook_loss=0.7622 Commitment_loss=0.7622 W_dist=1234.3444
+2025-08-10 23:45:12,116 - __main__.HybridTrainer - INFO - Epoch 4 Step 800: Generator_total_loss=868.2646 Reconstruction_loss=0.4885 Adversarial_loss=866.5412 Codebook_loss=0.8617 Commitment_loss=0.8617 W_dist=855.8493
+2025-08-10 23:45:20,937 - __main__.HybridTrainer - INFO - Epoch 4 Step 900: Generator_total_loss=790.0820 Reconstruction_loss=0.4593 Adversarial_loss=788.4785 Codebook_loss=0.8018 Commitment_loss=0.8018 W_dist=1310.1021
+2025-08-10 23:45:24,345 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:45:24,346 - __main__.HybridTrainer - INFO - EPOCH 4 COMPLETED in 81.6s
+2025-08-10 23:45:24,348 - __main__.HybridTrainer - INFO - Generator_total_loss: 382.0808
+2025-08-10 23:45:24,349 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4462
+2025-08-10 23:45:24,350 - __main__.HybridTrainer - INFO - Adversarial_loss: 380.5472
+2025-08-10 23:45:24,350 - __main__.HybridTrainer - INFO - Codebook_loss: 0.7668
+2025-08-10 23:45:24,351 - __main__.HybridTrainer - INFO - Commitment_loss: 0.7668
+2025-08-10 23:45:24,351 - __main__.HybridTrainer - INFO - Wasserstein_distance: 1000.3402
+2025-08-10 23:45:24,352 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:45:24,352 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 4...
+2025-08-10 23:45:25,108 - __main__.HybridTrainer - INFO - Epoch 5 Step 0: Generator_total_loss=966.7396 Reconstruction_loss=0.4645 Adversarial_loss=965.1262 Codebook_loss=0.8067 Commitment_loss=0.8067 W_dist=1059.3254
+2025-08-10 23:45:34,774 - __main__.HybridTrainer - INFO - Epoch 5 Step 100: Generator_total_loss=101.2743 Reconstruction_loss=0.4374 Adversarial_loss=99.6251 Codebook_loss=0.8246 Commitment_loss=0.8246 W_dist=1251.9235
+2025-08-10 23:45:44,539 - __main__.HybridTrainer - INFO - Epoch 5 Step 200: Generator_total_loss=3.9544 Reconstruction_loss=0.4699 Adversarial_loss=2.1975 Codebook_loss=0.8785 Commitment_loss=0.8785 W_dist=1169.2762
+2025-08-10 23:45:54,469 - __main__.HybridTrainer - INFO - Epoch 5 Step 300: Generator_total_loss=1176.7461 Reconstruction_loss=0.4772 Adversarial_loss=1175.0332 Codebook_loss=0.8564 Commitment_loss=0.8564 W_dist=1151.7455
+2025-08-10 23:46:04,440 - __main__.HybridTrainer - INFO - Epoch 5 Step 400: Generator_total_loss=982.9862 Reconstruction_loss=0.4328 Adversarial_loss=981.3136 Codebook_loss=0.8363 Commitment_loss=0.8363 W_dist=1303.3928
+2025-08-10 23:46:14,318 - __main__.HybridTrainer - INFO - Epoch 5 Step 500: Generator_total_loss=1091.8002 Reconstruction_loss=0.4607 Adversarial_loss=1090.1061 Codebook_loss=0.8470 Commitment_loss=0.8470 W_dist=1515.8184
+2025-08-10 23:46:23,182 - __main__.HybridTrainer - INFO - Epoch 5 Step 600: Generator_total_loss=-226.6277 Reconstruction_loss=0.4385 Adversarial_loss=-228.3453 Codebook_loss=0.8588 Commitment_loss=0.8588 W_dist=986.9366
+2025-08-10 23:46:33,129 - __main__.HybridTrainer - INFO - Epoch 5 Step 700: Generator_total_loss=-35.6798 Reconstruction_loss=0.4223 Adversarial_loss=-37.4387 Codebook_loss=0.8795 Commitment_loss=0.8795 W_dist=1210.5599
+2025-08-10 23:46:43,064 - __main__.HybridTrainer - INFO - Epoch 5 Step 800: Generator_total_loss=1063.6686 Reconstruction_loss=0.4344 Adversarial_loss=1061.9308 Codebook_loss=0.8689 Commitment_loss=0.8689 W_dist=1458.6219
+2025-08-10 23:46:53,211 - __main__.HybridTrainer - INFO - Epoch 5 Step 900: Generator_total_loss=1316.8308 Reconstruction_loss=0.4657 Adversarial_loss=1315.0425 Codebook_loss=0.8941 Commitment_loss=0.8941 W_dist=1696.1535
+2025-08-10 23:46:56,758 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:46:56,759 - __main__.HybridTrainer - INFO - EPOCH 5 COMPLETED in 91.8s
+2025-08-10 23:46:56,761 - __main__.HybridTrainer - INFO - Generator_total_loss: 507.9469
+2025-08-10 23:46:56,762 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4437
+2025-08-10 23:46:56,763 - __main__.HybridTrainer - INFO - Adversarial_loss: 506.2369
+2025-08-10 23:46:56,763 - __main__.HybridTrainer - INFO - Codebook_loss: 0.8550
+2025-08-10 23:46:56,764 - __main__.HybridTrainer - INFO - Commitment_loss: 0.8550
+2025-08-10 23:46:56,765 - __main__.HybridTrainer - INFO - Wasserstein_distance: 1303.4635
+2025-08-10 23:46:56,765 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:46:56,766 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 5...
+2025-08-10 23:46:57,260 - __main__.HybridTrainer - INFO - Epoch 6 Step 0: Generator_total_loss=1274.7534 Reconstruction_loss=0.4256 Adversarial_loss=1273.0132 Codebook_loss=0.8701 Commitment_loss=0.8701 W_dist=1655.2814
+2025-08-10 23:47:07,119 - __main__.HybridTrainer - INFO - Epoch 6 Step 100: Generator_total_loss=1174.0044 Reconstruction_loss=0.4455 Adversarial_loss=1172.1638 Codebook_loss=0.9202 Commitment_loss=0.9202 W_dist=1540.2408
+2025-08-10 23:47:15,974 - __main__.HybridTrainer - INFO - Epoch 6 Step 200: Generator_total_loss=1230.8954 Reconstruction_loss=0.4481 Adversarial_loss=1229.1366 Codebook_loss=0.8793 Commitment_loss=0.8793 W_dist=1666.6794
+2025-08-10 23:47:25,935 - __main__.HybridTrainer - INFO - Epoch 6 Step 300: Generator_total_loss=1309.2390 Reconstruction_loss=0.4133 Adversarial_loss=1307.4973 Codebook_loss=0.8709 Commitment_loss=0.8709 W_dist=1716.4843
+2025-08-10 23:47:35,867 - __main__.HybridTrainer - INFO - Epoch 6 Step 400: Generator_total_loss=-563.4539 Reconstruction_loss=0.4138 Adversarial_loss=-565.2770 Codebook_loss=0.9116 Commitment_loss=0.9116 W_dist=1613.3636
+2025-08-10 23:47:45,913 - __main__.HybridTrainer - INFO - Epoch 6 Step 500: Generator_total_loss=377.1344 Reconstruction_loss=0.3988 Adversarial_loss=375.4518 Codebook_loss=0.8413 Commitment_loss=0.8413 W_dist=1587.1492
+2025-08-10 23:47:55,856 - __main__.HybridTrainer - INFO - Epoch 6 Step 600: Generator_total_loss=720.7115 Reconstruction_loss=0.4291 Adversarial_loss=718.9449 Codebook_loss=0.8833 Commitment_loss=0.8833 W_dist=1900.2227
+2025-08-10 23:48:05,765 - __main__.HybridTrainer - INFO - Epoch 6 Step 700: Generator_total_loss=1577.7219 Reconstruction_loss=0.4093 Adversarial_loss=1575.9758 Codebook_loss=0.8731 Commitment_loss=0.8731 W_dist=1855.1554
+2025-08-10 23:48:14,628 - __main__.HybridTrainer - INFO - Epoch 6 Step 800: Generator_total_loss=554.0638 Reconstruction_loss=0.4117 Adversarial_loss=552.2745 Codebook_loss=0.8947 Commitment_loss=0.8947 W_dist=1929.4894
+2025-08-10 23:48:24,668 - __main__.HybridTrainer - INFO - Epoch 6 Step 900: Generator_total_loss=1741.1143 Reconstruction_loss=0.4632 Adversarial_loss=1739.2769 Codebook_loss=0.9188 Commitment_loss=0.9188 W_dist=2101.9454
+2025-08-10 23:48:28,233 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:48:28,235 - __main__.HybridTrainer - INFO - EPOCH 6 COMPLETED in 91.0s
+2025-08-10 23:48:28,236 - __main__.HybridTrainer - INFO - Generator_total_loss: 1014.0807
+2025-08-10 23:48:28,237 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4309
+2025-08-10 23:48:28,238 - __main__.HybridTrainer - INFO - Adversarial_loss: 1012.3030
+2025-08-10 23:48:28,239 - __main__.HybridTrainer - INFO - Codebook_loss: 0.8889
+2025-08-10 23:48:28,239 - __main__.HybridTrainer - INFO - Commitment_loss: 0.8889
+2025-08-10 23:48:28,240 - __main__.HybridTrainer - INFO - Wasserstein_distance: 1736.0882
+2025-08-10 23:48:28,240 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:48:28,240 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 6...
+2025-08-10 23:48:28,731 - __main__.HybridTrainer - INFO - Epoch 7 Step 0: Generator_total_loss=1610.9254 Reconstruction_loss=0.4279 Adversarial_loss=1609.1544 Codebook_loss=0.8855 Commitment_loss=0.8855 W_dist=1907.2405
+2025-08-10 23:48:38,569 - __main__.HybridTrainer - INFO - Epoch 7 Step 100: Generator_total_loss=1593.3551 Reconstruction_loss=0.4577 Adversarial_loss=1591.5348 Codebook_loss=0.9102 Commitment_loss=0.9102 W_dist=2143.0502
+2025-08-10 23:48:48,315 - __main__.HybridTrainer - INFO - Epoch 7 Step 200: Generator_total_loss=466.7729 Reconstruction_loss=0.3948 Adversarial_loss=464.9874 Codebook_loss=0.8927 Commitment_loss=0.8927 W_dist=1917.2965
+2025-08-10 23:48:58,154 - __main__.HybridTrainer - INFO - Epoch 7 Step 300: Generator_total_loss=1656.8235 Reconstruction_loss=0.4424 Adversarial_loss=1655.0771 Codebook_loss=0.8732 Commitment_loss=0.8732 W_dist=2075.3886
+2025-08-10 23:49:07,142 - __main__.HybridTrainer - INFO - Epoch 7 Step 400: Generator_total_loss=1666.7844 Reconstruction_loss=0.4488 Adversarial_loss=1664.9595 Codebook_loss=0.9125 Commitment_loss=0.9125 W_dist=2222.0762
+2025-08-10 23:49:17,036 - __main__.HybridTrainer - INFO - Epoch 7 Step 500: Generator_total_loss=118.4277 Reconstruction_loss=0.4398 Adversarial_loss=116.5974 Codebook_loss=0.9151 Commitment_loss=0.9151 W_dist=1860.8889
+2025-08-10 23:49:26,997 - __main__.HybridTrainer - INFO - Epoch 7 Step 600: Generator_total_loss=-12.6893 Reconstruction_loss=0.4352 Adversarial_loss=-14.5985 Codebook_loss=0.9546 Commitment_loss=0.9546 W_dist=1547.8646
+2025-08-10 23:49:36,747 - __main__.HybridTrainer - INFO - Epoch 7 Step 700: Generator_total_loss=1537.3827 Reconstruction_loss=0.4546 Adversarial_loss=1535.4696 Codebook_loss=0.9565 Commitment_loss=0.9565 W_dist=1992.5076
+2025-08-10 23:49:46,696 - __main__.HybridTrainer - INFO - Epoch 7 Step 800: Generator_total_loss=1447.3638 Reconstruction_loss=0.4568 Adversarial_loss=1445.3918 Codebook_loss=0.9859 Commitment_loss=0.9859 W_dist=2189.7814
+2025-08-10 23:49:56,742 - __main__.HybridTrainer - INFO - Epoch 7 Step 900: Generator_total_loss=2075.0803 Reconstruction_loss=0.4346 Adversarial_loss=2073.0647 Codebook_loss=1.0079 Commitment_loss=1.0079 W_dist=2694.6692
+2025-08-10 23:50:00,153 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:50:00,153 - __main__.HybridTrainer - INFO - EPOCH 7 COMPLETED in 91.5s
+2025-08-10 23:50:00,155 - __main__.HybridTrainer - INFO - Generator_total_loss: 1171.7245
+2025-08-10 23:50:00,156 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4385
+2025-08-10 23:50:00,157 - __main__.HybridTrainer - INFO - Adversarial_loss: 1169.8465
+2025-08-10 23:50:00,158 - __main__.HybridTrainer - INFO - Codebook_loss: 0.9390
+2025-08-10 23:50:00,159 - __main__.HybridTrainer - INFO - Commitment_loss: 0.9390
+2025-08-10 23:50:00,159 - __main__.HybridTrainer - INFO - Wasserstein_distance: 2083.1010
+2025-08-10 23:50:00,160 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:50:00,160 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 7...
+2025-08-10 23:50:00,650 - __main__.HybridTrainer - INFO - Epoch 8 Step 0: Generator_total_loss=1869.1743 Reconstruction_loss=0.4786 Adversarial_loss=1867.2595 Codebook_loss=0.9574 Commitment_loss=0.9574 W_dist=2000.1187
+2025-08-10 23:50:09,717 - __main__.HybridTrainer - INFO - Epoch 8 Step 100: Generator_total_loss=1763.5050 Reconstruction_loss=0.4604 Adversarial_loss=1761.5526 Codebook_loss=0.9762 Commitment_loss=0.9762 W_dist=1882.1999
+2025-08-10 23:50:19,524 - __main__.HybridTrainer - INFO - Epoch 8 Step 200: Generator_total_loss=1440.1887 Reconstruction_loss=0.4193 Adversarial_loss=1438.2197 Codebook_loss=0.9845 Commitment_loss=0.9845 W_dist=2131.1631
+2025-08-10 23:50:29,279 - __main__.HybridTrainer - INFO - Epoch 8 Step 300: Generator_total_loss=1513.6674 Reconstruction_loss=0.4407 Adversarial_loss=1511.6840 Codebook_loss=0.9917 Commitment_loss=0.9917 W_dist=2609.2418
+2025-08-10 23:50:39,159 - __main__.HybridTrainer - INFO - Epoch 8 Step 400: Generator_total_loss=388.5360 Reconstruction_loss=0.4494 Adversarial_loss=386.5203 Codebook_loss=1.0079 Commitment_loss=1.0079 W_dist=2633.5106
+2025-08-10 23:50:49,166 - __main__.HybridTrainer - INFO - Epoch 8 Step 500: Generator_total_loss=1784.7603 Reconstruction_loss=0.4306 Adversarial_loss=1782.7219 Codebook_loss=1.0192 Commitment_loss=1.0192 W_dist=2492.1586
+2025-08-10 23:50:58,151 - __main__.HybridTrainer - INFO - Epoch 8 Step 600: Generator_total_loss=2208.4385 Reconstruction_loss=0.4435 Adversarial_loss=2206.4238 Codebook_loss=1.0073 Commitment_loss=1.0073 W_dist=2027.8016
+2025-08-10 23:51:07,875 - __main__.HybridTrainer - INFO - Epoch 8 Step 700: Generator_total_loss=764.9232 Reconstruction_loss=0.4348 Adversarial_loss=762.9091 Codebook_loss=1.0071 Commitment_loss=1.0071 W_dist=2820.2521
+2025-08-10 23:51:17,898 - __main__.HybridTrainer - INFO - Epoch 8 Step 800: Generator_total_loss=213.0943 Reconstruction_loss=0.4314 Adversarial_loss=210.9780 Codebook_loss=1.0581 Commitment_loss=1.0581 W_dist=3289.1564
+2025-08-10 23:51:27,599 - __main__.HybridTrainer - INFO - Epoch 8 Step 900: Generator_total_loss=2093.3335 Reconstruction_loss=0.4402 Adversarial_loss=2091.2168 Codebook_loss=1.0583 Commitment_loss=1.0583 W_dist=2977.5232
+2025-08-10 23:51:31,243 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:51:31,245 - __main__.HybridTrainer - INFO - EPOCH 8 COMPLETED in 90.7s
+2025-08-10 23:51:31,246 - __main__.HybridTrainer - INFO - Generator_total_loss: 1191.5585
+2025-08-10 23:51:31,247 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4314
+2025-08-10 23:51:31,248 - __main__.HybridTrainer - INFO - Adversarial_loss: 1189.5438
+2025-08-10 23:51:31,249 - __main__.HybridTrainer - INFO - Codebook_loss: 1.0074
+2025-08-10 23:51:31,250 - __main__.HybridTrainer - INFO - Commitment_loss: 1.0074
+2025-08-10 23:51:31,250 - __main__.HybridTrainer - INFO - Wasserstein_distance: 2510.5076
+2025-08-10 23:51:31,251 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:51:31,251 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 8...
+2025-08-10 23:51:31,822 - __main__.HybridTrainer - INFO - Epoch 9 Step 0: Generator_total_loss=2184.3535 Reconstruction_loss=0.4427 Adversarial_loss=2182.3003 Codebook_loss=1.0267 Commitment_loss=1.0267 W_dist=2898.1191
+2025-08-10 23:51:41,647 - __main__.HybridTrainer - INFO - Epoch 9 Step 100: Generator_total_loss=2400.5737 Reconstruction_loss=0.4247 Adversarial_loss=2398.4824 Codebook_loss=1.0456 Commitment_loss=1.0456 W_dist=2815.5520
+2025-08-10 23:51:51,520 - __main__.HybridTrainer - INFO - Epoch 9 Step 200: Generator_total_loss=1782.1293 Reconstruction_loss=0.4249 Adversarial_loss=1780.0084 Codebook_loss=1.0604 Commitment_loss=1.0604 W_dist=3146.0273
+2025-08-10 23:52:00,376 - __main__.HybridTrainer - INFO - Epoch 9 Step 300: Generator_total_loss=-272.6918 Reconstruction_loss=0.4379 Adversarial_loss=-274.7256 Codebook_loss=1.0169 Commitment_loss=1.0169 W_dist=2302.4262
+2025-08-10 23:52:10,318 - __main__.HybridTrainer - INFO - Epoch 9 Step 400: Generator_total_loss=2175.5845 Reconstruction_loss=0.4615 Adversarial_loss=2173.3726 Codebook_loss=1.1060 Commitment_loss=1.1060 W_dist=3229.6202
+2025-08-10 23:52:20,037 - __main__.HybridTrainer - INFO - Epoch 9 Step 500: Generator_total_loss=1954.8647 Reconstruction_loss=0.4561 Adversarial_loss=1952.6736 Codebook_loss=1.0956 Commitment_loss=1.0956 W_dist=2745.4573
+2025-08-10 23:52:29,958 - __main__.HybridTrainer - INFO - Epoch 9 Step 600: Generator_total_loss=707.2552 Reconstruction_loss=0.4340 Adversarial_loss=705.0634 Codebook_loss=1.0960 Commitment_loss=1.0960 W_dist=2852.5768
+2025-08-10 23:52:39,801 - __main__.HybridTrainer - INFO - Epoch 9 Step 700: Generator_total_loss=2238.0444 Reconstruction_loss=0.4708 Adversarial_loss=2235.8916 Codebook_loss=1.0765 Commitment_loss=1.0765 W_dist=3672.7075
+2025-08-10 23:52:49,333 - __main__.HybridTrainer - INFO - Epoch 9 Step 800: Generator_total_loss=1790.9902 Reconstruction_loss=0.4167 Adversarial_loss=1788.9158 Codebook_loss=1.0373 Commitment_loss=1.0373 W_dist=3263.3928
+2025-08-10 23:52:58,358 - __main__.HybridTrainer - INFO - Epoch 9 Step 900: Generator_total_loss=2507.9365 Reconstruction_loss=0.4303 Adversarial_loss=2505.8032 Codebook_loss=1.0666 Commitment_loss=1.0666 W_dist=2924.5636
+2025-08-10 23:53:01,810 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:53:01,811 - __main__.HybridTrainer - INFO - EPOCH 9 COMPLETED in 90.1s
+2025-08-10 23:53:01,812 - __main__.HybridTrainer - INFO - Generator_total_loss: 1544.2268
+2025-08-10 23:53:01,812 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.4389
+2025-08-10 23:53:01,813 - __main__.HybridTrainer - INFO - Adversarial_loss: 1542.0676
+2025-08-10 23:53:01,813 - __main__.HybridTrainer - INFO - Codebook_loss: 1.0796
+2025-08-10 23:53:01,814 - __main__.HybridTrainer - INFO - Commitment_loss: 1.0796
+2025-08-10 23:53:01,814 - __main__.HybridTrainer - INFO - Wasserstein_distance: 3007.4429
+2025-08-10 23:53:01,815 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-10 23:53:01,815 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 9...
+2025-08-10 23:53:02,444 - __main__.HybridTrainer - INFO - TRAINING COMPLETED in 14.6 minutes!
+2025-08-10 23:53:03,185 - HybridVQVAE_WGAN - INFO - To train on MNIST, run:
+2025-08-10 23:53:03,189 - HybridVQVAE_WGAN - INFO -    mnist_trainer.train(mnist_dataloader, num_epochs=10)

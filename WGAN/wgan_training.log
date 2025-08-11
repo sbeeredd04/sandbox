@@ -1,0 +1,740 @@
+2025-08-11 00:03:50,135 - WGAN - INFO - Using device: cuda
+2025-08-11 00:03:50,137 - WGAN - INFO - ==================================================
+2025-08-11 00:03:50,138 - WGAN - INFO - CUDA DEVICE INFORMATION
+2025-08-11 00:03:50,139 - WGAN - INFO - ==================================================
+2025-08-11 00:03:50,291 - WGAN - INFO - Number of CUDA devices: 10
+2025-08-11 00:03:50,293 - WGAN - INFO - Current device index: 0
+2025-08-11 00:03:50,294 - WGAN - INFO - Device name: Quadro RTX 6000
+2025-08-11 00:03:50,295 - WGAN - INFO - MEMORY INFORMATION:
+2025-08-11 00:03:50,296 - WGAN - INFO - Total GPU memory: 22.16 GB
+2025-08-11 00:03:50,296 - WGAN - INFO - Allocated memory: 0.00 GB
+2025-08-11 00:03:50,297 - WGAN - INFO - Reserved memory: 0.00 GB
+2025-08-11 00:03:50,298 - WGAN - INFO - Free memory: 22.16 GB
+2025-08-11 00:03:50,299 - WGAN - INFO - ==================================================
+2025-08-11 00:03:50,318 - WGAN - INFO - DataSetLoader class created successfully!
+2025-08-11 00:03:50,340 - WGAN - INFO - Testing Critic:
+2025-08-11 00:03:50,391 - __main__.Critic - INFO - Critic initialized:
+2025-08-11 00:03:50,392 - __main__.Critic - INFO -   Input channels: 1
+2025-08-11 00:03:50,393 - __main__.Critic - INFO -   Hidden dim: 64
+2025-08-11 00:03:50,394 - __main__.Critic - INFO -   Image size: [64, 64]
+2025-08-11 00:03:50,395 - __main__.Critic - INFO -   Final spatial size: 4x4
+2025-08-11 00:03:50,418 - WGAN - INFO - Input shape: torch.Size([4, 1, 64, 64])
+2025-08-11 00:03:50,419 - WGAN - INFO - Output shape: torch.Size([4])
+2025-08-11 00:03:50,422 - WGAN - INFO - Note: Output values are unbounded (not probabilities)!
+2025-08-11 00:03:50,437 - WGAN - INFO - Testing Generator:
+2025-08-11 00:03:50,468 - __main__.Generator - INFO - Generator initialized:
+2025-08-11 00:03:50,469 - __main__.Generator - INFO -   Latent dim: 100
+2025-08-11 00:03:50,470 - __main__.Generator - INFO -   Hidden dim: 64
+2025-08-11 00:03:50,470 - __main__.Generator - INFO -   Output channels: 1
+2025-08-11 00:03:50,471 - __main__.Generator - INFO -   Output size: [64, 64]
+2025-08-11 00:03:50,471 - __main__.Generator - INFO -   Starting size: 4x4
+2025-08-11 00:03:50,532 - WGAN - INFO - 2D Noise shape: torch.Size([4, 100])
+2025-08-11 00:03:50,533 - WGAN - INFO - Generated image shape: torch.Size([4, 1, 64, 64])
+2025-08-11 00:03:50,535 - WGAN - INFO - Output range: [-0.802, 0.764]
+2025-08-11 00:03:50,542 - WGAN - INFO - 4D Noise shape: torch.Size([4, 100, 1, 1])
+2025-08-11 00:03:50,543 - WGAN - INFO - Generated image shape: torch.Size([4, 1, 64, 64])
+2025-08-11 00:03:50,544 - WGAN - INFO - Output range: [-0.776, 0.748]
+2025-08-11 00:03:50,569 - WGAN - INFO - WGAN class created successfully!
+2025-08-11 00:03:50,592 - WGAN - INFO - WGANLogger class created successfully!
+2025-08-11 00:03:50,604 - WGAN - INFO - Training function created successfully!
+2025-08-11 00:03:50,614 - WGAN.MNIST_Example - INFO - ================================================================================
+2025-08-11 00:03:50,615 - WGAN.MNIST_Example - INFO - WGAN TRAINING ON MNIST DATASET
+2025-08-11 00:03:50,615 - WGAN.MNIST_Example - INFO - ================================================================================
+2025-08-11 00:03:50,616 - __main__.DataSetLoader - INFO - DataSetLoader initialized with batch_size=64, data_dir=./data
+2025-08-11 00:03:50,616 - __main__.DataSetLoader - INFO - Loading MNIST dataset...
+2025-08-11 00:03:55,455 - __main__.DataSetLoader - INFO - MNIST dataset loaded: 937 batches, image size: [64, 64], channels: 1
+2025-08-11 00:03:55,458 - WGAN.MNIST_Example - INFO - MNIST - Batches: 937, Image size: [64, 64], Channels: 1
+2025-08-11 00:03:55,459 - __main__.WGAN - INFO - WGAN initialized on device: cuda
+2025-08-11 00:03:55,483 - __main__.Generator - INFO - Generator initialized:
+2025-08-11 00:03:55,484 - __main__.Generator - INFO -   Latent dim: 100
+2025-08-11 00:03:55,484 - __main__.Generator - INFO -   Hidden dim: 64
+2025-08-11 00:03:55,485 - __main__.Generator - INFO -   Output channels: 1
+2025-08-11 00:03:55,485 - __main__.Generator - INFO -   Output size: [64, 64]
+2025-08-11 00:03:55,486 - __main__.Generator - INFO -   Starting size: 4x4
+2025-08-11 00:03:55,720 - __main__.Critic - INFO - Critic initialized:
+2025-08-11 00:03:55,720 - __main__.Critic - INFO -   Input channels: 1
+2025-08-11 00:03:55,721 - __main__.Critic - INFO -   Hidden dim: 64
+2025-08-11 00:03:55,721 - __main__.Critic - INFO -   Image size: [64, 64]
+2025-08-11 00:03:55,721 - __main__.Critic - INFO -   Final spatial size: 4x4
+2025-08-11 00:03:55,776 - __main__.WGAN - INFO - WGAN Architecture:
+2025-08-11 00:03:55,777 - __main__.WGAN - INFO -   Generator parameters: 3,574,656
+2025-08-11 00:03:55,777 - __main__.WGAN - INFO -   Critic parameters: 2,763,520
+2025-08-11 00:03:55,778 - __main__.WGAN - INFO -   Critic iterations per generator step: 5
+2025-08-11 00:03:55,778 - __main__.WGAN - INFO -   Weight clip value: 0.01
+2025-08-11 00:03:55,779 - WGAN.MNIST_Example - INFO - WGAN MNIST Configuration:
+2025-08-11 00:03:55,779 - WGAN.MNIST_Example - INFO -   Latent dimension: 100
+2025-08-11 00:03:55,779 - WGAN.MNIST_Example - INFO -   Image size: [64, 64]
+2025-08-11 00:03:55,780 - WGAN.MNIST_Example - INFO -   Channels: 1
+2025-08-11 00:03:55,780 - WGAN.MNIST_Example - INFO -   Learning rate: 5e-05
+2025-08-11 00:03:55,781 - WGAN.MNIST_Example - INFO -   Clip value: 0.01
+2025-08-11 00:03:55,781 - WGAN.MNIST_Example - INFO -   Critic iterations: 5
+2025-08-11 00:03:55,782 - __main__.WGANLogger - INFO - WGANLogger initialized:
+2025-08-11 00:03:55,782 - __main__.WGANLogger - INFO -   Model: WGAN
+2025-08-11 00:03:55,782 - __main__.WGANLogger - INFO -   Dataset: MNIST
+2025-08-11 00:03:55,783 - __main__.WGANLogger - INFO -   Save directory: ./data
+2025-08-11 00:03:55,783 - WGAN.MNIST_Example - INFO - Generating initial samples (before training)...
+2025-08-11 00:03:56,432 - WGAN.MNIST_Example - INFO - Starting MNIST training...
+2025-08-11 00:03:56,436 - WGAN.Training - INFO - Starting WGAN training for 10 epochs...
+2025-08-11 00:03:56,437 - WGAN.Training - INFO - ================================================================================
+2025-08-11 00:03:56,825 - __main__.WGANLogger - INFO - Epoch [0] Batch [0] C_loss: -0.0234 G_loss: 0.0094 W_dist: -0.0234
+2025-08-11 00:03:57,498 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [0/937] (0.0%)
+2025-08-11 00:03:57,498 - __main__.WGANLogger - INFO - Critic Loss: -0.0234
+2025-08-11 00:03:57,499 - __main__.WGANLogger - INFO - Generator Loss: 0.0094
+2025-08-11 00:03:57,499 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.0234
+2025-08-11 00:03:57,500 - __main__.WGANLogger - INFO - Real Score: -0.1973
+2025-08-11 00:03:57,500 - __main__.WGANLogger - INFO - Fake Score: -0.2207
+2025-08-11 00:04:06,277 - __main__.WGANLogger - INFO - Epoch [0] Batch [50] C_loss: -0.7368 G_loss: 0.3150 W_dist: -0.7368
+2025-08-11 00:04:15,357 - __main__.WGANLogger - INFO - Epoch [0] Batch [100] C_loss: -1.1124 G_loss: 0.5220 W_dist: -1.1124
+2025-08-11 00:04:24,722 - __main__.WGANLogger - INFO - Epoch [0] Batch [150] C_loss: -1.2089 G_loss: 0.6372 W_dist: -1.2089
+2025-08-11 00:04:33,836 - __main__.WGANLogger - INFO - Epoch [0] Batch [200] C_loss: -1.2115 G_loss: 0.6084 W_dist: -1.2115
+2025-08-11 00:04:34,534 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [200/937] (21.3%)
+2025-08-11 00:04:34,535 - __main__.WGANLogger - INFO - Critic Loss: -1.2115
+2025-08-11 00:04:34,536 - __main__.WGANLogger - INFO - Generator Loss: 0.6084
+2025-08-11 00:04:34,537 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.2115
+2025-08-11 00:04:34,537 - __main__.WGANLogger - INFO - Real Score: 0.5738
+2025-08-11 00:04:34,538 - __main__.WGANLogger - INFO - Fake Score: -0.6376
+2025-08-11 00:04:42,404 - __main__.WGANLogger - INFO - Epoch [0] Batch [250] C_loss: -1.1569 G_loss: 0.6671 W_dist: -1.1569
+2025-08-11 00:04:51,142 - __main__.WGANLogger - INFO - Epoch [0] Batch [300] C_loss: -1.1996 G_loss: 0.5789 W_dist: -1.1996
+2025-08-11 00:05:00,604 - __main__.WGANLogger - INFO - Epoch [0] Batch [350] C_loss: -1.1092 G_loss: 0.5949 W_dist: -1.1092
+2025-08-11 00:05:09,685 - __main__.WGANLogger - INFO - Epoch [0] Batch [400] C_loss: -1.0541 G_loss: 0.5641 W_dist: -1.0541
+2025-08-11 00:05:10,350 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [400/937] (42.7%)
+2025-08-11 00:05:10,351 - __main__.WGANLogger - INFO - Critic Loss: -1.0541
+2025-08-11 00:05:10,352 - __main__.WGANLogger - INFO - Generator Loss: 0.5641
+2025-08-11 00:05:10,353 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0541
+2025-08-11 00:05:10,354 - __main__.WGANLogger - INFO - Real Score: 0.4476
+2025-08-11 00:05:10,354 - __main__.WGANLogger - INFO - Fake Score: -0.6065
+2025-08-11 00:05:19,140 - __main__.WGANLogger - INFO - Epoch [0] Batch [450] C_loss: -0.8903 G_loss: 0.3041 W_dist: -0.8903
+2025-08-11 00:05:28,256 - __main__.WGANLogger - INFO - Epoch [0] Batch [500] C_loss: -1.1907 G_loss: 0.6019 W_dist: -1.1907
+2025-08-11 00:05:36,574 - __main__.WGANLogger - INFO - Epoch [0] Batch [550] C_loss: -1.0962 G_loss: 0.6521 W_dist: -1.0962
+2025-08-11 00:05:45,348 - __main__.WGANLogger - INFO - Epoch [0] Batch [600] C_loss: -0.7993 G_loss: 0.6396 W_dist: -0.7993
+2025-08-11 00:05:45,999 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [600/937] (64.0%)
+2025-08-11 00:05:46,000 - __main__.WGANLogger - INFO - Critic Loss: -0.7993
+2025-08-11 00:05:46,001 - __main__.WGANLogger - INFO - Generator Loss: 0.6396
+2025-08-11 00:05:46,002 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.7993
+2025-08-11 00:05:46,002 - __main__.WGANLogger - INFO - Real Score: 0.4867
+2025-08-11 00:05:46,003 - __main__.WGANLogger - INFO - Fake Score: -0.3126
+2025-08-11 00:05:55,112 - __main__.WGANLogger - INFO - Epoch [0] Batch [650] C_loss: -0.8232 G_loss: 0.6229 W_dist: -0.8232
+2025-08-11 00:06:03,943 - __main__.WGANLogger - INFO - Epoch [0] Batch [700] C_loss: -0.8160 G_loss: 0.3811 W_dist: -0.8160
+2025-08-11 00:06:13,303 - __main__.WGANLogger - INFO - Epoch [0] Batch [750] C_loss: -0.8440 G_loss: 0.6534 W_dist: -0.8440
+2025-08-11 00:06:22,405 - __main__.WGANLogger - INFO - Epoch [0] Batch [800] C_loss: -0.7985 G_loss: 0.6632 W_dist: -0.7985
+2025-08-11 00:06:23,058 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [800/937] (85.4%)
+2025-08-11 00:06:23,059 - __main__.WGANLogger - INFO - Critic Loss: -0.7985
+2025-08-11 00:06:23,060 - __main__.WGANLogger - INFO - Generator Loss: 0.6632
+2025-08-11 00:06:23,061 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.7985
+2025-08-11 00:06:23,062 - __main__.WGANLogger - INFO - Real Score: 0.4366
+2025-08-11 00:06:23,063 - __main__.WGANLogger - INFO - Fake Score: -0.3619
+2025-08-11 00:06:30,773 - __main__.WGANLogger - INFO - Epoch [0] Batch [850] C_loss: -0.9201 G_loss: 0.6404 W_dist: -0.9201
+2025-08-11 00:06:39,662 - __main__.WGANLogger - INFO - Epoch [0] Batch [900] C_loss: -0.8531 G_loss: 0.6231 W_dist: -0.8531
+2025-08-11 00:06:46,511 - WGAN.Training - INFO - Epoch [0/10] completed in 170.07s
+2025-08-11 00:06:46,628 - __main__.WGANLogger - INFO - Epoch [1] Batch [0] C_loss: -0.8533 G_loss: 0.6529 W_dist: -0.8533
+2025-08-11 00:06:47,259 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [0/937] (0.0%)
+2025-08-11 00:06:47,259 - __main__.WGANLogger - INFO - Critic Loss: -0.8533
+2025-08-11 00:06:47,260 - __main__.WGANLogger - INFO - Generator Loss: 0.6529
+2025-08-11 00:06:47,260 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.8533
+2025-08-11 00:06:47,260 - __main__.WGANLogger - INFO - Real Score: 0.4509
+2025-08-11 00:06:47,261 - __main__.WGANLogger - INFO - Fake Score: -0.4023
+2025-08-11 00:06:56,050 - __main__.WGANLogger - INFO - Epoch [1] Batch [50] C_loss: -0.9222 G_loss: 0.6570 W_dist: -0.9222
+2025-08-11 00:07:05,082 - __main__.WGANLogger - INFO - Epoch [1] Batch [100] C_loss: -0.6897 G_loss: 0.0182 W_dist: -0.6897
+2025-08-11 00:07:14,632 - __main__.WGANLogger - INFO - Epoch [1] Batch [150] C_loss: -0.7613 G_loss: 0.2390 W_dist: -0.7613
+2025-08-11 00:07:23,639 - __main__.WGANLogger - INFO - Epoch [1] Batch [200] C_loss: -1.0260 G_loss: 0.3251 W_dist: -1.0260
+2025-08-11 00:07:24,270 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [200/937] (21.3%)
+2025-08-11 00:07:24,271 - __main__.WGANLogger - INFO - Critic Loss: -1.0260
+2025-08-11 00:07:24,272 - __main__.WGANLogger - INFO - Generator Loss: 0.3251
+2025-08-11 00:07:24,273 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0260
+2025-08-11 00:07:24,274 - __main__.WGANLogger - INFO - Real Score: 0.4912
+2025-08-11 00:07:24,274 - __main__.WGANLogger - INFO - Fake Score: -0.5348
+2025-08-11 00:07:32,010 - __main__.WGANLogger - INFO - Epoch [1] Batch [250] C_loss: -0.9088 G_loss: 0.2516 W_dist: -0.9088
+2025-08-11 00:07:40,694 - __main__.WGANLogger - INFO - Epoch [1] Batch [300] C_loss: -1.0085 G_loss: 0.4962 W_dist: -1.0085
+2025-08-11 00:07:49,863 - __main__.WGANLogger - INFO - Epoch [1] Batch [350] C_loss: -0.9724 G_loss: 0.6076 W_dist: -0.9724
+2025-08-11 00:07:58,906 - __main__.WGANLogger - INFO - Epoch [1] Batch [400] C_loss: -0.8896 G_loss: 0.2831 W_dist: -0.8896
+2025-08-11 00:07:59,539 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [400/937] (42.7%)
+2025-08-11 00:07:59,540 - __main__.WGANLogger - INFO - Critic Loss: -0.8896
+2025-08-11 00:07:59,541 - __main__.WGANLogger - INFO - Generator Loss: 0.2831
+2025-08-11 00:07:59,542 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.8896
+2025-08-11 00:07:59,543 - __main__.WGANLogger - INFO - Real Score: 0.3790
+2025-08-11 00:07:59,544 - __main__.WGANLogger - INFO - Fake Score: -0.5106
+2025-08-11 00:08:08,536 - __main__.WGANLogger - INFO - Epoch [1] Batch [450] C_loss: -0.9830 G_loss: 0.3948 W_dist: -0.9830
+2025-08-11 00:08:17,528 - __main__.WGANLogger - INFO - Epoch [1] Batch [500] C_loss: -1.0070 G_loss: 0.6290 W_dist: -1.0070
+2025-08-11 00:08:25,793 - __main__.WGANLogger - INFO - Epoch [1] Batch [550] C_loss: -1.0410 G_loss: 0.5125 W_dist: -1.0410
+2025-08-11 00:08:34,669 - __main__.WGANLogger - INFO - Epoch [1] Batch [600] C_loss: -0.9311 G_loss: 0.6284 W_dist: -0.9311
+2025-08-11 00:08:35,301 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [600/937] (64.0%)
+2025-08-11 00:08:35,301 - __main__.WGANLogger - INFO - Critic Loss: -0.9311
+2025-08-11 00:08:35,302 - __main__.WGANLogger - INFO - Generator Loss: 0.6284
+2025-08-11 00:08:35,302 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9311
+2025-08-11 00:08:35,303 - __main__.WGANLogger - INFO - Real Score: 0.4805
+2025-08-11 00:08:35,303 - __main__.WGANLogger - INFO - Fake Score: -0.4506
+2025-08-11 00:08:44,052 - __main__.WGANLogger - INFO - Epoch [1] Batch [650] C_loss: -1.0497 G_loss: 0.5033 W_dist: -1.0497
+2025-08-11 00:08:53,133 - __main__.WGANLogger - INFO - Epoch [1] Batch [700] C_loss: -1.0543 G_loss: 0.5916 W_dist: -1.0543
+2025-08-11 00:09:02,761 - __main__.WGANLogger - INFO - Epoch [1] Batch [750] C_loss: -0.9801 G_loss: 0.4106 W_dist: -0.9801
+2025-08-11 00:09:11,751 - __main__.WGANLogger - INFO - Epoch [1] Batch [800] C_loss: -1.0821 G_loss: 0.4970 W_dist: -1.0821
+2025-08-11 00:09:12,375 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [800/937] (85.4%)
+2025-08-11 00:09:12,377 - __main__.WGANLogger - INFO - Critic Loss: -1.0821
+2025-08-11 00:09:12,377 - __main__.WGANLogger - INFO - Generator Loss: 0.4970
+2025-08-11 00:09:12,378 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0821
+2025-08-11 00:09:12,379 - __main__.WGANLogger - INFO - Real Score: 0.5274
+2025-08-11 00:09:12,380 - __main__.WGANLogger - INFO - Fake Score: -0.5547
+2025-08-11 00:09:20,322 - __main__.WGANLogger - INFO - Epoch [1] Batch [850] C_loss: -0.9439 G_loss: 0.6239 W_dist: -0.9439
+2025-08-11 00:09:29,078 - __main__.WGANLogger - INFO - Epoch [1] Batch [900] C_loss: -1.0130 G_loss: 0.6211 W_dist: -1.0130
+2025-08-11 00:09:35,773 - WGAN.Training - INFO - Epoch [1/10] completed in 169.26s
+2025-08-11 00:09:36,002 - __main__.WGANLogger - INFO - Epoch [2] Batch [0] C_loss: -0.9852 G_loss: 0.6165 W_dist: -0.9852
+2025-08-11 00:09:36,840 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [0/937] (0.0%)
+2025-08-11 00:09:36,841 - __main__.WGANLogger - INFO - Critic Loss: -0.9852
+2025-08-11 00:09:36,843 - __main__.WGANLogger - INFO - Generator Loss: 0.6165
+2025-08-11 00:09:36,843 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9852
+2025-08-11 00:09:36,844 - __main__.WGANLogger - INFO - Real Score: 0.5140
+2025-08-11 00:09:36,845 - __main__.WGANLogger - INFO - Fake Score: -0.4712
+2025-08-11 00:09:45,710 - __main__.WGANLogger - INFO - Epoch [2] Batch [50] C_loss: -1.0282 G_loss: 0.5552 W_dist: -1.0282
+2025-08-11 00:09:54,800 - __main__.WGANLogger - INFO - Epoch [2] Batch [100] C_loss: -1.0329 G_loss: 0.6193 W_dist: -1.0329
+2025-08-11 00:10:04,282 - __main__.WGANLogger - INFO - Epoch [2] Batch [150] C_loss: -1.0933 G_loss: 0.4807 W_dist: -1.0933
+2025-08-11 00:10:13,029 - __main__.WGANLogger - INFO - Epoch [2] Batch [200] C_loss: -1.0054 G_loss: 0.4000 W_dist: -1.0054
+2025-08-11 00:10:13,650 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [200/937] (21.3%)
+2025-08-11 00:10:13,651 - __main__.WGANLogger - INFO - Critic Loss: -1.0054
+2025-08-11 00:10:13,652 - __main__.WGANLogger - INFO - Generator Loss: 0.4000
+2025-08-11 00:10:13,653 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0054
+2025-08-11 00:10:13,654 - __main__.WGANLogger - INFO - Real Score: 0.4860
+2025-08-11 00:10:13,655 - __main__.WGANLogger - INFO - Fake Score: -0.5194
+2025-08-11 00:10:21,982 - __main__.WGANLogger - INFO - Epoch [2] Batch [250] C_loss: -1.0499 G_loss: 0.4834 W_dist: -1.0499
+2025-08-11 00:10:30,954 - __main__.WGANLogger - INFO - Epoch [2] Batch [300] C_loss: -1.0580 G_loss: 0.5085 W_dist: -1.0580
+2025-08-11 00:10:40,273 - __main__.WGANLogger - INFO - Epoch [2] Batch [350] C_loss: -1.0500 G_loss: 0.4410 W_dist: -1.0500
+2025-08-11 00:10:49,245 - __main__.WGANLogger - INFO - Epoch [2] Batch [400] C_loss: -0.9863 G_loss: 0.6389 W_dist: -0.9863
+2025-08-11 00:10:50,074 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [400/937] (42.7%)
+2025-08-11 00:10:50,075 - __main__.WGANLogger - INFO - Critic Loss: -0.9863
+2025-08-11 00:10:50,076 - __main__.WGANLogger - INFO - Generator Loss: 0.6389
+2025-08-11 00:10:50,077 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9863
+2025-08-11 00:10:50,078 - __main__.WGANLogger - INFO - Real Score: 0.5164
+2025-08-11 00:10:50,079 - __main__.WGANLogger - INFO - Fake Score: -0.4698
+2025-08-11 00:10:58,856 - __main__.WGANLogger - INFO - Epoch [2] Batch [450] C_loss: -1.0106 G_loss: 0.4365 W_dist: -1.0106
+2025-08-11 00:11:07,901 - __main__.WGANLogger - INFO - Epoch [2] Batch [500] C_loss: -1.0366 G_loss: 0.6093 W_dist: -1.0366
+2025-08-11 00:11:16,000 - __main__.WGANLogger - INFO - Epoch [2] Batch [550] C_loss: -1.0684 G_loss: 0.5707 W_dist: -1.0684
+2025-08-11 00:11:24,737 - __main__.WGANLogger - INFO - Epoch [2] Batch [600] C_loss: -1.0527 G_loss: 0.5844 W_dist: -1.0527
+2025-08-11 00:11:25,358 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [600/937] (64.0%)
+2025-08-11 00:11:25,359 - __main__.WGANLogger - INFO - Critic Loss: -1.0527
+2025-08-11 00:11:25,360 - __main__.WGANLogger - INFO - Generator Loss: 0.5844
+2025-08-11 00:11:25,361 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0527
+2025-08-11 00:11:25,361 - __main__.WGANLogger - INFO - Real Score: 0.5357
+2025-08-11 00:11:25,362 - __main__.WGANLogger - INFO - Fake Score: -0.5169
+2025-08-11 00:11:34,171 - __main__.WGANLogger - INFO - Epoch [2] Batch [650] C_loss: -1.0327 G_loss: 0.5713 W_dist: -1.0327
+2025-08-11 00:11:43,139 - __main__.WGANLogger - INFO - Epoch [2] Batch [700] C_loss: -1.0451 G_loss: 0.5920 W_dist: -1.0451
+2025-08-11 00:11:52,663 - __main__.WGANLogger - INFO - Epoch [2] Batch [750] C_loss: -1.0788 G_loss: 0.5814 W_dist: -1.0788
+2025-08-11 00:12:01,629 - __main__.WGANLogger - INFO - Epoch [2] Batch [800] C_loss: -1.0020 G_loss: 0.3610 W_dist: -1.0020
+2025-08-11 00:12:02,459 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [800/937] (85.4%)
+2025-08-11 00:12:02,460 - __main__.WGANLogger - INFO - Critic Loss: -1.0020
+2025-08-11 00:12:02,461 - __main__.WGANLogger - INFO - Generator Loss: 0.3610
+2025-08-11 00:12:02,461 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0020
+2025-08-11 00:12:02,462 - __main__.WGANLogger - INFO - Real Score: 0.4901
+2025-08-11 00:12:02,463 - __main__.WGANLogger - INFO - Fake Score: -0.5120
+2025-08-11 00:12:10,164 - __main__.WGANLogger - INFO - Epoch [2] Batch [850] C_loss: -0.9866 G_loss: 0.6210 W_dist: -0.9866
+2025-08-11 00:12:18,985 - __main__.WGANLogger - INFO - Epoch [2] Batch [900] C_loss: -1.0870 G_loss: 0.5712 W_dist: -1.0870
+2025-08-11 00:12:25,809 - WGAN.Training - INFO - Epoch [2/10] completed in 170.03s
+2025-08-11 00:12:26,040 - __main__.WGANLogger - INFO - Epoch [3] Batch [0] C_loss: -1.0275 G_loss: 0.4660 W_dist: -1.0275
+2025-08-11 00:12:26,657 - __main__.WGANLogger - INFO - Epoch: [3/10] Batch: [0/937] (0.0%)
+2025-08-11 00:12:26,658 - __main__.WGANLogger - INFO - Critic Loss: -1.0275
+2025-08-11 00:12:26,659 - __main__.WGANLogger - INFO - Generator Loss: 0.4660
+2025-08-11 00:12:26,660 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0275
+2025-08-11 00:12:26,661 - __main__.WGANLogger - INFO - Real Score: 0.5055
+2025-08-11 00:12:26,661 - __main__.WGANLogger - INFO - Fake Score: -0.5220
+2025-08-11 00:12:35,585 - __main__.WGANLogger - INFO - Epoch [3] Batch [50] C_loss: -1.0379 G_loss: 0.4405 W_dist: -1.0379
+2025-08-11 00:12:44,558 - __main__.WGANLogger - INFO - Epoch [3] Batch [100] C_loss: -1.0267 G_loss: 0.4314 W_dist: -1.0267
+2025-08-11 00:12:53,954 - __main__.WGANLogger - INFO - Epoch [3] Batch [150] C_loss: -0.9990 G_loss: 0.3468 W_dist: -0.9990
+2025-08-11 00:13:02,206 - __main__.WGANLogger - INFO - Epoch [3] Batch [200] C_loss: -1.0672 G_loss: 0.4721 W_dist: -1.0672
+2025-08-11 00:13:03,011 - __main__.WGANLogger - INFO - Epoch: [3/10] Batch: [200/937] (21.3%)
+2025-08-11 00:13:03,012 - __main__.WGANLogger - INFO - Critic Loss: -1.0672
+2025-08-11 00:13:03,013 - __main__.WGANLogger - INFO - Generator Loss: 0.4721
+2025-08-11 00:13:03,013 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0672
+2025-08-11 00:13:03,014 - __main__.WGANLogger - INFO - Real Score: 0.5178
+2025-08-11 00:13:03,015 - __main__.WGANLogger - INFO - Fake Score: -0.5494
+2025-08-11 00:13:11,837 - __main__.WGANLogger - INFO - Epoch [3] Batch [250] C_loss: -1.0341 G_loss: 0.4939 W_dist: -1.0341
+2025-08-11 00:13:20,739 - __main__.WGANLogger - INFO - Epoch [3] Batch [300] C_loss: -1.0233 G_loss: 0.6037 W_dist: -1.0233
+2025-08-11 00:13:30,161 - __main__.WGANLogger - INFO - Epoch [3] Batch [350] C_loss: -0.9124 G_loss: 0.5924 W_dist: -0.9124
+2025-08-11 00:13:39,161 - __main__.WGANLogger - INFO - Epoch [3] Batch [400] C_loss: -0.9260 G_loss: 0.6090 W_dist: -0.9260
+2025-08-11 00:13:39,777 - __main__.WGANLogger - INFO - Epoch: [3/10] Batch: [400/937] (42.7%)
+2025-08-11 00:13:39,779 - __main__.WGANLogger - INFO - Critic Loss: -0.9260
+2025-08-11 00:13:39,780 - __main__.WGANLogger - INFO - Generator Loss: 0.6090
+2025-08-11 00:13:39,780 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9260
+2025-08-11 00:13:39,781 - __main__.WGANLogger - INFO - Real Score: 0.4527
+2025-08-11 00:13:39,782 - __main__.WGANLogger - INFO - Fake Score: -0.4732
+2025-08-11 00:13:48,805 - __main__.WGANLogger - INFO - Epoch [3] Batch [450] C_loss: -1.0317 G_loss: 0.5216 W_dist: -1.0317
+2025-08-11 00:13:57,638 - __main__.WGANLogger - INFO - Epoch [3] Batch [500] C_loss: -1.0171 G_loss: 0.6020 W_dist: -1.0171
+2025-08-11 00:14:06,016 - __main__.WGANLogger - INFO - Epoch [3] Batch [550] C_loss: -1.0442 G_loss: 0.5989 W_dist: -1.0442
+2025-08-11 00:14:15,062 - __main__.WGANLogger - INFO - Epoch [3] Batch [600] C_loss: -1.0566 G_loss: 0.5961 W_dist: -1.0566
+2025-08-11 00:14:15,680 - __main__.WGANLogger - INFO - Epoch: [3/10] Batch: [600/937] (64.0%)
+2025-08-11 00:14:15,682 - __main__.WGANLogger - INFO - Critic Loss: -1.0566
+2025-08-11 00:14:15,682 - __main__.WGANLogger - INFO - Generator Loss: 0.5961
+2025-08-11 00:14:15,683 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0566
+2025-08-11 00:14:15,684 - __main__.WGANLogger - INFO - Real Score: 0.5460
+2025-08-11 00:14:15,685 - __main__.WGANLogger - INFO - Fake Score: -0.5106
+2025-08-11 00:14:24,587 - __main__.WGANLogger - INFO - Epoch [3] Batch [650] C_loss: -1.0532 G_loss: 0.5518 W_dist: -1.0532
+2025-08-11 00:14:33,583 - __main__.WGANLogger - INFO - Epoch [3] Batch [700] C_loss: -1.0484 G_loss: 0.5619 W_dist: -1.0484
+2025-08-11 00:14:43,297 - __main__.WGANLogger - INFO - Epoch [3] Batch [750] C_loss: -1.0136 G_loss: 0.6233 W_dist: -1.0136
+2025-08-11 00:14:52,398 - __main__.WGANLogger - INFO - Epoch [3] Batch [800] C_loss: -0.7713 G_loss: 0.5882 W_dist: -0.7713
+2025-08-11 00:14:53,020 - __main__.WGANLogger - INFO - Epoch: [3/10] Batch: [800/937] (85.4%)
+2025-08-11 00:14:53,022 - __main__.WGANLogger - INFO - Critic Loss: -0.7713
+2025-08-11 00:14:53,023 - __main__.WGANLogger - INFO - Generator Loss: 0.5882
+2025-08-11 00:14:53,024 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.7713
+2025-08-11 00:14:53,025 - __main__.WGANLogger - INFO - Real Score: 0.3640
+2025-08-11 00:14:53,025 - __main__.WGANLogger - INFO - Fake Score: -0.4073
+2025-08-11 00:15:00,533 - __main__.WGANLogger - INFO - Epoch [3] Batch [850] C_loss: -1.0183 G_loss: 0.4487 W_dist: -1.0183
+2025-08-11 00:15:09,549 - __main__.WGANLogger - INFO - Epoch [3] Batch [900] C_loss: -1.0281 G_loss: 0.4497 W_dist: -1.0281
+2025-08-11 00:15:16,493 - WGAN.Training - INFO - Epoch [3/10] completed in 170.68s
+2025-08-11 00:15:16,610 - __main__.WGANLogger - INFO - Epoch [4] Batch [0] C_loss: -1.0856 G_loss: 0.5662 W_dist: -1.0856
+2025-08-11 00:15:17,223 - __main__.WGANLogger - INFO - Epoch: [4/10] Batch: [0/937] (0.0%)
+2025-08-11 00:15:17,223 - __main__.WGANLogger - INFO - Critic Loss: -1.0856
+2025-08-11 00:15:17,224 - __main__.WGANLogger - INFO - Generator Loss: 0.5662
+2025-08-11 00:15:17,224 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0856
+2025-08-11 00:15:17,225 - __main__.WGANLogger - INFO - Real Score: 0.5426
+2025-08-11 00:15:17,225 - __main__.WGANLogger - INFO - Fake Score: -0.5430
+2025-08-11 00:15:26,281 - __main__.WGANLogger - INFO - Epoch [4] Batch [50] C_loss: -1.0071 G_loss: 0.3521 W_dist: -1.0071
+2025-08-11 00:15:35,435 - __main__.WGANLogger - INFO - Epoch [4] Batch [100] C_loss: -1.0818 G_loss: 0.4988 W_dist: -1.0818
+2025-08-11 00:15:45,035 - __main__.WGANLogger - INFO - Epoch [4] Batch [150] C_loss: -1.0654 G_loss: 0.5866 W_dist: -1.0654
+2025-08-11 00:15:52,592 - __main__.WGANLogger - INFO - Epoch [4] Batch [200] C_loss: -0.9131 G_loss: 0.3914 W_dist: -0.9131
+2025-08-11 00:15:53,218 - __main__.WGANLogger - INFO - Epoch: [4/10] Batch: [200/937] (21.3%)
+2025-08-11 00:15:53,219 - __main__.WGANLogger - INFO - Critic Loss: -0.9131
+2025-08-11 00:15:53,220 - __main__.WGANLogger - INFO - Generator Loss: 0.3914
+2025-08-11 00:15:53,220 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9131
+2025-08-11 00:15:53,221 - __main__.WGANLogger - INFO - Real Score: 0.4504
+2025-08-11 00:15:53,222 - __main__.WGANLogger - INFO - Fake Score: -0.4627
+2025-08-11 00:16:01,990 - __main__.WGANLogger - INFO - Epoch [4] Batch [250] C_loss: -0.9591 G_loss: 0.2827 W_dist: -0.9591
+2025-08-11 00:16:11,035 - __main__.WGANLogger - INFO - Epoch [4] Batch [300] C_loss: -0.8924 G_loss: 0.5974 W_dist: -0.8924
+2025-08-11 00:16:20,442 - __main__.WGANLogger - INFO - Epoch [4] Batch [350] C_loss: -1.0442 G_loss: 0.5314 W_dist: -1.0442
+2025-08-11 00:16:29,592 - __main__.WGANLogger - INFO - Epoch [4] Batch [400] C_loss: -0.9969 G_loss: 0.4192 W_dist: -0.9969
+2025-08-11 00:16:30,211 - __main__.WGANLogger - INFO - Epoch: [4/10] Batch: [400/937] (42.7%)
+2025-08-11 00:16:30,212 - __main__.WGANLogger - INFO - Critic Loss: -0.9969
+2025-08-11 00:16:30,213 - __main__.WGANLogger - INFO - Generator Loss: 0.4192
+2025-08-11 00:16:30,213 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9969
+2025-08-11 00:16:30,214 - __main__.WGANLogger - INFO - Real Score: 0.4775
+2025-08-11 00:16:30,216 - __main__.WGANLogger - INFO - Fake Score: -0.5194
+2025-08-11 00:16:39,200 - __main__.WGANLogger - INFO - Epoch [4] Batch [450] C_loss: -0.9543 G_loss: 0.4205 W_dist: -0.9543
+2025-08-11 00:16:47,445 - __main__.WGANLogger - INFO - Epoch [4] Batch [500] C_loss: -1.0332 G_loss: 0.3545 W_dist: -1.0332
+2025-08-11 00:16:56,693 - __main__.WGANLogger - INFO - Epoch [4] Batch [550] C_loss: -1.0740 G_loss: 0.4534 W_dist: -1.0740
+2025-08-11 00:17:05,720 - __main__.WGANLogger - INFO - Epoch [4] Batch [600] C_loss: -1.0400 G_loss: 0.4796 W_dist: -1.0400
+2025-08-11 00:17:06,339 - __main__.WGANLogger - INFO - Epoch: [4/10] Batch: [600/937] (64.0%)
+2025-08-11 00:17:06,341 - __main__.WGANLogger - INFO - Critic Loss: -1.0400
+2025-08-11 00:17:06,341 - __main__.WGANLogger - INFO - Generator Loss: 0.4796
+2025-08-11 00:17:06,342 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0400
+2025-08-11 00:17:06,343 - __main__.WGANLogger - INFO - Real Score: 0.5112
+2025-08-11 00:17:06,344 - __main__.WGANLogger - INFO - Fake Score: -0.5288
+2025-08-11 00:17:15,460 - __main__.WGANLogger - INFO - Epoch [4] Batch [650] C_loss: -1.0094 G_loss: 0.4588 W_dist: -1.0094
+2025-08-11 00:17:24,507 - __main__.WGANLogger - INFO - Epoch [4] Batch [700] C_loss: -1.0000 G_loss: 0.4175 W_dist: -1.0000
+2025-08-11 00:17:33,959 - __main__.WGANLogger - INFO - Epoch [4] Batch [750] C_loss: -1.0532 G_loss: 0.5594 W_dist: -1.0532
+2025-08-11 00:17:42,815 - __main__.WGANLogger - INFO - Epoch [4] Batch [800] C_loss: -1.0908 G_loss: 0.4235 W_dist: -1.0908
+2025-08-11 00:17:43,435 - __main__.WGANLogger - INFO - Epoch: [4/10] Batch: [800/937] (85.4%)
+2025-08-11 00:17:43,437 - __main__.WGANLogger - INFO - Critic Loss: -1.0908
+2025-08-11 00:17:43,438 - __main__.WGANLogger - INFO - Generator Loss: 0.4235
+2025-08-11 00:17:43,439 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0908
+2025-08-11 00:17:43,439 - __main__.WGANLogger - INFO - Real Score: 0.5363
+2025-08-11 00:17:43,440 - __main__.WGANLogger - INFO - Fake Score: -0.5545
+2025-08-11 00:17:51,340 - __main__.WGANLogger - INFO - Epoch [4] Batch [850] C_loss: -0.9818 G_loss: 0.4386 W_dist: -0.9818
+2025-08-11 00:18:00,368 - __main__.WGANLogger - INFO - Epoch [4] Batch [900] C_loss: -0.9873 G_loss: 0.6160 W_dist: -0.9873
+2025-08-11 00:18:07,549 - WGAN.Training - INFO - Epoch [4/10] completed in 171.05s
+2025-08-11 00:18:07,619 - __main__.WGAN - INFO - Models saved to ./data/models/WGAN/MNIST/wgan_epoch_4_wgan.pth
+2025-08-11 00:18:08,480 - __main__.WGANLogger - INFO - Epoch [5] Batch [0] C_loss: -1.0390 G_loss: 0.3649 W_dist: -1.0390
+2025-08-11 00:18:09,103 - __main__.WGANLogger - INFO - Epoch: [5/10] Batch: [0/937] (0.0%)
+2025-08-11 00:18:09,103 - __main__.WGANLogger - INFO - Critic Loss: -1.0390
+2025-08-11 00:18:09,104 - __main__.WGANLogger - INFO - Generator Loss: 0.3649
+2025-08-11 00:18:09,104 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0390
+2025-08-11 00:18:09,104 - __main__.WGANLogger - INFO - Real Score: 0.5136
+2025-08-11 00:18:09,105 - __main__.WGANLogger - INFO - Fake Score: -0.5253
+2025-08-11 00:18:18,125 - __main__.WGANLogger - INFO - Epoch [5] Batch [50] C_loss: -1.0357 G_loss: 0.4655 W_dist: -1.0357
+2025-08-11 00:18:26,995 - __main__.WGANLogger - INFO - Epoch [5] Batch [100] C_loss: -1.0205 G_loss: 0.5940 W_dist: -1.0205
+2025-08-11 00:18:36,267 - __main__.WGANLogger - INFO - Epoch [5] Batch [150] C_loss: -1.0467 G_loss: 0.5512 W_dist: -1.0467
+2025-08-11 00:18:43,947 - __main__.WGANLogger - INFO - Epoch [5] Batch [200] C_loss: -1.1312 G_loss: 0.6272 W_dist: -1.1312
+2025-08-11 00:18:44,565 - __main__.WGANLogger - INFO - Epoch: [5/10] Batch: [200/937] (21.3%)
+2025-08-11 00:18:44,567 - __main__.WGANLogger - INFO - Critic Loss: -1.1312
+2025-08-11 00:18:44,568 - __main__.WGANLogger - INFO - Generator Loss: 0.6272
+2025-08-11 00:18:44,569 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.1312
+2025-08-11 00:18:44,570 - __main__.WGANLogger - INFO - Real Score: 0.5782
+2025-08-11 00:18:44,571 - __main__.WGANLogger - INFO - Fake Score: -0.5531
+2025-08-11 00:18:53,729 - __main__.WGANLogger - INFO - Epoch [5] Batch [250] C_loss: -1.0496 G_loss: 0.6090 W_dist: -1.0496
+2025-08-11 00:19:02,406 - __main__.WGANLogger - INFO - Epoch [5] Batch [300] C_loss: -1.0273 G_loss: 0.5706 W_dist: -1.0273
+2025-08-11 00:19:11,716 - __main__.WGANLogger - INFO - Epoch [5] Batch [350] C_loss: -0.8673 G_loss: 0.5852 W_dist: -0.8673
+2025-08-11 00:19:20,728 - __main__.WGANLogger - INFO - Epoch [5] Batch [400] C_loss: -1.0681 G_loss: 0.5949 W_dist: -1.0681
+2025-08-11 00:19:21,348 - __main__.WGANLogger - INFO - Epoch: [5/10] Batch: [400/937] (42.7%)
+2025-08-11 00:19:21,349 - __main__.WGANLogger - INFO - Critic Loss: -1.0681
+2025-08-11 00:19:21,350 - __main__.WGANLogger - INFO - Generator Loss: 0.5949
+2025-08-11 00:19:21,352 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0681
+2025-08-11 00:19:21,353 - __main__.WGANLogger - INFO - Real Score: 0.5489
+2025-08-11 00:19:21,353 - __main__.WGANLogger - INFO - Fake Score: -0.5192
+2025-08-11 00:19:30,358 - __main__.WGANLogger - INFO - Epoch [5] Batch [450] C_loss: -0.9566 G_loss: 0.6159 W_dist: -0.9566
+2025-08-11 00:19:38,019 - __main__.WGANLogger - INFO - Epoch [5] Batch [500] C_loss: -1.0327 G_loss: 0.4654 W_dist: -1.0327
+2025-08-11 00:19:47,364 - __main__.WGANLogger - INFO - Epoch [5] Batch [550] C_loss: -1.0100 G_loss: 0.4552 W_dist: -1.0100
+2025-08-11 00:19:56,361 - __main__.WGANLogger - INFO - Epoch [5] Batch [600] C_loss: -0.9848 G_loss: 0.3601 W_dist: -0.9848
+2025-08-11 00:19:56,977 - __main__.WGANLogger - INFO - Epoch: [5/10] Batch: [600/937] (64.0%)
+2025-08-11 00:19:56,979 - __main__.WGANLogger - INFO - Critic Loss: -0.9848
+2025-08-11 00:19:56,980 - __main__.WGANLogger - INFO - Generator Loss: 0.3601
+2025-08-11 00:19:56,980 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9848
+2025-08-11 00:19:56,981 - __main__.WGANLogger - INFO - Real Score: 0.4855
+2025-08-11 00:19:56,982 - __main__.WGANLogger - INFO - Fake Score: -0.4993
+2025-08-11 00:20:05,743 - __main__.WGANLogger - INFO - Epoch [5] Batch [650] C_loss: -0.9608 G_loss: 0.3268 W_dist: -0.9608
+2025-08-11 00:20:14,710 - __main__.WGANLogger - INFO - Epoch [5] Batch [700] C_loss: -1.0075 G_loss: 0.5888 W_dist: -1.0075
+2025-08-11 00:20:24,342 - __main__.WGANLogger - INFO - Epoch [5] Batch [750] C_loss: -0.9857 G_loss: 0.4324 W_dist: -0.9857
+2025-08-11 00:20:32,403 - __main__.WGANLogger - INFO - Epoch [5] Batch [800] C_loss: -1.0521 G_loss: 0.6237 W_dist: -1.0521
+2025-08-11 00:20:33,018 - __main__.WGANLogger - INFO - Epoch: [5/10] Batch: [800/937] (85.4%)
+2025-08-11 00:20:33,019 - __main__.WGANLogger - INFO - Critic Loss: -1.0521
+2025-08-11 00:20:33,020 - __main__.WGANLogger - INFO - Generator Loss: 0.6237
+2025-08-11 00:20:33,021 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0521
+2025-08-11 00:20:33,022 - __main__.WGANLogger - INFO - Real Score: 0.5443
+2025-08-11 00:20:33,023 - __main__.WGANLogger - INFO - Fake Score: -0.5078
+2025-08-11 00:20:42,169 - __main__.WGANLogger - INFO - Epoch [5] Batch [850] C_loss: -1.0028 G_loss: 0.6161 W_dist: -1.0028
+2025-08-11 00:20:50,804 - __main__.WGANLogger - INFO - Epoch [5] Batch [900] C_loss: -0.9826 G_loss: 0.4442 W_dist: -0.9826
+2025-08-11 00:20:57,594 - WGAN.Training - INFO - Epoch [5/10] completed in 169.38s
+2025-08-11 00:20:57,809 - __main__.WGANLogger - INFO - Epoch [6] Batch [0] C_loss: -0.9311 G_loss: 0.1927 W_dist: -0.9311
+2025-08-11 00:20:58,425 - __main__.WGANLogger - INFO - Epoch: [6/10] Batch: [0/937] (0.0%)
+2025-08-11 00:20:58,426 - __main__.WGANLogger - INFO - Critic Loss: -0.9311
+2025-08-11 00:20:58,427 - __main__.WGANLogger - INFO - Generator Loss: 0.1927
+2025-08-11 00:20:58,428 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9311
+2025-08-11 00:20:58,429 - __main__.WGANLogger - INFO - Real Score: 0.4471
+2025-08-11 00:20:58,430 - __main__.WGANLogger - INFO - Fake Score: -0.4840
+2025-08-11 00:21:07,273 - __main__.WGANLogger - INFO - Epoch [6] Batch [50] C_loss: -0.9770 G_loss: 0.5953 W_dist: -0.9770
+2025-08-11 00:21:16,267 - __main__.WGANLogger - INFO - Epoch [6] Batch [100] C_loss: -1.0560 G_loss: 0.6095 W_dist: -1.0560
+2025-08-11 00:21:25,890 - __main__.WGANLogger - INFO - Epoch [6] Batch [150] C_loss: -0.9093 G_loss: 0.1805 W_dist: -0.9093
+2025-08-11 00:21:33,373 - __main__.WGANLogger - INFO - Epoch [6] Batch [200] C_loss: -1.0750 G_loss: 0.6000 W_dist: -1.0750
+2025-08-11 00:21:33,989 - __main__.WGANLogger - INFO - Epoch: [6/10] Batch: [200/937] (21.3%)
+2025-08-11 00:21:33,990 - __main__.WGANLogger - INFO - Critic Loss: -1.0750
+2025-08-11 00:21:33,991 - __main__.WGANLogger - INFO - Generator Loss: 0.6000
+2025-08-11 00:21:33,992 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0750
+2025-08-11 00:21:33,993 - __main__.WGANLogger - INFO - Real Score: 0.5531
+2025-08-11 00:21:33,994 - __main__.WGANLogger - INFO - Fake Score: -0.5219
+2025-08-11 00:21:42,822 - __main__.WGANLogger - INFO - Epoch [6] Batch [250] C_loss: -0.9711 G_loss: 0.3589 W_dist: -0.9711
+2025-08-11 00:21:51,839 - __main__.WGANLogger - INFO - Epoch [6] Batch [300] C_loss: -1.0484 G_loss: 0.5914 W_dist: -1.0484
+2025-08-11 00:22:01,343 - __main__.WGANLogger - INFO - Epoch [6] Batch [350] C_loss: -0.9971 G_loss: 0.6164 W_dist: -0.9971
+2025-08-11 00:22:10,345 - __main__.WGANLogger - INFO - Epoch [6] Batch [400] C_loss: -1.0293 G_loss: 0.4532 W_dist: -1.0293
+2025-08-11 00:22:10,961 - __main__.WGANLogger - INFO - Epoch: [6/10] Batch: [400/937] (42.7%)
+2025-08-11 00:22:10,963 - __main__.WGANLogger - INFO - Critic Loss: -1.0293
+2025-08-11 00:22:10,963 - __main__.WGANLogger - INFO - Generator Loss: 0.4532
+2025-08-11 00:22:10,964 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0293
+2025-08-11 00:22:10,965 - __main__.WGANLogger - INFO - Real Score: 0.5095
+2025-08-11 00:22:10,966 - __main__.WGANLogger - INFO - Fake Score: -0.5198
+2025-08-11 00:22:19,982 - __main__.WGANLogger - INFO - Epoch [6] Batch [450] C_loss: -1.0344 G_loss: 0.5641 W_dist: -1.0344
+2025-08-11 00:22:27,576 - __main__.WGANLogger - INFO - Epoch [6] Batch [500] C_loss: -1.1614 G_loss: 0.6056 W_dist: -1.1614
+2025-08-11 00:22:36,886 - __main__.WGANLogger - INFO - Epoch [6] Batch [550] C_loss: -1.0390 G_loss: 0.4655 W_dist: -1.0390
+2025-08-11 00:22:45,973 - __main__.WGANLogger - INFO - Epoch [6] Batch [600] C_loss: -0.9902 G_loss: 0.5836 W_dist: -0.9902
+2025-08-11 00:22:46,588 - __main__.WGANLogger - INFO - Epoch: [6/10] Batch: [600/937] (64.0%)
+2025-08-11 00:22:46,590 - __main__.WGANLogger - INFO - Critic Loss: -0.9902
+2025-08-11 00:22:46,591 - __main__.WGANLogger - INFO - Generator Loss: 0.5836
+2025-08-11 00:22:46,592 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9902
+2025-08-11 00:22:46,593 - __main__.WGANLogger - INFO - Real Score: 0.5014
+2025-08-11 00:22:46,594 - __main__.WGANLogger - INFO - Fake Score: -0.4888
+2025-08-11 00:22:55,557 - __main__.WGANLogger - INFO - Epoch [6] Batch [650] C_loss: -1.0131 G_loss: 0.5732 W_dist: -1.0131
+2025-08-11 00:23:04,531 - __main__.WGANLogger - INFO - Epoch [6] Batch [700] C_loss: -0.8699 G_loss: 0.5976 W_dist: -0.8699
+2025-08-11 00:23:13,906 - __main__.WGANLogger - INFO - Epoch [6] Batch [750] C_loss: -1.0141 G_loss: 0.6094 W_dist: -1.0141
+2025-08-11 00:23:21,482 - __main__.WGANLogger - INFO - Epoch [6] Batch [800] C_loss: -0.9881 G_loss: 0.6090 W_dist: -0.9881
+2025-08-11 00:23:22,099 - __main__.WGANLogger - INFO - Epoch: [6/10] Batch: [800/937] (85.4%)
+2025-08-11 00:23:22,101 - __main__.WGANLogger - INFO - Critic Loss: -0.9881
+2025-08-11 00:23:22,102 - __main__.WGANLogger - INFO - Generator Loss: 0.6090
+2025-08-11 00:23:22,103 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9881
+2025-08-11 00:23:22,103 - __main__.WGANLogger - INFO - Real Score: 0.5183
+2025-08-11 00:23:22,104 - __main__.WGANLogger - INFO - Fake Score: -0.4698
+2025-08-11 00:23:30,891 - __main__.WGANLogger - INFO - Epoch [6] Batch [850] C_loss: -0.7079 G_loss: 0.1201 W_dist: -0.7079
+2025-08-11 00:23:39,887 - __main__.WGANLogger - INFO - Epoch [6] Batch [900] C_loss: -1.0292 G_loss: 0.6014 W_dist: -1.0292
+2025-08-11 00:23:47,090 - WGAN.Training - INFO - Epoch [6/10] completed in 169.49s
+2025-08-11 00:23:47,206 - __main__.WGANLogger - INFO - Epoch [7] Batch [0] C_loss: -0.9668 G_loss: 0.6086 W_dist: -0.9668
+2025-08-11 00:23:47,820 - __main__.WGANLogger - INFO - Epoch: [7/10] Batch: [0/937] (0.0%)
+2025-08-11 00:23:47,822 - __main__.WGANLogger - INFO - Critic Loss: -0.9668
+2025-08-11 00:23:47,823 - __main__.WGANLogger - INFO - Generator Loss: 0.6086
+2025-08-11 00:23:47,823 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9668
+2025-08-11 00:23:47,824 - __main__.WGANLogger - INFO - Real Score: 0.5133
+2025-08-11 00:23:47,825 - __main__.WGANLogger - INFO - Fake Score: -0.4535
+2025-08-11 00:23:57,002 - __main__.WGANLogger - INFO - Epoch [7] Batch [50] C_loss: -0.9381 G_loss: 0.5913 W_dist: -0.9381
+2025-08-11 00:24:06,023 - __main__.WGANLogger - INFO - Epoch [7] Batch [100] C_loss: -0.9884 G_loss: 0.4672 W_dist: -0.9884
+2025-08-11 00:24:15,157 - __main__.WGANLogger - INFO - Epoch [7] Batch [150] C_loss: -1.0303 G_loss: 0.4363 W_dist: -1.0303
+2025-08-11 00:24:23,052 - __main__.WGANLogger - INFO - Epoch [7] Batch [200] C_loss: -0.9231 G_loss: 0.4330 W_dist: -0.9231
+2025-08-11 00:24:23,669 - __main__.WGANLogger - INFO - Epoch: [7/10] Batch: [200/937] (21.3%)
+2025-08-11 00:24:23,670 - __main__.WGANLogger - INFO - Critic Loss: -0.9231
+2025-08-11 00:24:23,670 - __main__.WGANLogger - INFO - Generator Loss: 0.4330
+2025-08-11 00:24:23,671 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9231
+2025-08-11 00:24:23,671 - __main__.WGANLogger - INFO - Real Score: 0.4432
+2025-08-11 00:24:23,672 - __main__.WGANLogger - INFO - Fake Score: -0.4799
+2025-08-11 00:24:32,426 - __main__.WGANLogger - INFO - Epoch [7] Batch [250] C_loss: -0.9470 G_loss: 0.5885 W_dist: -0.9470
+2025-08-11 00:24:41,455 - __main__.WGANLogger - INFO - Epoch [7] Batch [300] C_loss: -1.0551 G_loss: 0.6158 W_dist: -1.0551
+2025-08-11 00:24:51,135 - __main__.WGANLogger - INFO - Epoch [7] Batch [350] C_loss: -1.0066 G_loss: 0.5079 W_dist: -1.0066
+2025-08-11 00:25:00,116 - __main__.WGANLogger - INFO - Epoch [7] Batch [400] C_loss: -1.0852 G_loss: 0.5958 W_dist: -1.0852
+2025-08-11 00:25:00,739 - __main__.WGANLogger - INFO - Epoch: [7/10] Batch: [400/937] (42.7%)
+2025-08-11 00:25:00,740 - __main__.WGANLogger - INFO - Critic Loss: -1.0852
+2025-08-11 00:25:00,740 - __main__.WGANLogger - INFO - Generator Loss: 0.5958
+2025-08-11 00:25:00,741 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0852
+2025-08-11 00:25:00,742 - __main__.WGANLogger - INFO - Real Score: 0.5611
+2025-08-11 00:25:00,743 - __main__.WGANLogger - INFO - Fake Score: -0.5240
+2025-08-11 00:25:09,803 - __main__.WGANLogger - INFO - Epoch [7] Batch [450] C_loss: -0.9071 G_loss: 0.4364 W_dist: -0.9071
+2025-08-11 00:25:17,297 - __main__.WGANLogger - INFO - Epoch [7] Batch [500] C_loss: -0.9645 G_loss: 0.2358 W_dist: -0.9645
+2025-08-11 00:25:26,477 - __main__.WGANLogger - INFO - Epoch [7] Batch [550] C_loss: -1.0352 G_loss: 0.5859 W_dist: -1.0352
+2025-08-11 00:25:35,503 - __main__.WGANLogger - INFO - Epoch [7] Batch [600] C_loss: -1.0622 G_loss: 0.5918 W_dist: -1.0622
+2025-08-11 00:25:36,117 - __main__.WGANLogger - INFO - Epoch: [7/10] Batch: [600/937] (64.0%)
+2025-08-11 00:25:36,118 - __main__.WGANLogger - INFO - Critic Loss: -1.0622
+2025-08-11 00:25:36,119 - __main__.WGANLogger - INFO - Generator Loss: 0.5918
+2025-08-11 00:25:36,120 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0622
+2025-08-11 00:25:36,121 - __main__.WGANLogger - INFO - Real Score: 0.5438
+2025-08-11 00:25:36,121 - __main__.WGANLogger - INFO - Fake Score: -0.5184
+2025-08-11 00:25:45,124 - __main__.WGANLogger - INFO - Epoch [7] Batch [650] C_loss: -1.1731 G_loss: 0.6338 W_dist: -1.1731
+2025-08-11 00:25:54,133 - __main__.WGANLogger - INFO - Epoch [7] Batch [700] C_loss: -0.9885 G_loss: 0.6166 W_dist: -0.9885
+2025-08-11 00:26:03,788 - __main__.WGANLogger - INFO - Epoch [7] Batch [750] C_loss: -1.0376 G_loss: 0.5826 W_dist: -1.0376
+2025-08-11 00:26:11,383 - __main__.WGANLogger - INFO - Epoch [7] Batch [800] C_loss: -0.9007 G_loss: 0.2770 W_dist: -0.9007
+2025-08-11 00:26:12,001 - __main__.WGANLogger - INFO - Epoch: [7/10] Batch: [800/937] (85.4%)
+2025-08-11 00:26:12,003 - __main__.WGANLogger - INFO - Critic Loss: -0.9007
+2025-08-11 00:26:12,004 - __main__.WGANLogger - INFO - Generator Loss: 0.2770
+2025-08-11 00:26:12,004 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9007
+2025-08-11 00:26:12,005 - __main__.WGANLogger - INFO - Real Score: 0.4280
+2025-08-11 00:26:12,006 - __main__.WGANLogger - INFO - Fake Score: -0.4727
+2025-08-11 00:26:21,022 - __main__.WGANLogger - INFO - Epoch [7] Batch [850] C_loss: -0.8826 G_loss: 0.1793 W_dist: -0.8826
+2025-08-11 00:26:29,936 - __main__.WGANLogger - INFO - Epoch [7] Batch [900] C_loss: -1.0023 G_loss: 0.5370 W_dist: -1.0023
+2025-08-11 00:26:36,791 - WGAN.Training - INFO - Epoch [7/10] completed in 169.70s
+2025-08-11 00:26:36,995 - __main__.WGANLogger - INFO - Epoch [8] Batch [0] C_loss: -0.6784 G_loss: -0.0083 W_dist: -0.6784
+2025-08-11 00:26:37,644 - __main__.WGANLogger - INFO - Epoch: [8/10] Batch: [0/937] (0.0%)
+2025-08-11 00:26:37,644 - __main__.WGANLogger - INFO - Critic Loss: -0.6784
+2025-08-11 00:26:37,645 - __main__.WGANLogger - INFO - Generator Loss: -0.0083
+2025-08-11 00:26:37,645 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.6784
+2025-08-11 00:26:37,645 - __main__.WGANLogger - INFO - Real Score: 0.2360
+2025-08-11 00:26:37,645 - __main__.WGANLogger - INFO - Fake Score: -0.4423
+2025-08-11 00:26:46,597 - __main__.WGANLogger - INFO - Epoch [8] Batch [50] C_loss: -0.9279 G_loss: 0.5636 W_dist: -0.9279
+2025-08-11 00:26:55,527 - __main__.WGANLogger - INFO - Epoch [8] Batch [100] C_loss: -0.9927 G_loss: 0.6004 W_dist: -0.9927
+2025-08-11 00:27:03,915 - __main__.WGANLogger - INFO - Epoch [8] Batch [150] C_loss: -0.9279 G_loss: 0.3707 W_dist: -0.9279
+2025-08-11 00:27:12,423 - __main__.WGANLogger - INFO - Epoch [8] Batch [200] C_loss: -0.9648 G_loss: 0.3756 W_dist: -0.9648
+2025-08-11 00:27:13,259 - __main__.WGANLogger - INFO - Epoch: [8/10] Batch: [200/937] (21.3%)
+2025-08-11 00:27:13,260 - __main__.WGANLogger - INFO - Critic Loss: -0.9648
+2025-08-11 00:27:13,261 - __main__.WGANLogger - INFO - Generator Loss: 0.3756
+2025-08-11 00:27:13,262 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9648
+2025-08-11 00:27:13,263 - __main__.WGANLogger - INFO - Real Score: 0.4649
+2025-08-11 00:27:13,263 - __main__.WGANLogger - INFO - Fake Score: -0.4998
+2025-08-11 00:27:21,945 - __main__.WGANLogger - INFO - Epoch [8] Batch [250] C_loss: -0.7312 G_loss: 0.0374 W_dist: -0.7312
+2025-08-11 00:27:30,884 - __main__.WGANLogger - INFO - Epoch [8] Batch [300] C_loss: -1.0202 G_loss: 0.5830 W_dist: -1.0202
+2025-08-11 00:27:40,250 - __main__.WGANLogger - INFO - Epoch [8] Batch [350] C_loss: -0.9994 G_loss: 0.3728 W_dist: -0.9994
+2025-08-11 00:27:49,283 - __main__.WGANLogger - INFO - Epoch [8] Batch [400] C_loss: -0.9810 G_loss: 0.4680 W_dist: -0.9810
+2025-08-11 00:27:49,905 - __main__.WGANLogger - INFO - Epoch: [8/10] Batch: [400/937] (42.7%)
+2025-08-11 00:27:49,906 - __main__.WGANLogger - INFO - Critic Loss: -0.9810
+2025-08-11 00:27:49,907 - __main__.WGANLogger - INFO - Generator Loss: 0.4680
+2025-08-11 00:27:49,908 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9810
+2025-08-11 00:27:49,909 - __main__.WGANLogger - INFO - Real Score: 0.4824
+2025-08-11 00:27:49,910 - __main__.WGANLogger - INFO - Fake Score: -0.4986
+2025-08-11 00:27:58,752 - __main__.WGANLogger - INFO - Epoch [8] Batch [450] C_loss: -0.9741 G_loss: 0.3224 W_dist: -0.9741
+2025-08-11 00:28:06,423 - __main__.WGANLogger - INFO - Epoch [8] Batch [500] C_loss: -0.9162 G_loss: 0.3273 W_dist: -0.9162
+2025-08-11 00:28:15,830 - __main__.WGANLogger - INFO - Epoch [8] Batch [550] C_loss: -1.0456 G_loss: 0.5927 W_dist: -1.0456
+2025-08-11 00:28:24,961 - __main__.WGANLogger - INFO - Epoch [8] Batch [600] C_loss: -0.9147 G_loss: 0.6148 W_dist: -0.9147
+2025-08-11 00:28:25,798 - __main__.WGANLogger - INFO - Epoch: [8/10] Batch: [600/937] (64.0%)
+2025-08-11 00:28:25,799 - __main__.WGANLogger - INFO - Critic Loss: -0.9147
+2025-08-11 00:28:25,799 - __main__.WGANLogger - INFO - Generator Loss: 0.6148
+2025-08-11 00:28:25,800 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9147
+2025-08-11 00:28:25,800 - __main__.WGANLogger - INFO - Real Score: 0.4916
+2025-08-11 00:28:25,800 - __main__.WGANLogger - INFO - Fake Score: -0.4231
+2025-08-11 00:28:34,780 - __main__.WGANLogger - INFO - Epoch [8] Batch [650] C_loss: -0.8834 G_loss: 0.3390 W_dist: -0.8834
+2025-08-11 00:28:43,788 - __main__.WGANLogger - INFO - Epoch [8] Batch [700] C_loss: -0.8752 G_loss: 0.5857 W_dist: -0.8752
+2025-08-11 00:28:53,060 - __main__.WGANLogger - INFO - Epoch [8] Batch [750] C_loss: -1.0138 G_loss: 0.5887 W_dist: -1.0138
+2025-08-11 00:29:00,796 - __main__.WGANLogger - INFO - Epoch [8] Batch [800] C_loss: -0.9615 G_loss: 0.6006 W_dist: -0.9615
+2025-08-11 00:29:01,414 - __main__.WGANLogger - INFO - Epoch: [8/10] Batch: [800/937] (85.4%)
+2025-08-11 00:29:01,415 - __main__.WGANLogger - INFO - Critic Loss: -0.9615
+2025-08-11 00:29:01,416 - __main__.WGANLogger - INFO - Generator Loss: 0.6006
+2025-08-11 00:29:01,417 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9615
+2025-08-11 00:29:01,418 - __main__.WGANLogger - INFO - Real Score: 0.5054
+2025-08-11 00:29:01,419 - __main__.WGANLogger - INFO - Fake Score: -0.4561
+2025-08-11 00:29:10,404 - __main__.WGANLogger - INFO - Epoch [8] Batch [850] C_loss: -0.9227 G_loss: 0.3438 W_dist: -0.9227
+2025-08-11 00:29:19,577 - __main__.WGANLogger - INFO - Epoch [8] Batch [900] C_loss: -0.8674 G_loss: 0.3190 W_dist: -0.8674
+2025-08-11 00:29:26,393 - WGAN.Training - INFO - Epoch [8/10] completed in 169.60s
+2025-08-11 00:29:26,663 - __main__.WGANLogger - INFO - Epoch [9] Batch [0] C_loss: -0.9967 G_loss: 0.3922 W_dist: -0.9967
+2025-08-11 00:29:27,492 - __main__.WGANLogger - INFO - Epoch: [9/10] Batch: [0/937] (0.0%)
+2025-08-11 00:29:27,493 - __main__.WGANLogger - INFO - Critic Loss: -0.9967
+2025-08-11 00:29:27,493 - __main__.WGANLogger - INFO - Generator Loss: 0.3922
+2025-08-11 00:29:27,493 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9967
+2025-08-11 00:29:27,494 - __main__.WGANLogger - INFO - Real Score: 0.4868
+2025-08-11 00:29:27,494 - __main__.WGANLogger - INFO - Fake Score: -0.5099
+2025-08-11 00:29:36,535 - __main__.WGANLogger - INFO - Epoch [9] Batch [50] C_loss: -0.7915 G_loss: 0.3065 W_dist: -0.7915
+2025-08-11 00:29:45,284 - __main__.WGANLogger - INFO - Epoch [9] Batch [100] C_loss: -0.9397 G_loss: 0.3260 W_dist: -0.9397
+2025-08-11 00:29:53,194 - __main__.WGANLogger - INFO - Epoch [9] Batch [150] C_loss: -1.0181 G_loss: 0.5797 W_dist: -1.0181
+2025-08-11 00:30:02,278 - __main__.WGANLogger - INFO - Epoch [9] Batch [200] C_loss: -0.9707 G_loss: 0.3786 W_dist: -0.9707
+2025-08-11 00:30:02,907 - __main__.WGANLogger - INFO - Epoch: [9/10] Batch: [200/937] (21.3%)
+2025-08-11 00:30:02,908 - __main__.WGANLogger - INFO - Critic Loss: -0.9707
+2025-08-11 00:30:02,909 - __main__.WGANLogger - INFO - Generator Loss: 0.3786
+2025-08-11 00:30:02,910 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9707
+2025-08-11 00:30:02,911 - __main__.WGANLogger - INFO - Real Score: 0.4785
+2025-08-11 00:30:02,911 - __main__.WGANLogger - INFO - Fake Score: -0.4923
+2025-08-11 00:30:11,902 - __main__.WGANLogger - INFO - Epoch [9] Batch [250] C_loss: -0.9600 G_loss: 0.5761 W_dist: -0.9600
+2025-08-11 00:30:21,009 - __main__.WGANLogger - INFO - Epoch [9] Batch [300] C_loss: -1.0595 G_loss: 0.6025 W_dist: -1.0595
+2025-08-11 00:30:30,563 - __main__.WGANLogger - INFO - Epoch [9] Batch [350] C_loss: -0.9035 G_loss: 0.3455 W_dist: -0.9035
+2025-08-11 00:30:39,352 - __main__.WGANLogger - INFO - Epoch [9] Batch [400] C_loss: -0.9504 G_loss: 0.6058 W_dist: -0.9504
+2025-08-11 00:30:40,207 - __main__.WGANLogger - INFO - Epoch: [9/10] Batch: [400/937] (42.7%)
+2025-08-11 00:30:40,209 - __main__.WGANLogger - INFO - Critic Loss: -0.9504
+2025-08-11 00:30:40,209 - __main__.WGANLogger - INFO - Generator Loss: 0.6058
+2025-08-11 00:30:40,210 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9504
+2025-08-11 00:30:40,211 - __main__.WGANLogger - INFO - Real Score: 0.4999
+2025-08-11 00:30:40,212 - __main__.WGANLogger - INFO - Fake Score: -0.4506
+2025-08-11 00:30:48,448 - __main__.WGANLogger - INFO - Epoch [9] Batch [450] C_loss: -0.9284 G_loss: 0.5963 W_dist: -0.9284
+2025-08-11 00:30:56,850 - __main__.WGANLogger - INFO - Epoch [9] Batch [500] C_loss: -0.9960 G_loss: 0.4845 W_dist: -0.9960
+2025-08-11 00:31:06,238 - __main__.WGANLogger - INFO - Epoch [9] Batch [550] C_loss: -0.8824 G_loss: 0.6107 W_dist: -0.8824
+2025-08-11 00:31:15,373 - __main__.WGANLogger - INFO - Epoch [9] Batch [600] C_loss: -1.0039 G_loss: 0.5653 W_dist: -1.0039
+2025-08-11 00:31:15,995 - __main__.WGANLogger - INFO - Epoch: [9/10] Batch: [600/937] (64.0%)
+2025-08-11 00:31:15,996 - __main__.WGANLogger - INFO - Critic Loss: -1.0039
+2025-08-11 00:31:15,997 - __main__.WGANLogger - INFO - Generator Loss: 0.5653
+2025-08-11 00:31:15,998 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.0039
+2025-08-11 00:31:15,999 - __main__.WGANLogger - INFO - Real Score: 0.5173
+2025-08-11 00:31:16,000 - __main__.WGANLogger - INFO - Fake Score: -0.4867
+2025-08-11 00:31:25,019 - __main__.WGANLogger - INFO - Epoch [9] Batch [650] C_loss: -0.9359 G_loss: 0.5686 W_dist: -0.9359
+2025-08-11 00:31:33,915 - __main__.WGANLogger - INFO - Epoch [9] Batch [700] C_loss: -0.9998 G_loss: 0.3481 W_dist: -0.9998
+2025-08-11 00:31:43,185 - __main__.WGANLogger - INFO - Epoch [9] Batch [750] C_loss: -0.9227 G_loss: 0.5893 W_dist: -0.9227
+2025-08-11 00:31:50,879 - __main__.WGANLogger - INFO - Epoch [9] Batch [800] C_loss: -0.9074 G_loss: 0.3563 W_dist: -0.9074
+2025-08-11 00:31:51,494 - __main__.WGANLogger - INFO - Epoch: [9/10] Batch: [800/937] (85.4%)
+2025-08-11 00:31:51,495 - __main__.WGANLogger - INFO - Critic Loss: -0.9074
+2025-08-11 00:31:51,496 - __main__.WGANLogger - INFO - Generator Loss: 0.3563
+2025-08-11 00:31:51,496 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.9074
+2025-08-11 00:31:51,497 - __main__.WGANLogger - INFO - Real Score: 0.4393
+2025-08-11 00:31:51,497 - __main__.WGANLogger - INFO - Fake Score: -0.4682
+2025-08-11 00:32:00,435 - __main__.WGANLogger - INFO - Epoch [9] Batch [850] C_loss: -0.7174 G_loss: 0.5870 W_dist: -0.7174
+2025-08-11 00:32:09,312 - __main__.WGANLogger - INFO - Epoch [9] Batch [900] C_loss: -0.9286 G_loss: 0.3780 W_dist: -0.9286
+2025-08-11 00:32:16,365 - WGAN.Training - INFO - Epoch [9/10] completed in 169.97s
+2025-08-11 00:32:16,449 - __main__.WGAN - INFO - Models saved to ./data/models/WGAN/MNIST/wgan_epoch_9_wgan.pth
+2025-08-11 00:32:17,119 - WGAN.Training - INFO - Training completed in 28.34 minutes!
+2025-08-11 00:32:19,339 - WGAN.CIFAR10_Example - INFO - ================================================================================
+2025-08-11 00:32:19,340 - WGAN.CIFAR10_Example - INFO - WGAN TRAINING ON CIFAR10 DATASET
+2025-08-11 00:32:19,341 - WGAN.CIFAR10_Example - INFO - ================================================================================
+2025-08-11 00:32:19,342 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-11 00:32:34,971 - __main__.DataSetLoader - INFO - CIFAR10 dataset loaded: 781 batches, image size: [64, 64], channels: 3
+2025-08-11 00:32:34,973 - WGAN.CIFAR10_Example - INFO - CIFAR10 - Batches: 781, Image size: [64, 64], Channels: 3
+2025-08-11 00:32:34,974 - __main__.WGAN - INFO - WGAN initialized on device: cuda
+2025-08-11 00:32:35,004 - __main__.Generator - INFO - Generator initialized:
+2025-08-11 00:32:35,004 - __main__.Generator - INFO -   Latent dim: 100
+2025-08-11 00:32:35,005 - __main__.Generator - INFO -   Hidden dim: 64
+2025-08-11 00:32:35,006 - __main__.Generator - INFO -   Output channels: 3
+2025-08-11 00:32:35,006 - __main__.Generator - INFO -   Output size: [64, 64]
+2025-08-11 00:32:35,007 - __main__.Generator - INFO -   Starting size: 4x4
+2025-08-11 00:32:35,030 - __main__.Critic - INFO - Critic initialized:
+2025-08-11 00:32:35,030 - __main__.Critic - INFO -   Input channels: 3
+2025-08-11 00:32:35,031 - __main__.Critic - INFO -   Hidden dim: 64
+2025-08-11 00:32:35,031 - __main__.Critic - INFO -   Image size: [64, 64]
+2025-08-11 00:32:35,032 - __main__.Critic - INFO -   Final spatial size: 4x4
+2025-08-11 00:32:35,036 - __main__.WGAN - INFO - WGAN Architecture:
+2025-08-11 00:32:35,037 - __main__.WGAN - INFO -   Generator parameters: 3,576,704
+2025-08-11 00:32:35,037 - __main__.WGAN - INFO -   Critic parameters: 2,765,568
+2025-08-11 00:32:35,038 - __main__.WGAN - INFO -   Critic iterations per generator step: 5
+2025-08-11 00:32:35,038 - __main__.WGAN - INFO -   Weight clip value: 0.01
+2025-08-11 00:32:35,039 - WGAN.CIFAR10_Example - INFO - WGAN CIFAR10 Configuration:
+2025-08-11 00:32:35,039 - WGAN.CIFAR10_Example - INFO -   Latent dimension: 100
+2025-08-11 00:32:35,040 - WGAN.CIFAR10_Example - INFO -   Image size: [64, 64]
+2025-08-11 00:32:35,040 - WGAN.CIFAR10_Example - INFO -   Channels: 3
+2025-08-11 00:32:35,041 - WGAN.CIFAR10_Example - INFO -   Learning rate: 5e-05
+2025-08-11 00:32:35,041 - WGAN.CIFAR10_Example - INFO -   Clip value: 0.01
+2025-08-11 00:32:35,042 - WGAN.CIFAR10_Example - INFO -   Critic iterations: 5
+2025-08-11 00:32:35,042 - __main__.WGANLogger - INFO - WGANLogger initialized:
+2025-08-11 00:32:35,043 - __main__.WGANLogger - INFO -   Model: WGAN
+2025-08-11 00:32:35,043 - __main__.WGANLogger - INFO -   Dataset: CIFAR10
+2025-08-11 00:32:35,044 - __main__.WGANLogger - INFO -   Save directory: ./data
+2025-08-11 00:32:35,044 - WGAN.CIFAR10_Example - INFO - Generating initial samples (before training)...
+2025-08-11 00:32:35,371 - WGAN.CIFAR10_Example - INFO - Starting CIFAR10 training...
+2025-08-11 00:32:35,372 - WGAN.Training - INFO - Starting WGAN training for 10 epochs...
+2025-08-11 00:32:35,373 - WGAN.Training - INFO - ================================================================================
+2025-08-11 00:32:35,541 - __main__.WGANLogger - INFO - Epoch [0] Batch [0] C_loss: -0.0097 G_loss: 0.0170 W_dist: -0.0097
+2025-08-11 00:32:36,220 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [0/781] (0.0%)
+2025-08-11 00:32:36,221 - __main__.WGANLogger - INFO - Critic Loss: -0.0097
+2025-08-11 00:32:36,221 - __main__.WGANLogger - INFO - Generator Loss: 0.0170
+2025-08-11 00:32:36,221 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.0097
+2025-08-11 00:32:36,222 - __main__.WGANLogger - INFO - Real Score: 0.0571
+2025-08-11 00:32:36,222 - __main__.WGANLogger - INFO - Fake Score: 0.0474
+2025-08-11 00:32:45,561 - __main__.WGANLogger - INFO - Epoch [0] Batch [50] C_loss: -0.4518 G_loss: 0.2877 W_dist: -0.4518
+2025-08-11 00:32:54,934 - __main__.WGANLogger - INFO - Epoch [0] Batch [100] C_loss: -1.0818 G_loss: 0.5646 W_dist: -1.0818
+2025-08-11 00:33:04,740 - __main__.WGANLogger - INFO - Epoch [0] Batch [150] C_loss: -1.2996 G_loss: 0.6563 W_dist: -1.2996
+2025-08-11 00:33:14,260 - __main__.WGANLogger - INFO - Epoch [0] Batch [200] C_loss: -1.3628 G_loss: 0.6792 W_dist: -1.3628
+2025-08-11 00:33:15,345 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [200/781] (25.6%)
+2025-08-11 00:33:15,346 - __main__.WGANLogger - INFO - Critic Loss: -1.3628
+2025-08-11 00:33:15,347 - __main__.WGANLogger - INFO - Generator Loss: 0.6792
+2025-08-11 00:33:15,347 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.3628
+2025-08-11 00:33:15,348 - __main__.WGANLogger - INFO - Real Score: 0.6985
+2025-08-11 00:33:15,349 - __main__.WGANLogger - INFO - Fake Score: -0.6642
+2025-08-11 00:33:24,875 - __main__.WGANLogger - INFO - Epoch [0] Batch [250] C_loss: -1.4062 G_loss: 0.6865 W_dist: -1.4062
+2025-08-11 00:33:32,803 - __main__.WGANLogger - INFO - Epoch [0] Batch [300] C_loss: -1.3750 G_loss: 0.6810 W_dist: -1.3750
+2025-08-11 00:33:42,690 - __main__.WGANLogger - INFO - Epoch [0] Batch [350] C_loss: -1.4038 G_loss: 0.6857 W_dist: -1.4038
+2025-08-11 00:33:52,203 - __main__.WGANLogger - INFO - Epoch [0] Batch [400] C_loss: -1.3765 G_loss: 0.6630 W_dist: -1.3765
+2025-08-11 00:33:53,045 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [400/781] (51.2%)
+2025-08-11 00:33:53,047 - __main__.WGANLogger - INFO - Critic Loss: -1.3765
+2025-08-11 00:33:53,048 - __main__.WGANLogger - INFO - Generator Loss: 0.6630
+2025-08-11 00:33:53,050 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.3765
+2025-08-11 00:33:53,051 - __main__.WGANLogger - INFO - Real Score: 0.7099
+2025-08-11 00:33:53,052 - __main__.WGANLogger - INFO - Fake Score: -0.6666
+2025-08-11 00:34:02,572 - __main__.WGANLogger - INFO - Epoch [0] Batch [450] C_loss: -1.3791 G_loss: 0.6722 W_dist: -1.3791
+2025-08-11 00:34:12,061 - __main__.WGANLogger - INFO - Epoch [0] Batch [500] C_loss: -1.3390 G_loss: 0.6630 W_dist: -1.3390
+2025-08-11 00:34:21,720 - __main__.WGANLogger - INFO - Epoch [0] Batch [550] C_loss: -1.3829 G_loss: 0.6806 W_dist: -1.3829
+2025-08-11 00:34:29,943 - __main__.WGANLogger - INFO - Epoch [0] Batch [600] C_loss: -1.3789 G_loss: 0.6737 W_dist: -1.3789
+2025-08-11 00:34:30,985 - __main__.WGANLogger - INFO - Epoch: [0/10] Batch: [600/781] (76.8%)
+2025-08-11 00:34:30,987 - __main__.WGANLogger - INFO - Critic Loss: -1.3789
+2025-08-11 00:34:30,987 - __main__.WGANLogger - INFO - Generator Loss: 0.6737
+2025-08-11 00:34:30,988 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.3789
+2025-08-11 00:34:30,989 - __main__.WGANLogger - INFO - Real Score: 0.7141
+2025-08-11 00:34:30,990 - __main__.WGANLogger - INFO - Fake Score: -0.6648
+2025-08-11 00:34:40,413 - __main__.WGANLogger - INFO - Epoch [0] Batch [650] C_loss: -1.2554 G_loss: 0.6481 W_dist: -1.2554
+2025-08-11 00:34:49,902 - __main__.WGANLogger - INFO - Epoch [0] Batch [700] C_loss: -1.3171 G_loss: 0.6533 W_dist: -1.3171
+2025-08-11 00:34:59,671 - __main__.WGANLogger - INFO - Epoch [0] Batch [750] C_loss: -1.3740 G_loss: 0.6746 W_dist: -1.3740
+2025-08-11 00:35:05,259 - WGAN.Training - INFO - Epoch [0/10] completed in 149.89s
+2025-08-11 00:35:05,529 - __main__.WGANLogger - INFO - Epoch [1] Batch [0] C_loss: -1.3391 G_loss: 0.6374 W_dist: -1.3391
+2025-08-11 00:35:06,339 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [0/781] (0.0%)
+2025-08-11 00:35:06,341 - __main__.WGANLogger - INFO - Critic Loss: -1.3391
+2025-08-11 00:35:06,341 - __main__.WGANLogger - INFO - Generator Loss: 0.6374
+2025-08-11 00:35:06,342 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.3391
+2025-08-11 00:35:06,343 - __main__.WGANLogger - INFO - Real Score: 0.6920
+2025-08-11 00:35:06,344 - __main__.WGANLogger - INFO - Fake Score: -0.6470
+2025-08-11 00:35:15,820 - __main__.WGANLogger - INFO - Epoch [1] Batch [50] C_loss: -1.3853 G_loss: 0.6750 W_dist: -1.3853
+2025-08-11 00:35:23,817 - __main__.WGANLogger - INFO - Epoch [1] Batch [100] C_loss: -1.3007 G_loss: 0.6610 W_dist: -1.3007
+2025-08-11 00:35:33,709 - __main__.WGANLogger - INFO - Epoch [1] Batch [150] C_loss: -1.3469 G_loss: 0.6564 W_dist: -1.3469
+2025-08-11 00:35:43,185 - __main__.WGANLogger - INFO - Epoch [1] Batch [200] C_loss: -1.2930 G_loss: 0.6415 W_dist: -1.2930
+2025-08-11 00:35:43,991 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [200/781] (25.6%)
+2025-08-11 00:35:43,991 - __main__.WGANLogger - INFO - Critic Loss: -1.2930
+2025-08-11 00:35:43,992 - __main__.WGANLogger - INFO - Generator Loss: 0.6415
+2025-08-11 00:35:43,992 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.2930
+2025-08-11 00:35:43,993 - __main__.WGANLogger - INFO - Real Score: 0.6704
+2025-08-11 00:35:43,993 - __main__.WGANLogger - INFO - Fake Score: -0.6226
+2025-08-11 00:35:53,441 - __main__.WGANLogger - INFO - Epoch [1] Batch [250] C_loss: -1.3223 G_loss: 0.6460 W_dist: -1.3223
+2025-08-11 00:36:02,797 - __main__.WGANLogger - INFO - Epoch [1] Batch [300] C_loss: -1.2525 G_loss: 0.6089 W_dist: -1.2525
+2025-08-11 00:36:12,713 - __main__.WGANLogger - INFO - Epoch [1] Batch [350] C_loss: -1.2659 G_loss: 0.6384 W_dist: -1.2659
+2025-08-11 00:36:20,927 - __main__.WGANLogger - INFO - Epoch [1] Batch [400] C_loss: -1.2991 G_loss: 0.6374 W_dist: -1.2991
+2025-08-11 00:36:21,717 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [400/781] (51.2%)
+2025-08-11 00:36:21,719 - __main__.WGANLogger - INFO - Critic Loss: -1.2991
+2025-08-11 00:36:21,719 - __main__.WGANLogger - INFO - Generator Loss: 0.6374
+2025-08-11 00:36:21,720 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.2991
+2025-08-11 00:36:21,721 - __main__.WGANLogger - INFO - Real Score: 0.6690
+2025-08-11 00:36:21,721 - __main__.WGANLogger - INFO - Fake Score: -0.6302
+2025-08-11 00:36:31,074 - __main__.WGANLogger - INFO - Epoch [1] Batch [450] C_loss: -1.3132 G_loss: 0.6433 W_dist: -1.3132
+2025-08-11 00:36:40,536 - __main__.WGANLogger - INFO - Epoch [1] Batch [500] C_loss: -0.6286 G_loss: 0.3349 W_dist: -0.6286
+2025-08-11 00:36:50,246 - __main__.WGANLogger - INFO - Epoch [1] Batch [550] C_loss: -1.2281 G_loss: 0.6223 W_dist: -1.2281
+2025-08-11 00:36:59,704 - __main__.WGANLogger - INFO - Epoch [1] Batch [600] C_loss: -1.2848 G_loss: 0.6330 W_dist: -1.2848
+2025-08-11 00:37:00,489 - __main__.WGANLogger - INFO - Epoch: [1/10] Batch: [600/781] (76.8%)
+2025-08-11 00:37:00,490 - __main__.WGANLogger - INFO - Critic Loss: -1.2848
+2025-08-11 00:37:00,490 - __main__.WGANLogger - INFO - Generator Loss: 0.6330
+2025-08-11 00:37:00,491 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.2848
+2025-08-11 00:37:00,491 - __main__.WGANLogger - INFO - Real Score: 0.6642
+2025-08-11 00:37:00,492 - __main__.WGANLogger - INFO - Fake Score: -0.6205
+2025-08-11 00:37:10,081 - __main__.WGANLogger - INFO - Epoch [1] Batch [650] C_loss: -1.2272 G_loss: 0.5832 W_dist: -1.2272
+2025-08-11 00:37:18,240 - __main__.WGANLogger - INFO - Epoch [1] Batch [700] C_loss: -0.7926 G_loss: 0.2926 W_dist: -0.7926
+2025-08-11 00:37:28,346 - __main__.WGANLogger - INFO - Epoch [1] Batch [750] C_loss: -1.2296 G_loss: 0.6160 W_dist: -1.2296
+2025-08-11 00:37:34,056 - WGAN.Training - INFO - Epoch [1/10] completed in 148.80s
+2025-08-11 00:37:34,331 - __main__.WGANLogger - INFO - Epoch [2] Batch [0] C_loss: -0.6412 G_loss: 0.6494 W_dist: -0.6412
+2025-08-11 00:37:35,120 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [0/781] (0.0%)
+2025-08-11 00:37:35,121 - __main__.WGANLogger - INFO - Critic Loss: -0.6412
+2025-08-11 00:37:35,121 - __main__.WGANLogger - INFO - Generator Loss: 0.6494
+2025-08-11 00:37:35,122 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.6412
+2025-08-11 00:37:35,123 - __main__.WGANLogger - INFO - Real Score: 0.4026
+2025-08-11 00:37:35,123 - __main__.WGANLogger - INFO - Fake Score: -0.2386
+2025-08-11 00:37:44,634 - __main__.WGANLogger - INFO - Epoch [2] Batch [50] C_loss: -1.2498 G_loss: 0.6225 W_dist: -1.2498
+2025-08-11 00:37:54,135 - __main__.WGANLogger - INFO - Epoch [2] Batch [100] C_loss: -1.1619 G_loss: 0.6449 W_dist: -1.1619
+2025-08-11 00:38:03,947 - __main__.WGANLogger - INFO - Epoch [2] Batch [150] C_loss: -1.2235 G_loss: 0.5982 W_dist: -1.2235
+2025-08-11 00:38:12,153 - __main__.WGANLogger - INFO - Epoch [2] Batch [200] C_loss: -1.2415 G_loss: 0.6137 W_dist: -1.2415
+2025-08-11 00:38:12,936 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [200/781] (25.6%)
+2025-08-11 00:38:12,938 - __main__.WGANLogger - INFO - Critic Loss: -1.2415
+2025-08-11 00:38:12,939 - __main__.WGANLogger - INFO - Generator Loss: 0.6137
+2025-08-11 00:38:12,939 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.2415
+2025-08-11 00:38:12,940 - __main__.WGANLogger - INFO - Real Score: 0.6427
+2025-08-11 00:38:12,941 - __main__.WGANLogger - INFO - Fake Score: -0.5988
+2025-08-11 00:38:22,468 - __main__.WGANLogger - INFO - Epoch [2] Batch [250] C_loss: -1.2154 G_loss: 0.5820 W_dist: -1.2154
+2025-08-11 00:38:31,978 - __main__.WGANLogger - INFO - Epoch [2] Batch [300] C_loss: -0.8519 G_loss: 0.6506 W_dist: -0.8519
+2025-08-11 00:38:42,005 - __main__.WGANLogger - INFO - Epoch [2] Batch [350] C_loss: -1.2473 G_loss: 0.6136 W_dist: -1.2473
+2025-08-11 00:38:51,509 - __main__.WGANLogger - INFO - Epoch [2] Batch [400] C_loss: -1.1181 G_loss: 0.1697 W_dist: -1.1181
+2025-08-11 00:38:52,289 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [400/781] (51.2%)
+2025-08-11 00:38:52,290 - __main__.WGANLogger - INFO - Critic Loss: -1.1181
+2025-08-11 00:38:52,291 - __main__.WGANLogger - INFO - Generator Loss: 0.1697
+2025-08-11 00:38:52,292 - __main__.WGANLogger - INFO - Wasserstein Distance: -1.1181
+2025-08-11 00:38:52,293 - __main__.WGANLogger - INFO - Real Score: 0.5617
+2025-08-11 00:38:52,293 - __main__.WGANLogger - INFO - Fake Score: -0.5564
+2025-08-11 00:39:01,788 - __main__.WGANLogger - INFO - Epoch [2] Batch [450] C_loss: -1.0386 G_loss: 0.0912 W_dist: -1.0386
+2025-08-11 00:39:10,052 - __main__.WGANLogger - INFO - Epoch [2] Batch [500] C_loss: -1.2438 G_loss: 0.5935 W_dist: -1.2438
+2025-08-11 00:39:19,918 - __main__.WGANLogger - INFO - Epoch [2] Batch [550] C_loss: -0.9167 G_loss: 0.6741 W_dist: -0.9167
+2025-08-11 00:39:29,396 - __main__.WGANLogger - INFO - Epoch [2] Batch [600] C_loss: -0.5552 G_loss: 0.1685 W_dist: -0.5552
+2025-08-11 00:39:30,171 - __main__.WGANLogger - INFO - Epoch: [2/10] Batch: [600/781] (76.8%)
+2025-08-11 00:39:30,173 - __main__.WGANLogger - INFO - Critic Loss: -0.5552
+2025-08-11 00:39:30,173 - __main__.WGANLogger - INFO - Generator Loss: 0.1685
+2025-08-11 00:39:30,174 - __main__.WGANLogger - INFO - Wasserstein Distance: -0.5552
+2025-08-11 00:39:30,175 - __main__.WGANLogger - INFO - Real Score: 0.2586
+2025-08-11 00:39:30,176 - __main__.WGANLogger - INFO - Fake Score: -0.2966
+2025-08-11 00:39:39,610 - __main__.WGANLogger - INFO - Epoch [2] Batch [650] C_loss: -1.2170 G_loss: 0.5887 W_dist: -1.2170
+2025-08-11 00:39:49,197 - __main__.WGANLogger - INFO - Epoch [2] Batch [700] C_loss: -1.1782 G_loss: 0.6073 W_dist: -1.1782
