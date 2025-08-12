@@ -537,3 +537,1431 @@
 2025-08-10 23:53:02,444 - __main__.HybridTrainer - INFO - TRAINING COMPLETED in 14.6 minutes!
 2025-08-10 23:53:03,185 - HybridVQVAE_WGAN - INFO - To train on MNIST, run:
 2025-08-10 23:53:03,189 - HybridVQVAE_WGAN - INFO -    mnist_trainer.train(mnist_dataloader, num_epochs=10)
+2025-08-12 10:04:34,691 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:04:34,693 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:04:34,800 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:04:34,801 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:04:34,802 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:04:34,820 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:04:34,830 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:04:34,844 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:04:34,855 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:04:34,865 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:04:34,897 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:04:34,905 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:04:34,906 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:04:34,907 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-12 10:04:34,908 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:04:35,933 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=781 | img_size=[64, 64] | channels=3
+2025-08-12 10:04:36,002 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-12 10:04:36,043 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:04:36,044 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:04:36,045 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-12 10:04:36,046 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-12 10:04:36,047 - __main__.VQVAE - INFO -    Base channels: 128
+2025-08-12 10:04:36,047 - __main__.VQVAE - INFO -    Total params: 12,532,739
+2025-08-12 10:04:36,053 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:04:36,053 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:04:36,053 - __main__.WGANCritic - INFO -    Base channels: 32
+2025-08-12 10:04:36,054 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:04:36,054 - __main__.WGANCritic - INFO -    Total params: 392,032
+2025-08-12 10:04:36,055 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:04:36,055 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:04:36,056 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-12 10:04:36,056 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-12 10:04:36,056 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:04:36,057 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 12,924,771
+2025-08-12 10:04:36,057 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 12,532,739
+2025-08-12 10:04:36,058 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 392,032
+2025-08-12 10:04:36,339 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:04:36,340 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-12 10:04:36,341 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 10:04:36,342 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1.0, 'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-12 10:04:36,343 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 10:04:36,343 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:04:36,344 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:04:36,345 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:04:36,347 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:04:36,348 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:04:36,349 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:04:36,349 - __main__.HybridTrainer - INFO - Training for 10 epochs | 781 steps/epoch
+2025-08-12 10:04:36,350 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:06:44,556 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:06:44,557 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:06:44,559 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:06:44,560 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:06:44,561 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:06:44,576 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:06:44,588 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:06:44,605 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:06:44,623 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:06:44,637 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:06:44,671 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:06:44,683 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:06:44,684 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:06:44,685 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-12 10:06:44,686 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:06:45,697 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=781 | img_size=[64, 64] | channels=3
+2025-08-12 10:06:45,752 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-12 10:06:45,806 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:06:45,807 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:06:45,807 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-12 10:06:45,808 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-12 10:06:45,808 - __main__.VQVAE - INFO -    Base channels: 128
+2025-08-12 10:06:45,809 - __main__.VQVAE - INFO -    Total params: 12,532,739
+2025-08-12 10:06:45,814 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:06:45,815 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:06:45,815 - __main__.WGANCritic - INFO -    Base channels: 32
+2025-08-12 10:06:45,816 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:06:45,816 - __main__.WGANCritic - INFO -    Total params: 392,032
+2025-08-12 10:06:45,817 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:06:45,817 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:06:45,818 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-12 10:06:45,818 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-12 10:06:45,818 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:06:45,819 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 12,924,771
+2025-08-12 10:06:45,819 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 12,532,739
+2025-08-12 10:06:45,820 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 392,032
+2025-08-12 10:06:45,875 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:06:45,876 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-12 10:06:45,877 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 10:06:45,878 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1.0, 'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-12 10:06:45,879 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 10:06:45,880 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:06:45,880 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:06:45,881 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:06:45,882 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:06:45,883 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:06:45,884 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:06:45,885 - __main__.HybridTrainer - INFO - Training for 10 epochs | 781 steps/epoch
+2025-08-12 10:06:45,885 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:19:17,009 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:19:17,010 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:19:17,012 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:19:17,012 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:19:17,013 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:19:17,029 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:19:17,043 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:19:17,064 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:19:17,079 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:19:17,091 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:19:17,126 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:19:17,135 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:19:17,136 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:19:17,136 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=64 | data_dir=./data
+2025-08-12 10:19:17,137 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:19:18,133 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=781 | img_size=[64, 64] | channels=3
+2025-08-12 10:19:18,188 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-12 10:19:18,242 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:19:18,243 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:19:18,244 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-12 10:19:18,245 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-12 10:19:18,245 - __main__.VQVAE - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:19:18,246 - __main__.VQVAE - INFO -    Total params: 12,796,035
+2025-08-12 10:19:18,298 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:19:18,298 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:19:18,299 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:19:18,299 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:19:18,299 - __main__.WGANCritic - INFO -    Total params: 6,212,992
+2025-08-12 10:19:18,300 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:19:18,300 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:19:18,301 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-12 10:19:18,301 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-12 10:19:18,302 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:19:18,303 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 19,009,027
+2025-08-12 10:19:18,304 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 12,796,035
+2025-08-12 10:19:18,304 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 6,212,992
+2025-08-12 10:19:18,433 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:19:18,434 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-12 10:19:18,435 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 10:19:18,436 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1.0, 'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-12 10:19:18,436 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 10:19:18,437 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:19:18,438 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:19:18,439 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:19:18,440 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:19:18,440 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:19:18,441 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:19:18,441 - __main__.HybridTrainer - INFO - Training for 10 epochs | 781 steps/epoch
+2025-08-12 10:19:18,442 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:22:59,126 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:22:59,128 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:22:59,130 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:22:59,131 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:22:59,132 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:22:59,145 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:22:59,154 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:22:59,169 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:22:59,179 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:22:59,189 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:22:59,219 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:22:59,227 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:22:59,228 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:22:59,229 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=100 | data_dir=./data
+2025-08-12 10:22:59,229 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:23:00,230 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=500 | img_size=[64, 64] | channels=3
+2025-08-12 10:23:00,297 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-12 10:23:00,356 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:23:00,357 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:23:00,358 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-12 10:23:00,359 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-12 10:23:00,359 - __main__.VQVAE - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:23:00,360 - __main__.VQVAE - INFO -    Total params: 12,796,035
+2025-08-12 10:23:00,417 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:23:00,417 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:23:00,418 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:23:00,419 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:23:00,419 - __main__.WGANCritic - INFO -    Total params: 6,212,992
+2025-08-12 10:23:00,420 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:23:00,421 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:23:00,421 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-12 10:23:00,422 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-12 10:23:00,423 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:23:00,423 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 19,009,027
+2025-08-12 10:23:00,424 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 12,796,035
+2025-08-12 10:23:00,425 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 6,212,992
+2025-08-12 10:23:00,454 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:23:00,455 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-12 10:23:00,456 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 10:23:00,457 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1.0, 'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-12 10:23:00,458 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 10:23:00,459 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:23:00,459 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:23:00,460 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:23:00,460 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:23:00,461 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:23:00,461 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:23:00,462 - __main__.HybridTrainer - INFO - Training for 10 epochs | 500 steps/epoch
+2025-08-12 10:23:00,462 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:23:01,751 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: 
+G_loss=2.7024 
+R_loss=0.6789 
+Crit_loss=1.6783 
+CB_loss=0.1726 
+CM_loss=0.1726 
+GP_loss=0.9695 
+W_dist=-0.0116
+2025-08-12 10:23:32,379 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: 
+G_loss=1043.1155 
+R_loss=0.5109 
+Crit_loss=31.9225 
+CB_loss=505.3410 
+CM_loss=505.3410 
+GP_loss=2.7520 
+W_dist=76.5002
+2025-08-12 10:24:04,517 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: 
+G_loss=1268.2278 
+R_loss=0.3471 
+Crit_loss=39.9254 
+CB_loss=613.9777 
+CM_loss=613.9777 
+GP_loss=5.4616 
+W_dist=142.7721
+2025-08-12 10:24:17,299 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:24:17,300 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:24:17,302 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:24:17,303 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:24:17,303 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:24:17,318 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:24:17,334 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:24:17,349 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:24:17,361 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:24:17,372 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:24:17,406 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:24:17,416 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:24:17,417 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:24:17,418 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=100 | data_dir=./data
+2025-08-12 10:24:17,420 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:24:18,426 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=500 | img_size=[64, 64] | channels=3
+2025-08-12 10:24:18,481 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=1024 | embedding_dim=128
+2025-08-12 10:24:18,534 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:24:18,534 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:24:18,535 - __main__.VQVAE - INFO -    Latent: 128 dimensions
+2025-08-12 10:24:18,536 - __main__.VQVAE - INFO -    Codebook: 1024 entries
+2025-08-12 10:24:18,537 - __main__.VQVAE - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:24:18,537 - __main__.VQVAE - INFO -    Total params: 12,796,035
+2025-08-12 10:24:18,592 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:24:18,593 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:24:18,593 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 128 -> 256 -> 512 -> 1024
+2025-08-12 10:24:18,593 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:24:18,594 - __main__.WGANCritic - INFO -    Total params: 6,212,992
+2025-08-12 10:24:18,594 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:24:18,594 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:24:18,595 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 128
+2025-08-12 10:24:18,595 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 1024
+2025-08-12 10:24:18,596 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:24:18,596 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 19,009,027
+2025-08-12 10:24:18,597 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 12,796,035
+2025-08-12 10:24:18,597 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 6,212,992
+2025-08-12 10:24:18,729 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:24:18,730 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.001
+2025-08-12 10:24:18,730 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 10:24:18,731 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1.0, 'adversarial': 1.0, 'codebook': 1.0, 'commitment': 1.0}
+2025-08-12 10:24:18,732 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 10:24:18,733 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:24:18,733 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:24:18,734 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:24:18,735 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:24:18,736 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:24:18,736 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:24:18,737 - __main__.HybridTrainer - INFO - Training for 10 epochs | 500 steps/epoch
+2025-08-12 10:24:18,739 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:24:19,005 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: 
+G_loss=2.4931 
+R_loss=0.6892 
+Crit_loss=1.4675 
+CB_loss=0.1682 
+CM_loss=0.1682 
+GP_loss=0.9689 
+W_dist=-0.0220
+2025-08-12 10:24:51,125 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: 
+G_loss=695.8030 
+R_loss=0.4799 
+Crit_loss=35.5427 
+CB_loss=329.8902 
+CM_loss=329.8902 
+GP_loss=3.6437 
+W_dist=109.0045
+2025-08-12 10:25:21,833 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: 
+G_loss=1874.5239 
+R_loss=0.3820 
+Crit_loss=18.9470 
+CB_loss=927.5975 
+CM_loss=927.5975 
+GP_loss=2.4852 
+W_dist=72.4417
+2025-08-12 10:25:54,242 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: 
+G_loss=1823.1687 
+R_loss=0.2756 
+Crit_loss=48.8304 
+CB_loss=887.0313 
+CM_loss=887.0313 
+GP_loss=3.5022 
+W_dist=90.7864
+2025-08-12 10:26:25,001 - __main__.HybridTrainer - INFO - Epoch 0 Step 400: 
+G_loss=1551.3920 
+R_loss=0.2969 
+Crit_loss=51.3133 
+CB_loss=749.8909 
+CM_loss=749.8909 
+GP_loss=3.2233 
+W_dist=87.8600
+2025-08-12 10:26:57,034 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:26:57,037 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 158.3s
+2025-08-12 10:26:57,038 - __main__.HybridTrainer - INFO - Generator_total_loss: 1272.9496
+2025-08-12 10:26:57,038 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3952
+2025-08-12 10:26:57,039 - __main__.HybridTrainer - INFO - Adversarial_loss: 45.9314
+2025-08-12 10:26:57,039 - __main__.HybridTrainer - INFO - Codebook_loss: 613.3115
+2025-08-12 10:26:57,040 - __main__.HybridTrainer - INFO - Commitment_loss: 613.3115
+2025-08-12 10:26:57,040 - __main__.HybridTrainer - INFO - Wasserstein_distance: 92.3545
+2025-08-12 10:26:57,041 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:26:57,041 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-12 10:26:58,320 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: 
+G_loss=914.0427 
+R_loss=0.5195 
+Crit_loss=8.8884 
+CB_loss=452.3174 
+CM_loss=452.3174 
+GP_loss=2.5298 
+W_dist=72.3599
+2025-08-12 10:27:29,224 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: 
+G_loss=592.1766 
+R_loss=0.5331 
+Crit_loss=2.8193 
+CB_loss=294.4121 
+CM_loss=294.4121 
+GP_loss=0.9622 
+W_dist=27.9123
+2025-08-12 10:28:00,934 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: 
+G_loss=684.8834 
+R_loss=0.5719 
+Crit_loss=29.9537 
+CB_loss=327.1789 
+CM_loss=327.1789 
+GP_loss=1.5660 
+W_dist=56.6045
+2025-08-12 10:28:32,490 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: 
+G_loss=766.2650 
+R_loss=0.4949 
+Crit_loss=9.6472 
+CB_loss=378.0614 
+CM_loss=378.0614 
+GP_loss=1.6167 
+W_dist=51.8890
+2025-08-12 10:29:03,211 - __main__.HybridTrainer - INFO - Epoch 1 Step 400: 
+G_loss=935.6432 
+R_loss=0.5210 
+Crit_loss=31.2781 
+CB_loss=451.9221 
+CM_loss=451.9221 
+GP_loss=2.1417 
+W_dist=65.7001
+2025-08-12 10:29:35,121 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:29:35,124 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 157.1s
+2025-08-12 10:29:35,126 - __main__.HybridTrainer - INFO - Generator_total_loss: 681.2227
+2025-08-12 10:29:35,126 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5609
+2025-08-12 10:29:35,127 - __main__.HybridTrainer - INFO - Adversarial_loss: 24.4668
+2025-08-12 10:29:35,127 - __main__.HybridTrainer - INFO - Codebook_loss: 328.0975
+2025-08-12 10:29:35,128 - __main__.HybridTrainer - INFO - Commitment_loss: 328.0975
+2025-08-12 10:29:35,128 - __main__.HybridTrainer - INFO - Wasserstein_distance: 54.7360
+2025-08-12 10:29:35,129 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:29:35,129 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 1...
+2025-08-12 10:29:36,336 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: 
+G_loss=682.4003 
+R_loss=0.5764 
+Crit_loss=16.7174 
+CB_loss=332.5532 
+CM_loss=332.5532 
+GP_loss=2.2491 
+W_dist=66.6034
+2025-08-12 10:30:07,269 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: 
+G_loss=341.4738 
+R_loss=0.5869 
+Crit_loss=18.4777 
+CB_loss=161.2046 
+CM_loss=161.2046 
+GP_loss=0.8526 
+W_dist=33.7629
+2025-08-12 10:30:39,391 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: 
+G_loss=135.3821 
+R_loss=0.5320 
+Crit_loss=12.4945 
+CB_loss=61.1778 
+CM_loss=61.1778 
+GP_loss=1.3063 
+W_dist=43.6506
+2025-08-12 10:31:10,253 - __main__.HybridTrainer - INFO - Epoch 2 Step 300: 
+G_loss=107.4445 
+R_loss=0.5096 
+Crit_loss=22.1632 
+CB_loss=42.3858 
+CM_loss=42.3858 
+GP_loss=0.6157 
+W_dist=23.4742
+2025-08-12 10:31:42,428 - __main__.HybridTrainer - INFO - Epoch 2 Step 400: 
+G_loss=122.5249 
+R_loss=0.5617 
+Crit_loss=-12.5893 
+CB_loss=67.2763 
+CM_loss=67.2763 
+GP_loss=0.9910 
+W_dist=31.7920
+2025-08-12 10:32:13,265 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:32:13,266 - __main__.HybridTrainer - INFO - EPOCH 2 COMPLETED in 157.4s
+2025-08-12 10:32:13,267 - __main__.HybridTrainer - INFO - Generator_total_loss: 238.5463
+2025-08-12 10:32:13,268 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5752
+2025-08-12 10:32:13,269 - __main__.HybridTrainer - INFO - Adversarial_loss: 6.4021
+2025-08-12 10:32:13,269 - __main__.HybridTrainer - INFO - Codebook_loss: 115.7845
+2025-08-12 10:32:13,270 - __main__.HybridTrainer - INFO - Commitment_loss: 115.7845
+2025-08-12 10:32:13,270 - __main__.HybridTrainer - INFO - Wasserstein_distance: 44.1918
+2025-08-12 10:32:13,271 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:32:13,271 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 2...
+2025-08-12 10:32:14,283 - __main__.HybridTrainer - INFO - Epoch 3 Step 0: 
+G_loss=125.0996 
+R_loss=0.5800 
+Crit_loss=-10.4627 
+CB_loss=67.4911 
+CM_loss=67.4911 
+GP_loss=1.0780 
+W_dist=35.1341
+2025-08-12 10:32:45,158 - __main__.HybridTrainer - INFO - Epoch 3 Step 100: 
+G_loss=179.1614 
+R_loss=0.6257 
+Crit_loss=6.6206 
+CB_loss=85.9575 
+CM_loss=85.9575 
+GP_loss=0.7921 
+W_dist=35.6001
+2025-08-12 10:33:17,144 - __main__.HybridTrainer - INFO - Epoch 3 Step 200: 
+G_loss=32.5107 
+R_loss=0.5897 
+Crit_loss=-15.6494 
+CB_loss=23.7852 
+CM_loss=23.7852 
+GP_loss=0.9214 
+W_dist=35.4242
+2025-08-12 10:33:48,185 - __main__.HybridTrainer - INFO - Epoch 3 Step 300: 
+G_loss=37.7325 
+R_loss=0.5426 
+Crit_loss=4.2315 
+CB_loss=16.4792 
+CM_loss=16.4792 
+GP_loss=0.6568 
+W_dist=29.4357
+2025-08-12 10:34:20,313 - __main__.HybridTrainer - INFO - Epoch 3 Step 400: 
+G_loss=47.5594 
+R_loss=0.6172 
+Crit_loss=0.5783 
+CB_loss=23.1819 
+CM_loss=23.1819 
+GP_loss=0.6947 
+W_dist=27.8882
+2025-08-12 10:34:50,625 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:34:50,627 - __main__.HybridTrainer - INFO - EPOCH 3 COMPLETED in 156.6s
+2025-08-12 10:34:50,629 - __main__.HybridTrainer - INFO - Generator_total_loss: 76.8662
+2025-08-12 10:34:50,629 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5856
+2025-08-12 10:34:50,630 - __main__.HybridTrainer - INFO - Adversarial_loss: 1.8393
+2025-08-12 10:34:50,631 - __main__.HybridTrainer - INFO - Codebook_loss: 37.2207
+2025-08-12 10:34:50,631 - __main__.HybridTrainer - INFO - Commitment_loss: 37.2207
+2025-08-12 10:34:50,632 - __main__.HybridTrainer - INFO - Wasserstein_distance: 32.4470
+2025-08-12 10:34:50,632 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:34:50,632 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 3...
+2025-08-12 10:34:51,830 - __main__.HybridTrainer - INFO - Epoch 4 Step 0: 
+G_loss=34.3541 
+R_loss=0.6107 
+Crit_loss=9.3322 
+CB_loss=12.2056 
+CM_loss=12.2056 
+GP_loss=0.6399 
+W_dist=27.5250
+2025-08-12 10:35:23,920 - __main__.HybridTrainer - INFO - Epoch 4 Step 100: 
+G_loss=53.9003 
+R_loss=0.6106 
+Crit_loss=5.4599 
+CB_loss=23.9149 
+CM_loss=23.9149 
+GP_loss=0.4751 
+W_dist=21.5224
+2025-08-12 10:35:53,435 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:35:53,436 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:35:53,437 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:35:53,438 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:35:53,438 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:35:53,452 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:35:53,463 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:35:53,479 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:35:53,491 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:35:53,505 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:35:53,538 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:35:53,547 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:35:53,548 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:35:53,549 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 10:35:53,549 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:35:54,554 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 10:35:54,570 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 10:35:54,585 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:35:54,586 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:35:54,586 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 10:35:54,587 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 10:35:54,588 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 10:35:54,589 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 10:35:54,603 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:35:54,604 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:35:54,605 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 10:35:54,605 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:35:54,606 - __main__.WGANCritic - INFO -    Total params: 1,558,208
+2025-08-12 10:35:54,607 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:35:54,608 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:35:54,609 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 10:35:54,610 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 10:35:54,610 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:35:54,611 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,761,347
+2025-08-12 10:35:54,612 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 10:35:54,613 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,558,208
+2025-08-12 10:35:54,731 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:35:54,732 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.0001
+2025-08-12 10:35:54,733 - __main__.HybridTrainer - INFO - Critic learning rate: 0.0001
+2025-08-12 10:35:54,734 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 0.5, 'adversarial': 2.0, 'codebook': 0.25, 'commitment': 0.1}
+2025-08-12 10:35:54,734 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-12 10:35:54,735 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:35:54,735 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:35:54,736 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:35:54,737 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:35:54,738 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:35:54,739 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:35:54,739 - __main__.HybridTrainer - INFO - Training for 20 epochs | 390 steps/epoch
+2025-08-12 10:35:54,740 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:35:55,248 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: 
+G_loss=1.5528 
+R_loss=0.5849 
+Crit_loss=0.4536 
+CB_loss=0.1734 
+CM_loss=0.1734 
+GP_loss=0.9632 
+W_dist=0.1449
+2025-08-12 10:37:04,019 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: 
+G_loss=20.8464 
+R_loss=0.3307 
+Crit_loss=9.8994 
+CB_loss=2.0484 
+CM_loss=2.0484 
+GP_loss=5.5794 
+W_dist=158.0916
+2025-08-12 10:38:11,369 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: 
+G_loss=17.8747 
+R_loss=0.3975 
+Crit_loss=6.0794 
+CB_loss=15.1958 
+CM_loss=15.1958 
+GP_loss=1.2990 
+W_dist=47.9971
+2025-08-12 10:39:20,272 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: 
+G_loss=22.1455 
+R_loss=0.4031 
+Crit_loss=4.2793 
+CB_loss=37.6679 
+CM_loss=37.6679 
+GP_loss=0.5924 
+W_dist=29.2029
+2025-08-12 10:40:21,353 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:40:21,355 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 266.6s
+2025-08-12 10:40:21,356 - __main__.HybridTrainer - INFO - Generator_total_loss: 36.6515
+2025-08-12 10:40:21,356 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3713
+2025-08-12 10:40:21,357 - __main__.HybridTrainer - INFO - Adversarial_loss: 14.8012
+2025-08-12 10:40:21,357 - __main__.HybridTrainer - INFO - Codebook_loss: 19.0793
+2025-08-12 10:40:21,358 - __main__.HybridTrainer - INFO - Commitment_loss: 19.0793
+2025-08-12 10:40:21,358 - __main__.HybridTrainer - INFO - Wasserstein_distance: 84.1893
+2025-08-12 10:40:21,359 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:40:21,359 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-12 10:40:23,188 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: 
+G_loss=6.7301 
+R_loss=0.3098 
+Crit_loss=-6.5739 
+CB_loss=55.9091 
+CM_loss=55.9091 
+GP_loss=0.7176 
+W_dist=30.5553
+2025-08-12 10:41:30,605 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: 
+G_loss=67.9565 
+R_loss=0.3302 
+Crit_loss=17.4650 
+CB_loss=93.4178 
+CM_loss=93.4178 
+GP_loss=0.5103 
+W_dist=22.8693
+2025-08-12 10:42:39,401 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: 
+G_loss=43.4631 
+R_loss=0.3140 
+Crit_loss=-0.4082 
+CB_loss=125.6158 
+CM_loss=125.6158 
+GP_loss=0.5779 
+W_dist=27.4612
+2025-08-12 10:43:47,948 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: 
+G_loss=75.5098 
+R_loss=0.3177 
+Crit_loss=12.8177 
+CB_loss=141.5902 
+CM_loss=141.5902 
+GP_loss=0.5313 
+W_dist=25.0699
+2025-08-12 10:44:49,068 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:44:49,071 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 266.8s
+2025-08-12 10:44:49,072 - __main__.HybridTrainer - INFO - Generator_total_loss: 47.8299
+2025-08-12 10:44:49,073 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3278
+2025-08-12 10:44:49,074 - __main__.HybridTrainer - INFO - Adversarial_loss: 3.3950
+2025-08-12 10:44:49,074 - __main__.HybridTrainer - INFO - Codebook_loss: 116.3199
+2025-08-12 10:44:49,074 - __main__.HybridTrainer - INFO - Commitment_loss: 116.3199
+2025-08-12 10:44:49,075 - __main__.HybridTrainer - INFO - Wasserstein_distance: 26.3923
+2025-08-12 10:44:49,075 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:44:49,789 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: 
+G_loss=69.0443 
+R_loss=0.3525 
+Crit_loss=3.3409 
+CB_loss=177.1713 
+CM_loss=177.1713 
+GP_loss=0.4706 
+W_dist=23.4301
+2025-08-12 10:45:57,474 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: 
+G_loss=83.0448 
+R_loss=0.3265 
+Crit_loss=8.9068 
+CB_loss=185.4421 
+CM_loss=185.4421 
+GP_loss=0.4166 
+W_dist=20.1843
+2025-08-12 10:47:06,131 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: 
+G_loss=60.5816 
+R_loss=0.3608 
+Crit_loss=-1.4873 
+CB_loss=180.5584 
+CM_loss=180.5584 
+GP_loss=0.4138 
+W_dist=22.6306
+2025-08-12 10:48:14,665 - __main__.HybridTrainer - INFO - Epoch 2 Step 300: 
+G_loss=64.4960 
+R_loss=0.4002 
+Crit_loss=-1.1617 
+CB_loss=189.7693 
+CM_loss=189.7693 
+GP_loss=0.3125 
+W_dist=19.8053
+2025-08-12 10:49:15,817 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:49:15,818 - __main__.HybridTrainer - INFO - EPOCH 2 COMPLETED in 266.7s
+2025-08-12 10:49:15,819 - __main__.HybridTrainer - INFO - Generator_total_loss: 70.7118
+2025-08-12 10:49:15,820 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3844
+2025-08-12 10:49:15,820 - __main__.HybridTrainer - INFO - Adversarial_loss: 2.7591
+2025-08-12 10:49:15,821 - __main__.HybridTrainer - INFO - Codebook_loss: 185.1692
+2025-08-12 10:49:15,821 - __main__.HybridTrainer - INFO - Commitment_loss: 185.1692
+2025-08-12 10:49:15,822 - __main__.HybridTrainer - INFO - Wasserstein_distance: 22.0777
+2025-08-12 10:49:15,822 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:49:15,823 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 2...
+2025-08-12 10:49:17,435 - __main__.HybridTrainer - INFO - Epoch 3 Step 0: 
+G_loss=43.4038 
+R_loss=0.4349 
+Crit_loss=-10.4469 
+CB_loss=182.4647 
+CM_loss=182.4647 
+GP_loss=0.4109 
+W_dist=21.3201
+2025-08-12 10:50:25,539 - __main__.HybridTrainer - INFO - Epoch 3 Step 100: 
+G_loss=42.3829 
+R_loss=0.3789 
+Crit_loss=-11.4923 
+CB_loss=185.6818 
+CM_loss=185.6818 
+GP_loss=0.3784 
+W_dist=19.8050
+2025-08-12 10:51:34,108 - __main__.HybridTrainer - INFO - Epoch 3 Step 200: 
+G_loss=67.4426 
+R_loss=0.3749 
+Crit_loss=-4.8804 
+CB_loss=219.5098 
+CM_loss=219.5098 
+GP_loss=0.3769 
+W_dist=20.7009
+2025-08-12 10:52:42,889 - __main__.HybridTrainer - INFO - Epoch 3 Step 300: 
+G_loss=131.5397 
+R_loss=0.3735 
+Crit_loss=25.8467 
+CB_loss=227.0656 
+CM_loss=227.0656 
+GP_loss=0.4321 
+W_dist=20.6562
+2025-08-12 10:53:42,546 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:53:42,549 - __main__.HybridTrainer - INFO - EPOCH 3 COMPLETED in 265.6s
+2025-08-12 10:53:42,550 - __main__.HybridTrainer - INFO - Generator_total_loss: 76.3932
+2025-08-12 10:53:42,551 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3848
+2025-08-12 10:53:42,553 - __main__.HybridTrainer - INFO - Adversarial_loss: 1.6413
+2025-08-12 10:53:42,554 - __main__.HybridTrainer - INFO - Codebook_loss: 207.7879
+2025-08-12 10:53:42,555 - __main__.HybridTrainer - INFO - Commitment_loss: 207.7879
+2025-08-12 10:53:42,555 - __main__.HybridTrainer - INFO - Wasserstein_distance: 19.4252
+2025-08-12 10:53:42,556 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:53:43,476 - __main__.HybridTrainer - INFO - Epoch 4 Step 0: 
+G_loss=51.4946 
+R_loss=0.3738 
+Crit_loss=-11.5908 
+CB_loss=212.2924 
+CM_loss=212.2924 
+GP_loss=0.4187 
+W_dist=21.3106
+2025-08-12 10:54:51,765 - __main__.HybridTrainer - INFO - Epoch 4 Step 100: 
+G_loss=97.8478 
+R_loss=0.3247 
+Crit_loss=8.2252 
+CB_loss=231.6367 
+CM_loss=231.6367 
+GP_loss=0.3383 
+W_dist=18.4063
+2025-08-12 10:56:00,524 - __main__.HybridTrainer - INFO - Epoch 4 Step 200: 
+G_loss=96.7425 
+R_loss=0.3789 
+Crit_loss=8.1996 
+CB_loss=228.4698 
+CM_loss=228.4698 
+GP_loss=0.2643 
+W_dist=15.5850
+2025-08-12 10:57:08,601 - __main__.HybridTrainer - INFO - Epoch 4 Step 300: 
+G_loss=102.9981 
+R_loss=0.3565 
+Crit_loss=7.9556 
+CB_loss=247.8014 
+CM_loss=247.8014 
+GP_loss=0.2652 
+W_dist=15.3176
+2025-08-12 10:58:09,049 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:58:09,051 - __main__.HybridTrainer - INFO - EPOCH 4 COMPLETED in 266.5s
+2025-08-12 10:58:09,051 - __main__.HybridTrainer - INFO - Generator_total_loss: 82.6611
+2025-08-12 10:58:09,052 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.3744
+2025-08-12 10:58:09,053 - __main__.HybridTrainer - INFO - Adversarial_loss: 1.0225
+2025-08-12 10:58:09,053 - __main__.HybridTrainer - INFO - Codebook_loss: 229.2624
+2025-08-12 10:58:09,054 - __main__.HybridTrainer - INFO - Commitment_loss: 229.2624
+2025-08-12 10:58:09,054 - __main__.HybridTrainer - INFO - Wasserstein_distance: 17.8939
+2025-08-12 10:58:09,055 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:58:09,055 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 4...
+2025-08-12 10:58:10,643 - __main__.HybridTrainer - INFO - Epoch 5 Step 0: 
+G_loss=99.3271 
+R_loss=0.3852 
+Crit_loss=6.2598 
+CB_loss=246.9209 
+CM_loss=246.9209 
+GP_loss=0.3029 
+W_dist=16.4463
+2025-08-12 10:58:49,539 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:58:49,540 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:58:49,542 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:58:49,542 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:58:49,543 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:58:49,556 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:58:49,567 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:58:49,586 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:58:49,601 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:58:49,613 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:58:49,646 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:58:49,655 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:58:49,656 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:58:49,657 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 10:58:49,658 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:58:50,653 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 10:59:57,264 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 10:59:57,265 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 10:59:57,266 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 10:59:57,267 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 10:59:57,268 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:59:57,282 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 10:59:57,295 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 10:59:57,309 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 10:59:57,322 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 10:59:57,334 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 10:59:57,368 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 10:59:57,377 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 10:59:57,378 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:59:57,379 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 10:59:57,380 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 10:59:58,377 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 10:59:58,393 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 10:59:58,406 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 10:59:58,407 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:59:58,407 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 10:59:58,408 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 10:59:58,409 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 10:59:58,410 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 10:59:58,424 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 10:59:58,425 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 10:59:58,425 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 10:59:58,426 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 10:59:58,427 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 10:59:58,427 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 10:59:58,428 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 10:59:58,428 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 10:59:58,428 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 10:59:58,429 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 10:59:58,430 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 10:59:58,430 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 10:59:58,430 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 10:59:58,440 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 10:59:58,440 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.0001
+2025-08-12 10:59:58,441 - __main__.HybridTrainer - INFO - Critic learning rate: 0.0001
+2025-08-12 10:59:58,441 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 0.5, 'adversarial': 2.0, 'codebook': 0.25, 'commitment': 0.1}
+2025-08-12 10:59:58,442 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-12 10:59:58,442 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 10:59:58,443 - __main__.HybridTrainer - INFO - Using gradient penalty for WGAN training
+2025-08-12 10:59:58,444 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 10:59:58,445 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 10:59:58,445 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:59:58,446 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 10:59:58,447 - __main__.HybridTrainer - INFO - Training for 20 epochs | 390 steps/epoch
+2025-08-12 10:59:58,447 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 10:59:59,519 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: 
+G_loss=22.7772 
+R_loss=0.6018 
+Crit_loss=11.0602 
+CB_loss=0.1574 
+CM_loss=0.1574 
+GP_loss=0.2927 
+W_dist=5.2840
+2025-08-12 11:01:20,118 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: 
+G_loss=431.2018 
+R_loss=0.5052 
+Crit_loss=212.0888 
+CB_loss=18.6259 
+CM_loss=18.6259 
+GP_loss=4.8564 
+W_dist=407.7938
+2025-08-12 11:02:42,513 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: 
+G_loss=357.7994 
+R_loss=0.6154 
+Crit_loss=169.9305 
+CB_loss=49.4941 
+CM_loss=49.4941 
+GP_loss=6.0512 
+W_dist=679.1561
+2025-08-12 11:04:03,190 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: 
+G_loss=1411.1317 
+R_loss=0.6212 
+Crit_loss=693.9711 
+CB_loss=64.4809 
+CM_loss=64.4809 
+GP_loss=1.8520 
+W_dist=1512.3716
+2025-08-12 11:05:16,180 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:05:16,182 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 317.7s
+2025-08-12 11:05:16,183 - __main__.HybridTrainer - INFO - Generator_total_loss: 831.1347
+2025-08-12 11:05:16,183 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5997
+2025-08-12 11:05:16,184 - __main__.HybridTrainer - INFO - Adversarial_loss: 409.6201
+2025-08-12 11:05:16,184 - __main__.HybridTrainer - INFO - Codebook_loss: 32.2709
+2025-08-12 11:05:16,184 - __main__.HybridTrainer - INFO - Commitment_loss: 32.2709
+2025-08-12 11:05:16,185 - __main__.HybridTrainer - INFO - Wasserstein_distance: 909.9197
+2025-08-12 11:05:16,185 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:05:16,185 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-12 11:05:17,777 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: 
+G_loss=2279.5469 
+R_loss=0.7473 
+Crit_loss=1133.8408 
+CB_loss=31.7659 
+CM_loss=31.7659 
+GP_loss=0.3180 
+W_dist=2355.2365
+2025-08-12 11:06:38,950 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: 
+G_loss=2937.1157 
+R_loss=0.5020 
+Crit_loss=1458.5862 
+CB_loss=55.5472 
+CM_loss=55.5472 
+GP_loss=4.8586 
+W_dist=2984.0769
+2025-08-12 11:08:00,867 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: 
+G_loss=3990.2017 
+R_loss=0.5501 
+Crit_loss=1993.2639 
+CB_loss=8.9252 
+CM_loss=8.9252 
+GP_loss=0.6427 
+W_dist=4075.8928
+2025-08-12 11:09:21,920 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: 
+G_loss=5188.1943 
+R_loss=0.5323 
+Crit_loss=2587.1855 
+CB_loss=37.9754 
+CM_loss=37.9754 
+GP_loss=0.2380 
+W_dist=5240.8428
+2025-08-12 11:10:34,609 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:10:34,611 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 317.5s
+2025-08-12 11:10:34,612 - __main__.HybridTrainer - INFO - Generator_total_loss: 4058.9812
+2025-08-12 11:10:34,613 - __main__.HybridTrainer - INFO - Reconstruction_loss: 0.5747
+2025-08-12 11:10:34,614 - __main__.HybridTrainer - INFO - Adversarial_loss: 2022.3960
+2025-08-12 11:10:34,615 - __main__.HybridTrainer - INFO - Codebook_loss: 38.8985
+2025-08-12 11:10:34,615 - __main__.HybridTrainer - INFO - Commitment_loss: 38.8985
+2025-08-12 11:10:34,616 - __main__.HybridTrainer - INFO - Wasserstein_distance: 3954.1123
+2025-08-12 11:10:34,616 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:10:35,699 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: 
+G_loss=6387.4370 
+R_loss=0.5202 
+Crit_loss=3184.8657 
+CB_loss=49.1019 
+CM_loss=49.1019 
+GP_loss=0.2283 
+W_dist=6384.4543
+2025-08-12 11:11:56,477 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: 
+G_loss=7471.1597 
+R_loss=0.5176 
+Crit_loss=3728.7954 
+CB_loss=37.2884 
+CM_loss=37.2884 
+GP_loss=0.5685 
+W_dist=7431.0943
+2025-08-12 11:13:18,706 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: 
+G_loss=8850.1895 
+R_loss=0.4851 
+Crit_loss=4418.4580 
+CB_loss=36.5373 
+CM_loss=36.5373 
+GP_loss=0.6755 
+W_dist=8747.4062
+2025-08-12 11:19:58,356 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 11:19:58,358 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:19:58,359 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 11:19:58,360 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 11:19:59,350 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 11:24:36,323 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 11:24:36,325 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 11:24:36,326 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 11:24:36,327 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 11:24:36,328 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:24:36,349 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 11:24:36,364 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 11:24:36,379 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 11:24:36,395 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 11:24:36,407 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 11:24:36,442 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 11:24:36,454 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 11:24:36,455 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:24:36,456 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 11:24:36,457 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 11:24:37,458 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 11:24:37,474 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 11:24:37,488 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 11:24:37,488 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:24:37,489 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 11:24:37,490 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 11:24:37,490 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:24:37,491 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 11:24:37,507 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 11:24:37,507 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:24:37,508 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:24:37,509 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 11:24:37,510 - __main__.WGANCritic - INFO -    Training mode: Gradient Penalty
+2025-08-12 11:24:37,511 - __main__.WGANCritic - INFO -    Normalization: GroupNorm (LayerNorm)
+2025-08-12 11:24:37,511 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 11:24:37,512 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 11:24:37,513 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 11:24:37,514 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 11:24:37,515 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 11:24:37,515 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 11:24:37,516 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 11:24:37,517 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 11:24:37,518 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 11:24:37,526 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 11:24:37,526 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.0001
+2025-08-12 11:24:37,527 - __main__.HybridTrainer - INFO - Critic learning rate: 0.0001
+2025-08-12 11:24:37,528 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 0.5, 'adversarial': 2.0, 'codebook': 0.25, 'commitment': 0.1}
+2025-08-12 11:24:37,528 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-12 11:24:37,529 - __main__.HybridTrainer - INFO - Training mode: Gradient Penalty
+2025-08-12 11:24:37,530 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 11:24:37,530 - __main__.HybridTrainer - INFO - Optimizer: Adam
+2025-08-12 11:24:37,531 - __main__.HybridTrainer - INFO - Normalization: GroupNorm (LayerNorm)
+2025-08-12 11:24:37,532 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 11:24:37,532 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:24:37,533 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:24:37,534 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 11:24:37,534 - __main__.HybridTrainer - INFO - Training for 20 epochs | 390 steps/epoch
+2025-08-12 11:24:37,534 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:24:38,356 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: 
+G_loss=23.8438 
+Crit_loss=-6.1408 
+W_dist=7.0080
+2025-08-12 11:25:58,190 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: 
+G_loss=68.8704 
+Crit_loss=-43.3790 
+W_dist=62.2128
+2025-08-12 11:27:17,059 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: 
+G_loss=67.0694 
+Crit_loss=-31.3852 
+W_dist=40.4607
+2025-08-12 11:28:20,379 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 11:28:20,380 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 11:28:20,382 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 11:28:20,383 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 11:28:20,384 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:28:20,399 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 11:28:20,415 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 11:28:20,434 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 11:28:20,447 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 11:28:20,458 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 11:28:20,506 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 11:28:20,515 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 11:28:20,516 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:28:20,517 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 11:28:20,518 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 11:28:21,514 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 11:28:21,528 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 11:28:21,542 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 11:28:21,542 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:28:21,543 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 11:28:21,544 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 11:28:21,544 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:28:21,545 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 11:28:21,558 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 11:28:21,558 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:28:21,559 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:28:21,559 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 11:28:21,560 - __main__.WGANCritic - INFO -    Training mode: Weight Clipping
+2025-08-12 11:28:21,560 - __main__.WGANCritic - INFO -    Normalization: BatchNorm
+2025-08-12 11:28:21,561 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 11:28:21,561 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 11:28:21,562 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 11:28:21,562 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 11:28:21,563 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 11:28:21,563 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 11:28:21,564 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 11:28:21,564 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 11:28:21,565 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 11:28:21,731 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 11:28:21,732 - __main__.HybridTrainer - INFO - VQVAE learning rate: 5e-05
+2025-08-12 11:28:21,733 - __main__.HybridTrainer - INFO - Critic learning rate: 5e-05
+2025-08-12 11:28:21,733 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1, 'adversarial': 2, 'codebook': 1, 'commitment': 1}
+2025-08-12 11:28:21,734 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 11:28:21,735 - __main__.HybridTrainer - INFO - Training mode: Weight Clipping
+2025-08-12 11:28:21,736 - __main__.HybridTrainer - INFO - Weight clip value: 0.01
+2025-08-12 11:28:21,737 - __main__.HybridTrainer - INFO - Optimizer: RMSprop
+2025-08-12 11:28:21,737 - __main__.HybridTrainer - INFO - Normalization: BatchNorm
+2025-08-12 11:28:21,738 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 11:28:21,739 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:28:21,740 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:28:21,741 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 11:28:21,741 - __main__.HybridTrainer - INFO - Training for 20 epochs | 390 steps/epoch
+2025-08-12 11:28:21,742 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:28:22,023 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: | G_loss=0.9307 | Crit_loss=-0.1169 | W_dist=0.1169
+2025-08-12 11:28:45,906 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: | G_loss=13.4704 | Crit_loss=-0.0091 | W_dist=0.0091
+2025-08-12 11:29:09,491 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: | G_loss=16.8915 | Crit_loss=-0.0001 | W_dist=0.0001
+2025-08-12 11:29:33,162 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: | G_loss=14.6359 | Crit_loss=-0.0306 | W_dist=0.0306
+2025-08-12 11:29:54,189 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:29:54,191 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 92.4s
+2025-08-12 11:29:54,192 - __main__.HybridTrainer - INFO - Generator_total_loss: 13.5864
+2025-08-12 11:29:54,193 - __main__.HybridTrainer - INFO - Critic_loss: -0.0319
+2025-08-12 11:29:54,194 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0319
+2025-08-12 11:29:54,195 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:29:54,195 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-12 11:29:55,299 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: | G_loss=14.7020 | Crit_loss=-0.0748 | W_dist=0.0748
+2025-08-12 11:30:18,719 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: | G_loss=11.3697 | Crit_loss=-0.3326 | W_dist=0.3326
+2025-08-12 11:30:42,494 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: | G_loss=11.0371 | Crit_loss=-0.7657 | W_dist=0.7657
+2025-08-12 11:31:05,898 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: | G_loss=11.0188 | Crit_loss=-0.8670 | W_dist=0.8670
+2025-08-12 11:31:27,100 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:31:27,103 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 92.0s
+2025-08-12 11:31:27,103 - __main__.HybridTrainer - INFO - Generator_total_loss: 11.2809
+2025-08-12 11:31:27,104 - __main__.HybridTrainer - INFO - Critic_loss: -0.5101
+2025-08-12 11:31:27,105 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.5101
+2025-08-12 11:31:27,105 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:31:27,376 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: | G_loss=10.7240 | Crit_loss=-0.9067 | W_dist=0.9067
+2025-08-12 11:31:51,111 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: | G_loss=10.6830 | Crit_loss=-0.8366 | W_dist=0.8366
+2025-08-12 11:32:15,058 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: | G_loss=14.0443 | Crit_loss=-1.1576 | W_dist=1.1576
+2025-08-12 11:32:25,892 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 11:32:25,893 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 11:32:25,894 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 11:32:25,895 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 11:32:25,896 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:32:25,908 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 11:32:25,918 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 11:32:25,932 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 11:32:25,946 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 11:32:25,956 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 11:32:25,990 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 11:32:36,887 - HybridVQVAE_WGAN - INFO - HYBRID WGAN-VQVAE INITIALIZED
+2025-08-12 11:32:36,888 - HybridVQVAE_WGAN - INFO - Device: cuda
+2025-08-12 11:32:36,890 - HybridVQVAE_WGAN - INFO - GPU: Quadro RTX 6000
+2025-08-12 11:32:36,891 - HybridVQVAE_WGAN - INFO - GPU Memory: 23.8 GB
+2025-08-12 11:32:36,892 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:32:36,905 - HybridVQVAE_WGAN - INFO - DataSetLoader class created successfully!
+2025-08-12 11:32:36,920 - HybridVQVAE_WGAN - INFO - VectorQuantizer class created successfully!
+2025-08-12 11:32:36,939 - HybridVQVAE_WGAN - INFO - DynamicVQVAE class created successfully!
+2025-08-12 11:32:36,954 - HybridVQVAE_WGAN - INFO - WGANCritic class created successfully!
+2025-08-12 11:32:36,964 - HybridVQVAE_WGAN - INFO - HybridVQVAEWGAN class created successfully!
+2025-08-12 11:32:36,998 - HybridVQVAE_WGAN - INFO - HybridTrainer class created successfully!
+2025-08-12 11:32:37,007 - HybridVQVAE_WGAN - INFO - PREPARING CIFAR10 TRAINING EXAMPLE
+2025-08-12 11:32:37,008 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:32:37,009 - __main__.DataSetLoader - INFO - DataSetLoader initialized | batch_size=128 | data_dir=./data
+2025-08-12 11:32:37,009 - __main__.DataSetLoader - INFO - Loading CIFAR10 dataset...
+2025-08-12 11:32:38,003 - __main__.DataSetLoader - INFO - CIFAR10 loaded | Dataset=cifar10 | batches=390 | img_size=[64, 64] | channels=3
+2025-08-12 11:32:38,017 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 11:32:38,030 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 11:32:38,030 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:32:38,031 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 11:32:38,031 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 11:32:38,032 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:32:38,033 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 11:32:38,045 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 11:32:38,046 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 11:32:38,046 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 11:32:38,047 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 11:32:38,047 - __main__.WGANCritic - INFO -    Training mode: Weight Clipping
+2025-08-12 11:32:38,048 - __main__.WGANCritic - INFO -    Normalization: BatchNorm
+2025-08-12 11:32:38,048 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 11:32:38,049 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 11:32:38,049 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 11:32:38,050 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 11:32:38,050 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 11:32:38,051 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 11:32:38,052 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 11:32:38,052 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 11:32:38,053 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 11:32:38,060 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 11:32:38,061 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.01
+2025-08-12 11:32:38,062 - __main__.HybridTrainer - INFO - Critic learning rate: 0.001
+2025-08-12 11:32:38,062 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 1, 'adversarial': 2, 'codebook': 1, 'commitment': 1}
+2025-08-12 11:32:38,063 - __main__.HybridTrainer - INFO - Critic iterations per step: 1
+2025-08-12 11:32:38,063 - __main__.HybridTrainer - INFO - Training mode: Weight Clipping
+2025-08-12 11:32:38,064 - __main__.HybridTrainer - INFO - Weight clip value: 0.01
+2025-08-12 11:32:38,064 - __main__.HybridTrainer - INFO - Optimizer: RMSprop
+2025-08-12 11:32:38,064 - __main__.HybridTrainer - INFO - Normalization: BatchNorm
+2025-08-12 11:32:38,065 - HybridVQVAE_WGAN - INFO - STARTING TRAINING...
+2025-08-12 11:32:38,066 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 11:32:38,066 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:32:38,067 - __main__.HybridTrainer - INFO - STARTING HYBRID VQVAE-WGAN TRAINING
+2025-08-12 11:32:38,067 - __main__.HybridTrainer - INFO - Training for 20 epochs | 390 steps/epoch
+2025-08-12 11:32:38,068 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:32:38,354 - __main__.HybridTrainer - INFO - Epoch 0 Step 0: | G_loss=0.7718 | Crit_loss=0.0744 | W_dist=-0.0744
+2025-08-12 11:33:02,258 - __main__.HybridTrainer - INFO - Epoch 0 Step 100: | G_loss=0.0869 | Crit_loss=-0.0231 | W_dist=0.0231
+2025-08-12 11:33:25,778 - __main__.HybridTrainer - INFO - Epoch 0 Step 200: | G_loss=0.2677 | Crit_loss=-0.0171 | W_dist=0.0171
+2025-08-12 11:33:49,788 - __main__.HybridTrainer - INFO - Epoch 0 Step 300: | G_loss=0.3060 | Crit_loss=-0.0071 | W_dist=0.0071
+2025-08-12 11:34:10,781 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:34:10,784 - __main__.HybridTrainer - INFO - EPOCH 0 COMPLETED in 92.7s
+2025-08-12 11:34:10,785 - __main__.HybridTrainer - INFO - Generator_total_loss: 1.9329
+2025-08-12 11:34:10,786 - __main__.HybridTrainer - INFO - Critic_loss: -0.0175
+2025-08-12 11:34:10,787 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0175
+2025-08-12 11:34:10,787 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:34:10,787 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 0...
+2025-08-12 11:34:11,956 - __main__.HybridTrainer - INFO - Epoch 1 Step 0: | G_loss=0.2854 | Crit_loss=-0.0119 | W_dist=0.0119
+2025-08-12 11:34:35,316 - __main__.HybridTrainer - INFO - Epoch 1 Step 100: | G_loss=0.2939 | Crit_loss=-0.0052 | W_dist=0.0052
+2025-08-12 11:34:59,086 - __main__.HybridTrainer - INFO - Epoch 1 Step 200: | G_loss=0.3211 | Crit_loss=0.0041 | W_dist=-0.0041
+2025-08-12 11:35:22,443 - __main__.HybridTrainer - INFO - Epoch 1 Step 300: | G_loss=0.3239 | Crit_loss=0.0002 | W_dist=-0.0002
+2025-08-12 11:35:43,659 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:35:43,661 - __main__.HybridTrainer - INFO - EPOCH 1 COMPLETED in 92.0s
+2025-08-12 11:35:43,662 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.3205
+2025-08-12 11:35:43,663 - __main__.HybridTrainer - INFO - Critic_loss: -0.0070
+2025-08-12 11:35:43,664 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0070
+2025-08-12 11:35:43,665 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:35:43,666 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 1...
+2025-08-12 11:35:44,826 - __main__.HybridTrainer - INFO - Epoch 2 Step 0: | G_loss=0.2914 | Crit_loss=-0.0016 | W_dist=0.0016
+2025-08-12 11:36:08,183 - __main__.HybridTrainer - INFO - Epoch 2 Step 100: | G_loss=0.2852 | Crit_loss=-0.0071 | W_dist=0.0071
+2025-08-12 11:36:31,983 - __main__.HybridTrainer - INFO - Epoch 2 Step 200: | G_loss=0.3459 | Crit_loss=-0.0020 | W_dist=0.0020
+2025-08-12 11:36:55,435 - __main__.HybridTrainer - INFO - Epoch 2 Step 300: | G_loss=0.2624 | Crit_loss=-0.0030 | W_dist=0.0030
+2025-08-12 11:37:16,605 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:37:16,606 - __main__.HybridTrainer - INFO - EPOCH 2 COMPLETED in 92.0s
+2025-08-12 11:37:16,607 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2948
+2025-08-12 11:37:16,608 - __main__.HybridTrainer - INFO - Critic_loss: -0.0034
+2025-08-12 11:37:16,609 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0034
+2025-08-12 11:37:16,610 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:37:16,611 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 2...
+2025-08-12 11:37:17,782 - __main__.HybridTrainer - INFO - Epoch 3 Step 0: | G_loss=0.2647 | Crit_loss=-0.0083 | W_dist=0.0083
+2025-08-12 11:37:41,427 - __main__.HybridTrainer - INFO - Epoch 3 Step 100: | G_loss=0.2793 | Crit_loss=-0.0032 | W_dist=0.0032
+2025-08-12 11:38:05,411 - __main__.HybridTrainer - INFO - Epoch 3 Step 200: | G_loss=0.2946 | Crit_loss=-0.0069 | W_dist=0.0069
+2025-08-12 11:38:28,779 - __main__.HybridTrainer - INFO - Epoch 3 Step 300: | G_loss=0.2802 | Crit_loss=-0.0022 | W_dist=0.0022
+2025-08-12 11:38:50,154 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:38:50,157 - __main__.HybridTrainer - INFO - EPOCH 3 COMPLETED in 92.6s
+2025-08-12 11:38:50,158 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2705
+2025-08-12 11:38:50,159 - __main__.HybridTrainer - INFO - Critic_loss: -0.0023
+2025-08-12 11:38:50,160 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0023
+2025-08-12 11:38:50,161 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:38:50,162 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 3...
+2025-08-12 11:38:51,337 - __main__.HybridTrainer - INFO - Epoch 4 Step 0: | G_loss=0.2678 | Crit_loss=0.0033 | W_dist=-0.0033
+2025-08-12 11:39:14,902 - __main__.HybridTrainer - INFO - Epoch 4 Step 100: | G_loss=0.2121 | Crit_loss=-0.0007 | W_dist=0.0007
+2025-08-12 11:39:38,305 - __main__.HybridTrainer - INFO - Epoch 4 Step 200: | G_loss=0.2672 | Crit_loss=-0.0030 | W_dist=0.0030
+2025-08-12 11:40:02,138 - __main__.HybridTrainer - INFO - Epoch 4 Step 300: | G_loss=0.2565 | Crit_loss=-0.0021 | W_dist=0.0021
+2025-08-12 11:40:23,101 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:40:23,103 - __main__.HybridTrainer - INFO - EPOCH 4 COMPLETED in 92.0s
+2025-08-12 11:40:23,103 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2598
+2025-08-12 11:40:23,104 - __main__.HybridTrainer - INFO - Critic_loss: -0.0017
+2025-08-12 11:40:23,104 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0017
+2025-08-12 11:40:23,104 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:40:23,105 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 4...
+2025-08-12 11:40:24,501 - __main__.HybridTrainer - INFO - Epoch 5 Step 0: | G_loss=0.2696 | Crit_loss=0.0002 | W_dist=-0.0002
+2025-08-12 11:40:48,330 - __main__.HybridTrainer - INFO - Epoch 5 Step 100: | G_loss=0.2439 | Crit_loss=-0.0034 | W_dist=0.0034
+2025-08-12 11:41:11,676 - __main__.HybridTrainer - INFO - Epoch 5 Step 200: | G_loss=0.2723 | Crit_loss=-0.0016 | W_dist=0.0016
+2025-08-12 11:41:35,505 - __main__.HybridTrainer - INFO - Epoch 5 Step 300: | G_loss=0.2653 | Crit_loss=-0.0031 | W_dist=0.0031
+2025-08-12 11:41:56,457 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:41:56,460 - __main__.HybridTrainer - INFO - EPOCH 5 COMPLETED in 92.2s
+2025-08-12 11:41:56,462 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2609
+2025-08-12 11:41:56,463 - __main__.HybridTrainer - INFO - Critic_loss: -0.0014
+2025-08-12 11:41:56,463 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0014
+2025-08-12 11:41:56,464 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:41:56,465 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 5...
+2025-08-12 11:41:57,620 - __main__.HybridTrainer - INFO - Epoch 6 Step 0: | G_loss=0.2669 | Crit_loss=-0.0041 | W_dist=0.0041
+2025-08-12 11:42:21,595 - __main__.HybridTrainer - INFO - Epoch 6 Step 100: | G_loss=0.2634 | Crit_loss=-0.0018 | W_dist=0.0018
+2025-08-12 11:42:45,144 - __main__.HybridTrainer - INFO - Epoch 6 Step 200: | G_loss=0.2838 | Crit_loss=-0.0014 | W_dist=0.0014
+2025-08-12 11:43:09,058 - __main__.HybridTrainer - INFO - Epoch 6 Step 300: | G_loss=0.2816 | Crit_loss=-0.0021 | W_dist=0.0021
+2025-08-12 11:43:29,849 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:43:29,850 - __main__.HybridTrainer - INFO - EPOCH 6 COMPLETED in 92.5s
+2025-08-12 11:43:29,851 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2577
+2025-08-12 11:43:29,852 - __main__.HybridTrainer - INFO - Critic_loss: -0.0012
+2025-08-12 11:43:29,853 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0012
+2025-08-12 11:43:29,854 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:43:29,855 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 6...
+2025-08-12 11:43:30,964 - __main__.HybridTrainer - INFO - Epoch 7 Step 0: | G_loss=0.2366 | Crit_loss=-0.0018 | W_dist=0.0018
+2025-08-12 11:43:54,698 - __main__.HybridTrainer - INFO - Epoch 7 Step 100: | G_loss=0.2507 | Crit_loss=-0.0012 | W_dist=0.0012
+2025-08-12 11:44:18,363 - __main__.HybridTrainer - INFO - Epoch 7 Step 200: | G_loss=0.2265 | Crit_loss=-0.0047 | W_dist=0.0047
+2025-08-12 11:44:41,750 - __main__.HybridTrainer - INFO - Epoch 7 Step 300: | G_loss=0.2740 | Crit_loss=-0.0006 | W_dist=0.0006
+2025-08-12 11:45:03,073 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:45:03,073 - __main__.HybridTrainer - INFO - EPOCH 7 COMPLETED in 92.3s
+2025-08-12 11:45:03,074 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2529
+2025-08-12 11:45:03,074 - __main__.HybridTrainer - INFO - Critic_loss: -0.0010
+2025-08-12 11:45:03,075 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0010
+2025-08-12 11:45:03,075 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:45:03,076 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 7...
+2025-08-12 11:45:04,180 - __main__.HybridTrainer - INFO - Epoch 8 Step 0: | G_loss=0.2552 | Crit_loss=-0.0024 | W_dist=0.0024
+2025-08-12 11:45:27,618 - __main__.HybridTrainer - INFO - Epoch 8 Step 100: | G_loss=0.2555 | Crit_loss=-0.0016 | W_dist=0.0016
+2025-08-12 11:45:51,463 - __main__.HybridTrainer - INFO - Epoch 8 Step 200: | G_loss=0.2892 | Crit_loss=-0.0026 | W_dist=0.0026
+2025-08-12 11:46:15,084 - __main__.HybridTrainer - INFO - Epoch 8 Step 300: | G_loss=0.2431 | Crit_loss=-0.0027 | W_dist=0.0027
+2025-08-12 11:46:36,244 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:46:36,246 - __main__.HybridTrainer - INFO - EPOCH 8 COMPLETED in 92.3s
+2025-08-12 11:46:36,247 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2459
+2025-08-12 11:46:36,248 - __main__.HybridTrainer - INFO - Critic_loss: -0.0009
+2025-08-12 11:46:36,249 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0009
+2025-08-12 11:46:36,250 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:46:36,251 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 8...
+2025-08-12 11:46:37,417 - __main__.HybridTrainer - INFO - Epoch 9 Step 0: | G_loss=0.2306 | Crit_loss=0.0057 | W_dist=-0.0057
+2025-08-12 11:47:00,704 - __main__.HybridTrainer - INFO - Epoch 9 Step 100: | G_loss=0.2397 | Crit_loss=0.0021 | W_dist=-0.0021
+2025-08-12 11:47:24,590 - __main__.HybridTrainer - INFO - Epoch 9 Step 200: | G_loss=0.2238 | Crit_loss=0.0032 | W_dist=-0.0032
+2025-08-12 11:47:47,892 - __main__.HybridTrainer - INFO - Epoch 9 Step 300: | G_loss=0.2484 | Crit_loss=-0.0000 | W_dist=0.0000
+2025-08-12 11:48:09,150 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:48:09,151 - __main__.HybridTrainer - INFO - EPOCH 9 COMPLETED in 92.0s
+2025-08-12 11:48:09,152 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2393
+2025-08-12 11:48:09,153 - __main__.HybridTrainer - INFO - Critic_loss: -0.0008
+2025-08-12 11:48:09,154 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0008
+2025-08-12 11:48:09,155 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:48:09,156 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 9...
+2025-08-12 11:48:10,322 - __main__.HybridTrainer - INFO - Epoch 10 Step 0: | G_loss=0.2474 | Crit_loss=-0.0011 | W_dist=0.0011
+2025-08-12 11:48:33,968 - __main__.HybridTrainer - INFO - Epoch 10 Step 100: | G_loss=0.2140 | Crit_loss=-0.0026 | W_dist=0.0026
+2025-08-12 11:48:57,642 - __main__.HybridTrainer - INFO - Epoch 10 Step 200: | G_loss=0.2409 | Crit_loss=-0.0001 | W_dist=0.0001
+2025-08-12 11:49:21,210 - __main__.HybridTrainer - INFO - Epoch 10 Step 300: | G_loss=0.2396 | Crit_loss=-0.0014 | W_dist=0.0014
+2025-08-12 11:49:42,233 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:49:42,234 - __main__.HybridTrainer - INFO - EPOCH 10 COMPLETED in 92.2s
+2025-08-12 11:49:42,236 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2344
+2025-08-12 11:49:42,237 - __main__.HybridTrainer - INFO - Critic_loss: -0.0007
+2025-08-12 11:49:42,238 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0007
+2025-08-12 11:49:42,238 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:49:42,239 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 10...
+2025-08-12 11:49:43,641 - __main__.HybridTrainer - INFO - Epoch 11 Step 0: | G_loss=0.2406 | Crit_loss=0.0023 | W_dist=-0.0023
+2025-08-12 11:50:07,572 - __main__.HybridTrainer - INFO - Epoch 11 Step 100: | G_loss=0.2249 | Crit_loss=-0.0020 | W_dist=0.0020
+2025-08-12 11:50:31,050 - __main__.HybridTrainer - INFO - Epoch 11 Step 200: | G_loss=0.2437 | Crit_loss=-0.0013 | W_dist=0.0013
+2025-08-12 11:50:54,935 - __main__.HybridTrainer - INFO - Epoch 11 Step 300: | G_loss=0.2301 | Crit_loss=-0.0007 | W_dist=0.0007
+2025-08-12 11:51:15,949 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:51:15,950 - __main__.HybridTrainer - INFO - EPOCH 11 COMPLETED in 92.6s
+2025-08-12 11:51:15,951 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2316
+2025-08-12 11:51:15,952 - __main__.HybridTrainer - INFO - Critic_loss: -0.0006
+2025-08-12 11:51:15,953 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0006
+2025-08-12 11:51:15,953 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:51:15,954 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 11...
+2025-08-12 11:51:17,081 - __main__.HybridTrainer - INFO - Epoch 12 Step 0: | G_loss=0.2505 | Crit_loss=0.0022 | W_dist=-0.0022
+2025-08-12 11:51:40,968 - __main__.HybridTrainer - INFO - Epoch 12 Step 100: | G_loss=0.2466 | Crit_loss=-0.0021 | W_dist=0.0021
+2025-08-12 11:52:04,628 - __main__.HybridTrainer - INFO - Epoch 12 Step 200: | G_loss=0.2756 | Crit_loss=-0.0005 | W_dist=0.0005
+2025-08-12 11:52:28,457 - __main__.HybridTrainer - INFO - Epoch 12 Step 300: | G_loss=0.2060 | Crit_loss=0.0027 | W_dist=-0.0027
+2025-08-12 11:52:49,245 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:52:49,246 - __main__.HybridTrainer - INFO - EPOCH 12 COMPLETED in 92.4s
+2025-08-12 11:52:49,247 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2296
+2025-08-12 11:52:49,248 - __main__.HybridTrainer - INFO - Critic_loss: -0.0006
+2025-08-12 11:52:49,248 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0006
+2025-08-12 11:52:49,249 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:52:49,249 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 12...
+2025-08-12 11:52:50,422 - __main__.HybridTrainer - INFO - Epoch 13 Step 0: | G_loss=0.2180 | Crit_loss=0.0001 | W_dist=-0.0001
+2025-08-12 11:53:14,446 - __main__.HybridTrainer - INFO - Epoch 13 Step 100: | G_loss=0.2111 | Crit_loss=0.0003 | W_dist=-0.0003
+2025-08-12 11:53:37,880 - __main__.HybridTrainer - INFO - Epoch 13 Step 200: | G_loss=0.2353 | Crit_loss=-0.0005 | W_dist=0.0005
+2025-08-12 11:54:01,595 - __main__.HybridTrainer - INFO - Epoch 13 Step 300: | G_loss=0.2279 | Crit_loss=-0.0005 | W_dist=0.0005
+2025-08-12 11:54:22,745 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:54:22,746 - __main__.HybridTrainer - INFO - EPOCH 13 COMPLETED in 92.6s
+2025-08-12 11:54:22,747 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2317
+2025-08-12 11:54:22,747 - __main__.HybridTrainer - INFO - Critic_loss: -0.0006
+2025-08-12 11:54:22,748 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0006
+2025-08-12 11:54:22,748 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:54:22,748 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 13...
+2025-08-12 11:54:23,869 - __main__.HybridTrainer - INFO - Epoch 14 Step 0: | G_loss=0.2078 | Crit_loss=0.0013 | W_dist=-0.0013
+2025-08-12 11:54:47,465 - __main__.HybridTrainer - INFO - Epoch 14 Step 100: | G_loss=0.2201 | Crit_loss=-0.0003 | W_dist=0.0003
+2025-08-12 11:55:11,277 - __main__.HybridTrainer - INFO - Epoch 14 Step 200: | G_loss=0.2302 | Crit_loss=-0.0003 | W_dist=0.0003
+2025-08-12 11:55:34,792 - __main__.HybridTrainer - INFO - Epoch 14 Step 300: | G_loss=0.2306 | Crit_loss=-0.0026 | W_dist=0.0026
+2025-08-12 11:55:56,005 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:55:56,007 - __main__.HybridTrainer - INFO - EPOCH 14 COMPLETED in 92.3s
+2025-08-12 11:55:56,008 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2284
+2025-08-12 11:55:56,009 - __main__.HybridTrainer - INFO - Critic_loss: -0.0005
+2025-08-12 11:55:56,010 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0005
+2025-08-12 11:55:56,011 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:55:56,012 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 14...
+2025-08-12 11:55:57,183 - __main__.HybridTrainer - INFO - Epoch 15 Step 0: | G_loss=0.2301 | Crit_loss=0.0044 | W_dist=-0.0044
+2025-08-12 11:56:20,564 - __main__.HybridTrainer - INFO - Epoch 15 Step 100: | G_loss=0.2153 | Crit_loss=-0.0010 | W_dist=0.0010
+2025-08-12 11:56:44,427 - __main__.HybridTrainer - INFO - Epoch 15 Step 200: | G_loss=0.2267 | Crit_loss=-0.0011 | W_dist=0.0011
+2025-08-12 11:57:08,036 - __main__.HybridTrainer - INFO - Epoch 15 Step 300: | G_loss=0.2458 | Crit_loss=-0.0015 | W_dist=0.0015
+2025-08-12 11:57:29,309 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:57:29,310 - __main__.HybridTrainer - INFO - EPOCH 15 COMPLETED in 92.4s
+2025-08-12 11:57:29,311 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2272
+2025-08-12 11:57:29,312 - __main__.HybridTrainer - INFO - Critic_loss: -0.0005
+2025-08-12 11:57:29,312 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0005
+2025-08-12 11:57:29,313 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:57:29,314 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 15...
+2025-08-12 11:57:30,425 - __main__.HybridTrainer - INFO - Epoch 16 Step 0: | G_loss=0.2403 | Crit_loss=-0.0011 | W_dist=0.0011
+2025-08-12 11:57:53,840 - __main__.HybridTrainer - INFO - Epoch 16 Step 100: | G_loss=0.2170 | Crit_loss=-0.0014 | W_dist=0.0014
+2025-08-12 11:58:17,665 - __main__.HybridTrainer - INFO - Epoch 16 Step 200: | G_loss=0.2310 | Crit_loss=-0.0016 | W_dist=0.0016
+2025-08-12 11:58:41,080 - __main__.HybridTrainer - INFO - Epoch 16 Step 300: | G_loss=0.2288 | Crit_loss=0.0005 | W_dist=-0.0005
+2025-08-12 11:59:02,229 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:59:02,230 - __main__.HybridTrainer - INFO - EPOCH 16 COMPLETED in 92.0s
+2025-08-12 11:59:02,231 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2193
+2025-08-12 11:59:02,231 - __main__.HybridTrainer - INFO - Critic_loss: -0.0004
+2025-08-12 11:59:02,232 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0004
+2025-08-12 11:59:02,232 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 11:59:02,232 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 16...
+2025-08-12 11:59:03,337 - __main__.HybridTrainer - INFO - Epoch 17 Step 0: | G_loss=0.2012 | Crit_loss=-0.0011 | W_dist=0.0011
+2025-08-12 11:59:27,227 - __main__.HybridTrainer - INFO - Epoch 17 Step 100: | G_loss=0.2406 | Crit_loss=-0.0003 | W_dist=0.0003
+2025-08-12 11:59:50,708 - __main__.HybridTrainer - INFO - Epoch 17 Step 200: | G_loss=0.2318 | Crit_loss=0.0002 | W_dist=-0.0002
+2025-08-12 12:00:14,744 - __main__.HybridTrainer - INFO - Epoch 17 Step 300: | G_loss=0.2154 | Crit_loss=0.0002 | W_dist=-0.0002
+2025-08-12 12:00:35,509 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:00:35,511 - __main__.HybridTrainer - INFO - EPOCH 17 COMPLETED in 92.4s
+2025-08-12 12:00:35,512 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2194
+2025-08-12 12:00:35,513 - __main__.HybridTrainer - INFO - Critic_loss: -0.0005
+2025-08-12 12:00:35,514 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0005
+2025-08-12 12:00:35,515 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:00:35,516 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 17...
+2025-08-12 12:00:36,901 - __main__.HybridTrainer - INFO - Epoch 18 Step 0: | G_loss=0.2501 | Crit_loss=-0.0000 | W_dist=0.0000
+2025-08-12 12:01:00,843 - __main__.HybridTrainer - INFO - Epoch 18 Step 100: | G_loss=0.2005 | Crit_loss=-0.0007 | W_dist=0.0007
+2025-08-12 12:01:24,248 - __main__.HybridTrainer - INFO - Epoch 18 Step 200: | G_loss=0.2216 | Crit_loss=-0.0010 | W_dist=0.0010
+2025-08-12 12:01:48,054 - __main__.HybridTrainer - INFO - Epoch 18 Step 300: | G_loss=0.2344 | Crit_loss=-0.0019 | W_dist=0.0019
+2025-08-12 12:02:09,045 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:02:09,046 - __main__.HybridTrainer - INFO - EPOCH 18 COMPLETED in 92.4s
+2025-08-12 12:02:09,047 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2227
+2025-08-12 12:02:09,048 - __main__.HybridTrainer - INFO - Critic_loss: -0.0004
+2025-08-12 12:02:09,049 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0004
+2025-08-12 12:02:09,050 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:02:09,051 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 18...
+2025-08-12 12:02:10,220 - __main__.HybridTrainer - INFO - Epoch 19 Step 0: | G_loss=0.2422 | Crit_loss=0.0009 | W_dist=-0.0009
+2025-08-12 12:02:34,088 - __main__.HybridTrainer - INFO - Epoch 19 Step 100: | G_loss=0.2050 | Crit_loss=0.0000 | W_dist=-0.0000
+2025-08-12 12:02:57,573 - __main__.HybridTrainer - INFO - Epoch 19 Step 200: | G_loss=0.2360 | Crit_loss=-0.0013 | W_dist=0.0013
+2025-08-12 12:03:21,336 - __main__.HybridTrainer - INFO - Epoch 19 Step 300: | G_loss=0.2178 | Crit_loss=0.0000 | W_dist=-0.0000
+2025-08-12 12:03:42,271 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:03:42,272 - __main__.HybridTrainer - INFO - EPOCH 19 COMPLETED in 92.3s
+2025-08-12 12:03:42,273 - __main__.HybridTrainer - INFO - Generator_total_loss: 0.2209
+2025-08-12 12:03:42,273 - __main__.HybridTrainer - INFO - Critic_loss: -0.0004
+2025-08-12 12:03:42,274 - __main__.HybridTrainer - INFO - Wasserstein_distance: 0.0004
+2025-08-12 12:03:42,274 - __main__.HybridTrainer - INFO - ================================================================================
+2025-08-12 12:03:42,274 - __main__.HybridTrainer - INFO - Generating reconstruction visualization for epoch 19...
+2025-08-12 12:03:43,166 - __main__.HybridTrainer - INFO - TRAINING COMPLETED in 31.1 minutes!
+2025-08-12 12:03:44,008 - HybridVQVAE_WGAN - INFO - 🧪 TESTING BOTH TRAINING MODES
+2025-08-12 12:03:44,010 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 12:03:44,011 - HybridVQVAE_WGAN - INFO - Testing Gradient Penalty Mode...
+2025-08-12 12:03:44,026 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 12:03:44,038 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 12:03:44,039 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 12:03:44,040 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 12:03:44,040 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 12:03:44,041 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 12:03:44,042 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 12:03:44,058 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 12:03:44,059 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 12:03:44,060 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 12:03:44,061 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 12:03:44,062 - __main__.WGANCritic - INFO -    Training mode: Gradient Penalty
+2025-08-12 12:03:44,062 - __main__.WGANCritic - INFO -    Normalization: GroupNorm (LayerNorm)
+2025-08-12 12:03:44,063 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 12:03:44,064 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 12:03:44,065 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 12:03:44,066 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 12:03:44,066 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 12:03:44,067 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 12:03:44,068 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 12:03:44,068 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 12:03:44,069 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 12:03:44,069 - HybridVQVAE_WGAN - INFO - ✅ Gradient Penalty model created successfully!
+2025-08-12 12:03:44,070 - HybridVQVAE_WGAN - INFO - Testing Weight Clipping Mode...
+2025-08-12 12:03:44,085 - __main__.VectorQuantizer - INFO - VectorQuantizer | codebook_size=512 | embedding_dim=64
+2025-08-12 12:03:44,097 - __main__.VQVAE - INFO - DynamicVQVAE Architecture:
+2025-08-12 12:03:44,098 - __main__.VQVAE - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 12:03:44,099 - __main__.VQVAE - INFO -    Latent: 64 dimensions
+2025-08-12 12:03:44,099 - __main__.VQVAE - INFO -    Codebook: 512 entries
+2025-08-12 12:03:44,100 - __main__.VQVAE - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 12:03:44,100 - __main__.VQVAE - INFO -    Total params: 3,203,139
+2025-08-12 12:03:44,112 - __main__.WGANCritic - INFO - DynamicWGANCritic Architecture:
+2025-08-12 12:03:44,113 - __main__.WGANCritic - INFO -    Input: 3 channels, [64, 64]
+2025-08-12 12:03:44,113 - __main__.WGANCritic - INFO -    Channel progression: 3 -> 64 -> 128 -> 256 -> 512
+2025-08-12 12:03:44,114 - __main__.WGANCritic - INFO -    Final spatial: 4x4
+2025-08-12 12:03:44,114 - __main__.WGANCritic - INFO -    Training mode: Weight Clipping
+2025-08-12 12:03:44,114 - __main__.WGANCritic - INFO -    Normalization: BatchNorm
+2025-08-12 12:03:44,115 - __main__.WGANCritic - INFO -    Total params: 1,560,128
+2025-08-12 12:03:44,115 - __main__.HybridVQVAEWGAN - INFO - HybridVQVAEWGAN initialized:
+2025-08-12 12:03:44,115 - __main__.HybridVQVAEWGAN - INFO -    Input dimensions: 3
+2025-08-12 12:03:44,116 - __main__.HybridVQVAEWGAN - INFO -    Latent dimensions: 64
+2025-08-12 12:03:44,116 - __main__.HybridVQVAEWGAN - INFO -    Codebook size: 512
+2025-08-12 12:03:44,116 - __main__.HybridVQVAEWGAN - INFO -    Image size: [64, 64]
+2025-08-12 12:03:44,117 - __main__.HybridVQVAEWGAN - INFO -    Total parameters: 4,763,267
+2025-08-12 12:03:44,117 - __main__.HybridVQVAEWGAN - INFO -    VQVAE parameters: 3,203,139
+2025-08-12 12:03:44,118 - __main__.HybridVQVAEWGAN - INFO -    Critic parameters: 1,560,128
+2025-08-12 12:03:44,118 - HybridVQVAE_WGAN - INFO - ✅ Weight Clipping model created successfully!
+2025-08-12 12:03:44,119 - HybridVQVAE_WGAN - INFO - Testing Trainer Creation...
+2025-08-12 12:03:44,257 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 12:03:44,258 - __main__.HybridTrainer - INFO - VQVAE learning rate: 0.0001
+2025-08-12 12:03:44,258 - __main__.HybridTrainer - INFO - Critic learning rate: 0.0001
+2025-08-12 12:03:44,259 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 0.5, 'adversarial': 2.0, 'codebook': 0.25, 'commitment': 0.1}
+2025-08-12 12:03:44,259 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-12 12:03:44,260 - __main__.HybridTrainer - INFO - Training mode: Gradient Penalty
+2025-08-12 12:03:44,260 - __main__.HybridTrainer - INFO - Gradient penalty lambda: 10
+2025-08-12 12:03:44,260 - __main__.HybridTrainer - INFO - Optimizer: Adam
+2025-08-12 12:03:44,260 - __main__.HybridTrainer - INFO - Normalization: GroupNorm (LayerNorm)
+2025-08-12 12:03:44,261 - HybridVQVAE_WGAN - INFO - ✅ Gradient Penalty trainer created successfully!
+2025-08-12 12:03:44,429 - __main__.HybridTrainer - INFO - Trainer initialized on cuda
+2025-08-12 12:03:44,429 - __main__.HybridTrainer - INFO - VQVAE learning rate: 5e-05
+2025-08-12 12:03:44,429 - __main__.HybridTrainer - INFO - Critic learning rate: 5e-05
+2025-08-12 12:03:44,430 - __main__.HybridTrainer - INFO - Loss weights: {'reconstruction': 0.5, 'adversarial': 2.0, 'codebook': 0.25, 'commitment': 0.1}
+2025-08-12 12:03:44,430 - __main__.HybridTrainer - INFO - Critic iterations per step: 5
+2025-08-12 12:03:44,430 - __main__.HybridTrainer - INFO - Training mode: Weight Clipping
+2025-08-12 12:03:44,431 - __main__.HybridTrainer - INFO - Weight clip value: 0.01
+2025-08-12 12:03:44,431 - __main__.HybridTrainer - INFO - Optimizer: RMSprop
+2025-08-12 12:03:44,432 - __main__.HybridTrainer - INFO - Normalization: BatchNorm
+2025-08-12 12:03:44,432 - HybridVQVAE_WGAN - INFO - ✅ Weight Clipping trainer created successfully!
+2025-08-12 12:03:44,433 - HybridVQVAE_WGAN - INFO - ================================================================================
+2025-08-12 12:03:44,433 - HybridVQVAE_WGAN - INFO - 🎉 ALL TESTS PASSED! Both modes are working correctly.
+2025-08-12 12:03:44,434 - HybridVQVAE_WGAN - INFO - You can now safely run either training mode.
