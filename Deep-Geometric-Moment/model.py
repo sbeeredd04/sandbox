@@ -136,6 +136,7 @@ class DGMResNet(nn.Module):
         # g is the grid of coordinates (32x32)
         g = torch.meshgrid(a, a)
         
+        ## LEVEL 1 CNN based image feature extraction
         # gridt is the grid of coordinates (32x32)
         self.gridt = nn.Parameter(torch.cat((g[0].view(1, 1, self.hw,self.hw), g[1].view(1, 1, self.hw,self.hw),),dim=1), requires_grad=False)
 
@@ -144,8 +145,15 @@ class DGMResNet(nn.Module):
         
         # coordinate grid layer 2 X N X N (32x32)
         self.conv11 = nn.Conv2d(2, self.df, kernel_size=1, stride=1, bias=False)
+                
+        # Resnet block for the coordinate bases computation
         self.layer02 = self._make_layer(block, self.df, 2, stride=1, k=3, p=1)
+        
+        # 3 X N X N (32x32) input to the resnet block
         self.conv02 = nn.Conv2d(3, self.df, kernel_size=5, stride=1, padding=2)
+        
+        
+        ## LEVEL 2 Coordinate Bases computation
 
         self.lvl2 = LevelBlockGM(self.df, n=2, k=3, p=1, hw=self.hw)
         self.lvl3 = LevelBlockGM(self.df, n=2, k=3, p=1, hw=self.hw)
