@@ -123,12 +123,21 @@ class DGMResNet(nn.Module):
     def __init__(self, block, num_classes=1000):
         super(DGMResNet, self).__init__()
 
+        # height and width of the image
         self.hw = 32
+        # number of features for the C features (256)
         self.df=256
 
+        # grid of coordinates (32x32)
         h = (self.hw-1)
+        
+        # a is the range of the image (0-31)
         a = (torch.Tensor(range(self.hw)))/(h)
+        
+        # g is the grid of coordinates (32x32)
         g = torch.meshgrid(a, a)
+        
+        # gridt is the grid of coordinates (32x32)
         self.gridt = nn.Parameter(torch.cat((g[0].view(1, 1, self.hw,self.hw), g[1].view(1, 1, self.hw,self.hw),),dim=1), requires_grad=False)
 
         self.layer01 = BasicBlockG( self.df, self.df, stride=1, k=1, p=0)
