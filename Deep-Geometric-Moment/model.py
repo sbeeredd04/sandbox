@@ -36,8 +36,7 @@ class BasicBlockG(nn.Module):
         self.conv1 = nn.Conv2d(
             in_planes, planes, kernel_size=k, padding=p, stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=k,padding=p, 
-                               stride=1, bias=False)        
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=k,padding=p, stride=1, bias=False)        
         self.bn2 = nn.BatchNorm2d(planes)
        
     def forward(self, x):
@@ -142,6 +141,8 @@ class DGMResNet(nn.Module):
 
         # layer01 is the first layer of the model this is 2 fully connected layers 
         self.layer01 = BasicBlockG( self.df, self.df, stride=1, k=1, p=0)
+        
+        # coordinate grid layer 2 X N X N (32x32)
         self.conv11 = nn.Conv2d(2, self.df, kernel_size=1, stride=1, bias=False)
         self.layer02 = self._make_layer(block, self.df, 2, stride=1, k=3, p=1)
         self.conv02 = nn.Conv2d(3, self.df, kernel_size=5, stride=1, padding=2)
