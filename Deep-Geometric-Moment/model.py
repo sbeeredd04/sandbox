@@ -140,6 +140,7 @@ class DGMResNet(nn.Module):
         # gridt is the grid of coordinates (32x32)
         self.gridt = nn.Parameter(torch.cat((g[0].view(1, 1, self.hw,self.hw), g[1].view(1, 1, self.hw,self.hw),),dim=1), requires_grad=False)
 
+        # layer01 is the first layer of the model
         self.layer01 = BasicBlockG( self.df, self.df, stride=1, k=1, p=0)
         self.conv11 = nn.Conv2d(2, self.df, kernel_size=1, stride=1, bias=False)
         self.layer02 = self._make_layer(block, self.df, 2, stride=1, k=3, p=1)
