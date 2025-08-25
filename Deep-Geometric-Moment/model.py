@@ -175,8 +175,13 @@ class DGMResNet(nn.Module):
         gridt = self.gridt
         bases = self.layer01(self.conv11(gridt))
         x = self.layer02(self.conv02(x))
+
+        # FC x GC element wise multiplication of the feature map and the coordinate bases
         xb = bases*x
+
+        # compute moments
         m = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
+
         #second level onward
         x, xb, m, bases, gridt = self.lvl2(x, m, xb, gridt, bases)
         x, xb, m, bases, gridt = self.lvl3(x, m, xb, gridt, bases)
