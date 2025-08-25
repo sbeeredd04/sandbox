@@ -3,3 +3,4 @@
 ResNet/resnet34_cifar10_final.pth
 *lightning_logs*
 *pycache*
+*.env*
