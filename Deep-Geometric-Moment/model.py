@@ -170,7 +170,7 @@ class DGMResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        #size = (x.shape[2], x.shape[3])
+        size = (x.shape[2], x.shape[3])
         #first level
         gridt = self.gridt
         bases = self.layer01(self.conv11(gridt))
@@ -189,13 +189,13 @@ class DGMResNet(nn.Module):
 
         cl = self.linear(self.do(m))
 
-        #visualization
-        # imgr = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        # imgr = imgr.view(imgr.size(0), -1)
-        # imgr = imgr - imgr.min(1, keepdim=True)[0]
-        # imgr = imgr/imgr.max(1, keepdim=True)[0]
-        # imgr = (imgr.view(-1, 1, self.hw, self.hw))
-        # imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
+        # visualization
+        imgr = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr = imgr.view(imgr.size(0), -1)
+        imgr = imgr - imgr.min(1, keepdim=True)[0]
+        imgr = imgr/imgr.max(1, keepdim=True)[0]
+        imgr = (imgr.view(-1, 1, self.hw, self.hw))
+        imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
 
         return cl
 
