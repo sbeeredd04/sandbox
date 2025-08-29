@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Variable
+from utils import *
 
 
 
@@ -102,6 +103,9 @@ class LevelBlockGM(nn.Module):
         xy_ = self.fc1_2(xy1_).view(-1,self.df , 2)
         xy_b1 =  self.fc1_5(xy1_).view(-1, 2, 1,1)
         xy_1 = self.fc1_4(xy1_).view(-1,2 , 2)
+        
+        #logging the affine parameters
+        print(f"xy_1: {xy_1} \n xy_b1: {xy_b1} \n xy_: {xy_} \n xy_b: {xy_b}")
         
         #transform coordinate grid, first single affine, second for all channel
         gridt = torch.matmul(xy_1, gridt.view(-1, 2, self.hw*self.hw)).view(-1, 2, self.hw, self.hw) + xy_b1

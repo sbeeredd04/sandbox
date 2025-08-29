@@ -118,16 +118,60 @@ def main():
     if args.dataset == 'cifar10':
         dataloader = datasets.CIFAR10
         num_classes = 10
+    elif args.dataset == 'ucf_101':
+        dataloader = datasets.UCF101
+        num_classes = 101
+        
+    # elif args.dataset == 'ucf_sports':
+    #     dataloader = datasets.UCF_Sports
+    #     num_classes = 101   
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
+        
+    #transform for ucf_101
+    if args.dataset == 'ucf_101':
+        ucf_root = './data/UCF-101'
+        annotation_path = './data/ucfTrainTestlist'
+        frames_per_clip = 1 #number of frames per clip
+        
+        trainset = dataloader(
+            root=ucf_root,
+            annotation_path=annotation_path,
+            frames_per_clip=frames_per_clip,
+            train=True,
+            transform=transform_train  # Defin`e suitable transform for video data
+        )
+        train_loader = data.DataLoader(
+            trainset,
+            batch_size=args.train_batch,
+            shuffle=True,
+            num_workers=args.workers,
+            pin_memory=True
+        )
 
-
-    trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
-    train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
-
-    testset = dataloader(root='./data', train=False, download=False, transform=transform_test)
-    val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        # test loader
+        testset = dataloader(
+            root=ucf_root,
+            annotation_path=annotation_path,
+            frames_per_clip=frames_per_clip,
+            train=False,
+            transform=transform_test
+        )
+        val_loader = data.DataLoader(
+            testset,
+            batch_size=args.test_batch,
+            shuffle=False,
+            num_workers=args.workers,
+            pin_memory=True
+        )
+    else:
+        trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
+        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        
+        #test loader
+        testset = dataloader(root='./data', train=False, download=False, transform=transform_test)
+        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
 
     model = ResNet18(num_classes=num_classes)
     model = torch.nn.DataParallel(model).cuda()
@@ -168,9 +212,13 @@ def main():
 
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, scheduler.get_last_lr()[0]))
-
-        train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-        test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
+        
+        if args.dataset == 'ucf_101':
+            train_loss, train_acc = train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            test_loss, test_acc = test_ucf_101(val_loader, model, criterion, epoch, use_cuda)
+        else:
+            train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
 
         # append logger file
         logger.append([scheduler.get_last_lr()[0], train_loss, test_loss, train_acc, test_acc])
@@ -249,6 +297,70 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
     bar.finish()
     return (losses.avg, top1.avg)
 
+def train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
+    '''A 3-tuple with the following entries:
+
+        video (Tensor[T, H, W, C] or Tensor[T, C, H, W]): The T video frames
+        audio(Tensor[K, L]): the audio frames, where K is the number of channels and L is the number of points
+        label (int): class of the video clip
+        
+        One video frame is used as input to the model. with the label (int) as the class of the video clip.
+        
+        Note: Audio is ignored since it is not used in the model.
+        '''
+    
+    model.train()
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    
+    bar = Bar('Processing', max=len(train_loader))
+    for batch_idx, (video, _ , label) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            video, label = video.cuda(), label.cuda()
+        video, label = torch.autograd.Variable(video), torch.autograd.Variable(label)
+        
+        # compute output
+        outputs = model(video)
+        loss = criterion(outputs, label)
+        
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, label.data, topk=(1, 5))
+        losses.update(loss.item(), video.size(0))
+        
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        
+        # plot progress
+        
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(train_loader),
+                    data=data_time.val,
+                    bt=batch_time.val,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+    bar.finish()
+    return (losses.avg, top1.avg)
+
 def test(val_loader, model, criterion, epoch, use_cuda):
     global best_acc
 
@@ -286,6 +398,59 @@ def test(val_loader, model, criterion, epoch, use_cuda):
         end = time.time()
         # plot progress
         bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(val_loader),
+                    data=data_time.avg,
+                    bt=batch_time.avg,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+    bar.finish()
+    return (losses.avg, top1.avg)
+
+
+def test_ucf_101(val_loader, model, criterion, epoch, use_cuda):
+    global best_acc
+    
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    
+    model.eval()
+    
+    end = time.time()
+    bar = Bar('Processing', max=len(val_loader))
+    
+    for batch_idx, (video, _ , label) in enumerate(val_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+        
+        if use_cuda:
+            video, label = video.cuda(), label.cuda()
+        video, label = torch.autograd.Variable(video, volatile=True), torch.autograd.Variable(label)
+        
+        # compute output
+        outputs = model(video)
+        loss = criterion(outputs, label)
+        
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, label.data, topk=(1, 5))
+        losses.update(loss.item(), video.size(0))
+        top1.update(prec1.item(), video.size(0))
+        top5.update(prec5.item(), video.size(0))
+        
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .f}'.format(
                     batch=batch_idx + 1,
                     size=len(val_loader),
                     data=data_time.avg,
