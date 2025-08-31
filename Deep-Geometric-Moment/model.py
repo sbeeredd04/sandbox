@@ -124,7 +124,7 @@ class DGMResNet(nn.Module):
         super(DGMResNet, self).__init__()
 
         # height and width of the image
-        self.hw = 224
+        self.hw = 32
         # number of features for the C features (256)
         self.df=256
 
