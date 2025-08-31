@@ -17,46 +17,33 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from model import ResNet18
 from torch.optim.lr_scheduler import LambdaLR
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
+from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig, dataloader
 import math
 # Parse arguments
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
 # Datasets
 parser.add_argument('-d', '--dataset', default='cifar10', type=str)
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
-                    help='number of data loading workers (default: 4)')
+parser.add_argument('-j', '--workers', default=4, type=int, metavar='N', help='number of data loading workers (default: 4)')
 # Optimization options
-parser.add_argument('--epochs', default=150, type=int, metavar='N',
-                    help='number of total epochs to run')
-parser.add_argument('--start-epoch', default=0, type=int, metavar='N',
-                    help='manual epoch number (useful on restarts)')
-parser.add_argument('--train-batch', default=128, type=int, metavar='N',
-                    help='train batchsize (default: 256)')
-parser.add_argument('--test-batch', default=100, type=int, metavar='N',
-                    help='test batchsize (default: 200)')
-parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
-                    metavar='LR', help='initial learning rate')
+parser.add_argument('--epochs', default=150, type=int, metavar='N', help='number of total epochs to run')
+parser.add_argument('--start-epoch', default=0, type=int, metavar='N', help='manual epoch number (useful on restarts)')
+parser.add_argument('--train-batch', default=128, type=int, metavar='N', help='train batchsize (default: 256)')
+parser.add_argument('--test-batch', default=100, type=int, metavar='N', help='test batchsize (default: 200)')
+parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, metavar='LR', help='initial learning rate')
 parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
-parser.add_argument('--momentum', default=0.9, type=float, metavar='M',
-                    help='momentum')
-parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float,
-                    metavar='W', help='weight decay (default: 1e-4)')
+parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
+parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar='W', help='weight decay (default: 1e-4)')
 # Checkpoints
-parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH',
-                    help='path to save checkpoint (default: checkpoint)')
-parser.add_argument('--resume', default='', type=str, metavar='PATH',
-                    help='path to latest checkpoint (default: none)')
+parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH', help='path to save checkpoint (default: checkpoint)')
+parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
 
 # Miscs
 parser.add_argument('--manualSeed', type=int, help='manual seed')
-parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
-                    help='evaluate model on validation set')
-parser.add_argument('--pretrained', dest='pretrained', action='store_true',
-                    help='use pre-trained model')
+parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', help='evaluate model on validation set')
+parser.add_argument('--pretrained', dest='pretrained', action='store_true', help='use pre-trained model')
 #Device options
-parser.add_argument('--gpu-id', default='0', type=str,
-                    help='id(s) for CUDA_VISIBLE_DEVICES')
+parser.add_argument('--gpu-id', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
@@ -97,10 +84,8 @@ def main():
         mkdir_p(args.checkpoint)
 
     # Data loading code
-    transforms1 = transforms.RandomApply(torch.nn.ModuleList([
-                    transforms.RandomAffine(90, translate=(0.2, 0.2), scale = (0.6, 1.3)),]), p=0.4)
-    transforms2 = transforms.RandomApply(torch.nn.ModuleList([          
-                    transforms.ColorJitter(0.8, 0.8, 0.8, 0.25),]), p=0.3)
+    transforms1 = transforms.RandomApply(torch.nn.ModuleList([transforms.RandomAffine(90, translate=(0.2, 0.2), scale = (0.6, 1.3)),]), p=0.4)
+    transforms2 = transforms.RandomApply(torch.nn.ModuleList([transforms.ColorJitter(0.8, 0.8, 0.8, 0.25),]), p=0.3)
     transform_train = transforms.Compose([
         transforms2,
         transforms1,
@@ -110,61 +95,28 @@ def main():
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    transform_test = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    transform_test = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),])
 
     if args.dataset == 'cifar10':
         dataloader = datasets.CIFAR10
         num_classes = 10
+        
     elif args.dataset == 'ucf_101':
         dataloader = datasets.UCF101
         num_classes = 101
         
-    # elif args.dataset == 'ucf_sports':
-    #     dataloader = datasets.UCF_Sports
-    #     num_classes = 101   
+    elif args.dataset == 'ucf_sports':
+        dataloader = datasets.UCF_Sports
+        num_classes = 10 
+        
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
         
     #transform for ucf_101
-    if args.dataset == 'ucf_101':
-        ucf_root = './data/UCF-101'
-        annotation_path = './data/ucfTrainTestlist'
-        frames_per_clip = 1 #number of frames per clip
+    if args.dataset == 'ucf_sports':
         
-        trainset = dataloader(
-            root=ucf_root,
-            annotation_path=annotation_path,
-            frames_per_clip=frames_per_clip,
-            train=True,
-            transform=transform_train  # Defin`e suitable transform for video data
-        )
-        train_loader = data.DataLoader(
-            trainset,
-            batch_size=args.train_batch,
-            shuffle=True,
-            num_workers=args.workers,
-            pin_memory=True
-        )
-
-        # test loader
-        testset = dataloader(
-            root=ucf_root,
-            annotation_path=annotation_path,
-            frames_per_clip=frames_per_clip,
-            train=False,
-            transform=transform_test
-        )
-        val_loader = data.DataLoader(
-            testset,
-            batch_size=args.test_batch,
-            shuffle=False,
-            num_workers=args.workers,
-            pin_memory=True
-        )
+        
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
         train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
