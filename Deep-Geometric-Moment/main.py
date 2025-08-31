@@ -17,7 +17,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 from model import ResNet18
 from torch.optim.lr_scheduler import LambdaLR
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig, dataloader
+from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig, Stanford40Dataset, get_stanford40_transforms
 import math
 # Parse arguments
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
@@ -101,21 +101,25 @@ def main():
         dataloader = datasets.CIFAR10
         num_classes = 10
         
-    elif args.dataset == 'ucf_101':
-        dataloader = datasets.UCF101
-        num_classes = 101
-        
-    elif args.dataset == 'ucf_sports':
-        dataloader = datasets.UCF_Sports
-        num_classes = 10 
-        
+    elif args.dataset == 'stanford_40':
+        # Use our custom Stanford40Dataset
+        num_classes = 40
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
         
-    #transform for ucf_101
-    if args.dataset == 'ucf_sports':
+    #transform for stanford_40
+    if args.dataset == 'stanford_40':
+        # Use Stanford 40 specific transforms and dataloaders
+        transform_train, transform_test = get_stanford40_transforms()
         
+        # Create Stanford 40 datasets
+        trainset = Stanford40Dataset(root_dir='./data', split='train', transform=transform_train)
+        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        
+        # Test loader
+        testset = Stanford40Dataset(root_dir='./data', split='test', transform=transform_test)
+        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
         
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
@@ -136,7 +140,10 @@ def main():
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=100, t_total=args.epochs*len(train_loader))
 
     # Resume
-    title = 'cifar-DGM-ResNet18'
+    if args.dataset == 'stanford_40':
+        title = 'stanford40-DGM-ResNet18'
+    else:
+        title = 'cifar-DGM-ResNet18'
     if args.resume:
         # Load checkpoint.
         print('==> Resuming from checkpoint..')
@@ -165,9 +172,9 @@ def main():
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, scheduler.get_last_lr()[0]))
         
-        if args.dataset == 'ucf_101':
-            train_loss, train_acc = train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_ucf_101(val_loader, model, criterion, epoch, use_cuda)
+        if args.dataset == 'stanford_40':
+            train_loss, train_acc = train_stanford_40(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            test_loss, test_acc = test_stanford_40(val_loader, model, criterion, epoch, use_cuda)
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
@@ -249,17 +256,7 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
     bar.finish()
     return (losses.avg, top1.avg)
 
-def train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
-    '''A 3-tuple with the following entries:
-
-        video (Tensor[T, H, W, C] or Tensor[T, C, H, W]): The T video frames
-        audio(Tensor[K, L]): the audio frames, where K is the number of channels and L is the number of points
-        label (int): class of the video clip
-        
-        One video frame is used as input to the model. with the label (int) as the class of the video clip.
-        
-        Note: Audio is ignored since it is not used in the model.
-        '''
+def train_stanford_40(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
     
     model.train()
 
@@ -269,22 +266,25 @@ def train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, sc
     top1 = AverageMeter()
     top5 = AverageMeter()
     
+    end = time.time()
     bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (video, _ , label) in enumerate(train_loader):
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
         if use_cuda:
-            video, label = video.cuda(), label.cuda()
-        video, label = torch.autograd.Variable(video), torch.autograd.Variable(label)
+            inputs, targets = inputs.cuda(), targets.cuda()
+        inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
         
         # compute output
-        outputs = model(video)
-        loss = criterion(outputs, label)
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(outputs.data, label.data, topk=(1, 5))
-        losses.update(loss.item(), video.size(0))
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -297,8 +297,7 @@ def train_ucf_101(train_loader, model, criterion, optimizer, epoch, use_cuda, sc
         end = time.time()
         
         # plot progress
-        
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .f}'.format(
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
                     batch=batch_idx + 1,
                     size=len(train_loader),
                     data=data_time.val,
@@ -365,7 +364,7 @@ def test(val_loader, model, criterion, epoch, use_cuda):
     return (losses.avg, top1.avg)
 
 
-def test_ucf_101(val_loader, model, criterion, epoch, use_cuda):
+def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
     global best_acc
     
     batch_time = AverageMeter()
@@ -379,30 +378,30 @@ def test_ucf_101(val_loader, model, criterion, epoch, use_cuda):
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
     
-    for batch_idx, (video, _ , label) in enumerate(val_loader):
+    for batch_idx, (inputs, targets) in enumerate(val_loader):
         # measure data loading time
         data_time.update(time.time() - end)
         
         if use_cuda:
-            video, label = video.cuda(), label.cuda()
-        video, label = torch.autograd.Variable(video, volatile=True), torch.autograd.Variable(label)
+            inputs, targets = inputs.cuda(), targets.cuda()
+        inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
         
         # compute output
-        outputs = model(video)
-        loss = criterion(outputs, label)
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
-        prec1, prec5 = accuracy(outputs.data, label.data, topk=(1, 5))
-        losses.update(loss.item(), video.size(0))
-        top1.update(prec1.item(), video.size(0))
-        top5.update(prec5.item(), video.size(0))
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
         
         # measure elapsed time
         batch_time.update(time.time() - end)
         end = time.time()
         
         # plot progress
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .f}'.format(
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
                     batch=batch_idx + 1,
                     size=len(val_loader),
                     data=data_time.avg,
