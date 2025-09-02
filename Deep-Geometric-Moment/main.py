@@ -536,8 +536,8 @@ class UCFSportsDataset(data.Dataset):
     def _get_label_distribution(self):
         """Get distribution of labels in current split"""
         label_counts = {}
-        for idx in self.indices[:]:  # for all samples
-            sample = self.deeplake_ds[idx]
+        for i, sample in enumerate(self.deeplake_ds):
+            #for all samples
             label = int(sample.labels.numpy()[0])
             label_counts[label] = label_counts.get(label, 0) + 1
         return label_counts
