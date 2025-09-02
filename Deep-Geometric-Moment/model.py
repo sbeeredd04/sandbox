@@ -120,37 +120,37 @@ class LevelBlockGM(nn.Module):
 
 
 class DGMResNet(nn.Module):
-    def __init__(self, block, num_classes=1000):
+    def __init__(self, block, num_classes=1000, hw=32):
         super(DGMResNet, self).__init__()
 
         # height and width of the image
-        self.hw = 32
+        self.hw = hw  # Configurable height/width (32 for CIFAR/Stanford40, 224 for UCF Sports)
         # number of features for the C features (256)
         self.df=256
 
-        # grid of coordinates (32x32)
+                # grid of coordinates (224x224)
         h = (self.hw-1)
         
-        # a is the range of the image (0-31)
+        # a is the range of the image (0-223)
         a = (torch.Tensor(range(self.hw)))/(h)
         
-        # g is the grid of coordinates (32x32)
+        # g is the grid of coordinates (224x224)
         g = torch.meshgrid(a, a)
         
         ## LEVEL 1 CNN based image feature extraction
-        # gridt is the grid of coordinates (32x32)
+        # gridt is the grid of coordinates (224x224)
         self.gridt = nn.Parameter(torch.cat((g[0].view(1, 1, self.hw,self.hw), g[1].view(1, 1, self.hw,self.hw),),dim=1), requires_grad=False)
-
+        
         # layer01 is the first layer of the model this is 2 fully connected layers 
         self.layer01 = BasicBlockG( self.df, self.df, stride=1, k=1, p=0)
         
-        # coordinate grid layer 2 X N X N (32x32)
+        # coordinate grid layer 2 X N X N (224x224)
         self.conv11 = nn.Conv2d(2, self.df, kernel_size=1, stride=1, bias=False)
                 
         # Resnet block for the coordinate bases computation
         self.layer02 = self._make_layer(block, self.df, 2, stride=1, k=3, p=1)
         
-        # 3 X N X N (32x32) input to the resnet block
+        # 3 X N X N (224x224) input to the resnet block
         self.conv02 = nn.Conv2d(3, self.df, kernel_size=5, stride=1, padding=2)
         
         
@@ -202,4 +202,4 @@ class DGMResNet(nn.Module):
 
 
 def ResNet18(num_classes=100):
-    return DGMResNet(BasicBlock, num_classes=num_classes)
+    return DGMResNet(BasicBlock, num_classes=num_classes, hw=32)

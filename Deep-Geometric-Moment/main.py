@@ -15,10 +15,15 @@ import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
+import deeplake
+import numpy as np
+from PIL import Image
 from model import ResNet18
 from torch.optim.lr_scheduler import LambdaLR
 from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig, Stanford40Dataset, get_stanford40_transforms
 import math
+import wandb
+wandb.login()
 # Parse arguments
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 
@@ -104,6 +109,10 @@ def main():
     elif args.dataset == 'stanford_40':
         # Use our custom Stanford40Dataset
         num_classes = 40
+        
+    elif args.dataset == 'ucf_sports':
+        # UCF Sports Action dataset
+        num_classes = 13 
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
@@ -121,6 +130,21 @@ def main():
         testset = Stanford40Dataset(root_dir='./data', split='test', transform=transform_test)
         val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
         
+    elif args.dataset == 'ucf_sports':
+        # UCF Sports Action dataset transforms
+        transform_train, transform_test = get_ucf_sports_transforms()
+        
+        # Load UCF Sports dataset using Deep Lake
+        ds = deeplake.load('hub://activeloop/ucf-sports-action')
+        
+        # Create UCF Sports datasets
+        trainset = UCFSportsDataset(ds, split='train', transform=transform_train)
+        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        
+        # Test loader
+        testset = UCFSportsDataset(ds, split='test', transform=transform_test)
+        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
         train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
@@ -129,7 +153,15 @@ def main():
         testset = dataloader(root='./data', train=False, download=False, transform=transform_test)
         val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
 
-    model = ResNet18(num_classes=num_classes)
+    # Create model with appropriate image dimensions
+    if args.dataset == 'ucf_sports':
+        # UCF Sports uses 224x224 images
+        from model import DGMResNet, BasicBlock
+        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=224)
+    else:
+        # CIFAR and Stanford40 use 32x32 images
+        model = ResNet18(num_classes=num_classes)
+    
     model = torch.nn.DataParallel(model).cuda()
 
     cudnn.benchmark = True
@@ -142,6 +174,8 @@ def main():
     # Resume
     if args.dataset == 'stanford_40':
         title = 'stanford40-DGM-ResNet18'
+    elif args.dataset == 'ucf_sports':
+        title = 'ucf-sports-DGM-ResNet18'
     else:
         title = 'cifar-DGM-ResNet18'
     if args.resume:
@@ -160,9 +194,12 @@ def main():
         logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.'])
 
 
-    if args.evaluate:
+    if args.evaluate: 
         print('\nEvaluation only')
-        test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda)
+        if args.dataset == 'ucf_sports':
+            test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, start_epoch, use_cuda)
+        else:
+            test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda)
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
         return
 
@@ -175,6 +212,9 @@ def main():
         if args.dataset == 'stanford_40':
             train_loss, train_acc = train_stanford_40(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test_stanford_40(val_loader, model, criterion, epoch, use_cuda)
+        elif args.dataset == 'ucf_sports':
+            train_loss, train_acc = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda)
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
@@ -192,7 +232,16 @@ def main():
                 'best_acc': best_acc,
                 'optimizer' : optimizer.state_dict(),
             }, is_best, checkpoint=args.checkpoint)
-
+        
+        #log to wandb
+        run.log({
+            'epoch': epoch + 1,
+            'train_loss': train_loss,
+            'train_acc': train_acc,
+            'test_loss': test_loss,
+            'test_acc': test_acc,
+        })
+        
     logger.close()
     logger.plot()
     savefig(os.path.join(args.checkpoint, 'log.eps'))
@@ -363,7 +412,6 @@ def test(val_loader, model, criterion, epoch, use_cuda):
     bar.finish()
     return (losses.avg, top1.avg)
 
-
 def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
     global best_acc
     
@@ -416,6 +464,289 @@ def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
     bar.finish()
     return (losses.avg, top1.avg)
 
+def get_ucf_sports_transforms():
+    """Get UCF Sports Action dataset transforms with appropriate scaling"""
+    # UCF Sports images are 720x480, we'll resize to 224x224 for ResNet18
+    transform_train = transforms.Compose([
+        transforms.Resize((256, 256)),  # Resize to 256x256
+        transforms.RandomCrop(224),     # Random crop to 224x224
+        transforms.RandomHorizontalFlip(p=0.5),
+        transforms.ColorJitter(brightness=0.4, contrast=0.4, saturation=0.4, hue=0.1),
+        transforms.RandomRotation(degrees=15),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
+    ])
+    
+    transform_test = transforms.Compose([
+        transforms.Resize((224, 224)),  # Resize to 224x224
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
+    ])
+    
+    return transform_train, transform_test
+
+class UCFSportsDataset(data.Dataset):
+    """UCF Sports Action Dataset using Deep Lake"""
+    def __init__(self, deeplake_ds, split='train', transform=None):
+        self.deeplake_ds = deeplake_ds
+        self.transform = transform
+        self.split = split
+        
+        # Create stratified train/test split
+        total_samples = len(deeplake_ds)
+        
+        # Get all labels first to create stratified split
+        all_labels = []
+        for i in range(total_samples):
+            sample = deeplake_ds[i]
+            label = int(sample.labels.numpy()[0])
+            all_labels.append(label)
+        
+        # Create stratified indices
+        from collections import defaultdict
+        label_to_indices = defaultdict(list)
+        for idx, label in enumerate(all_labels):
+            label_to_indices[label].append(idx)
+        
+        # Split each class 80/20
+        train_indices = []
+        test_indices = []
+        
+        for label, indices in label_to_indices.items():
+            n_train = int(0.8 * len(indices))
+            train_indices.extend(indices[:n_train])
+            test_indices.extend(indices[n_train:])
+        
+        # Shuffle the indices
+        import random
+        random.shuffle(train_indices)
+        random.shuffle(test_indices)
+        
+        if split == 'train':
+            self.indices = train_indices
+        else:  # test
+            self.indices = test_indices
+        
+        run.log({
+            'split': split,
+            'num_samples': len(self.indices),
+            'label_distribution': self._get_label_distribution(),
+        })
+    
+    def _get_label_distribution(self):
+        """Get distribution of labels in current split"""
+        label_counts = {}
+        for idx in self.indices[:]:  # for all samples
+            sample = self.deeplake_ds[idx]
+            label = int(sample.labels.numpy()[0])
+            label_counts[label] = label_counts.get(label, 0) + 1
+        return label_counts
+    
+    def __len__(self):
+        return len(self.indices)
+    
+    def __getitem__(self, idx):
+        # Get the actual index from our split indices
+        actual_idx = self.indices[idx]
+        
+        # Get image and label from Deep Lake dataset
+        sample = self.deeplake_ds[actual_idx]
+        
+        # Extract image and label
+        image = sample.images.numpy()
+        label = int(sample.labels.numpy()[0])
+        
+        # Handle different image formats from Deep Lake
+        if len(image.shape) == 4:  # (1, C, H, W) format
+            image = image.squeeze(0)
+        elif len(image.shape) == 3:  # (C, H, W) format
+            pass
+        else:
+            image = image.squeeze()
+        
+        # Ensure we have a 3D tensor (C, H, W)
+        if len(image.shape) != 3:
+            raise ValueError(f"Unexpected image shape after processing: {image.shape}")
+        
+        # Convert CHW to HWC for PIL
+        image = image.transpose(1, 2, 0)
+        
+        # Handle different data types
+        if image.dtype == np.uint8:
+            pass
+        elif image.dtype in [np.float32, np.float64]:
+            if image.max() <= 1.0:
+                image = (image * 255).astype(np.uint8)
+            else:
+                image = image.astype(np.uint8)
+        else:
+            image = image.astype(np.uint8)
+        
+        # Ensure values are in valid range
+        image = np.clip(image, 0, 255).astype(np.uint8)
+        
+        # Convert to PIL Image
+        try:
+            image = Image.fromarray(image, mode='RGB')
+        except Exception as e:
+            print(f"Error converting image to PIL: {e}")
+            image = Image.new('RGB', (224, 224), color=(128, 128, 128))
+        
+        # Apply transforms
+        if self.transform:
+            image = self.transform(image)
+        
+        return image, label
+
+def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
+    """Training function for UCF Sports Action dataset"""
+    # switch to train mode
+    model.train()
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    end = time.time()
+
+    bar = Bar('Processing', max=len(train_loader))
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+
+        # compute output
+        outputs = model(inputs)
+        targets = targets.long()        
+        loss = criterion(outputs, targets)
+
+        #log to wandb
+        if batch_idx == 200:
+            print(f"Outputs: {outputs}")
+            print(f"Targets: {targets}")
+            print(f"Loss: {loss}\n")
+                
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(train_loader),
+                    data=data_time.val,
+                    bt=batch_time.val,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+        
+        run.log({
+            'epoch': epoch + 1,
+            'train_loss': losses.avg,
+            'train_acc': top1.avg,
+            'train_top5': top5.avg,
+        })
+        
+    bar.finish()
+    return (losses.avg, top1.avg)
+
+def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
+    """Testing function for UCF Sports Action dataset"""
+    global best_acc
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+
+    # switch to evaluate mode
+    model.eval()
+
+    end = time.time()
+    bar = Bar('Processing', max=len(val_loader))
+    for batch_idx, (inputs, targets) in enumerate(val_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        # Convert targets to long immediately to fix uint32 issue
+        targets = targets.long()
+
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        
+        # Convert to Variables (deprecated but keeping for compatibility)
+        with torch.no_grad():
+            inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+
+        # compute output
+        outputs = model(inputs)
+        
+        # Ensure targets are in valid range
+        num_classes = outputs.shape[1]
+
+        targets = torch.clamp(targets, 0, num_classes - 1)
+
+        # Compute loss with error handling
+        try:
+            loss = criterion(outputs, targets)
+        except RuntimeError as e:
+            print(f"ERROR in loss computation at batch {batch_idx}: {e}")
+            # Skip this batch
+            continue
+
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(val_loader),
+                    data=data_time.avg,
+                    bt=batch_time.avg,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        
+        run.log({
+            'epoch': epoch + 1,
+            'test_loss': losses.avg,
+            'test_acc': top1.avg,
+            'test_top5': top5.avg,
+        })
+        bar.next()
+    bar.finish()
+    return (losses.avg, top1.avg)
+
 def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoint.pth.tar'):
     filepath = os.path.join(checkpoint, filename)
     torch.save(state, filepath)
@@ -423,4 +754,7 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
         shutil.copyfile(filepath, os.path.join(checkpoint, 'model_best.pth.tar'))
 
 if __name__ == '__main__':
-    main()
+    
+    with wandb.init(project="ucf-sports-dgm-resnet18", name="ucf-sports-dgm-resnet18") as run:
+        wandb.config.update(args)
+        main()
