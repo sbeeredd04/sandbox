@@ -113,7 +113,7 @@ class LevelBlockGM(nn.Module):
         b = F.relu(self.bn2g(self.conv2g(b)))
         
         #compute moments
-        xb = b*x 
+        xb = b*x  
         m =  torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
 
         return x, xb, m, b, gridt
