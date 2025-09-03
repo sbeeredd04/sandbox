@@ -153,6 +153,7 @@ class OlympicActionDataset(Dataset):
     
     This dataset loads .seq files from the Olympic Sports dataset and extracts frames.
     The .seq files are Norpix sequence files containing JPEG frames.
+    Modified to return individual frames instead of video sequences.
     """
     
     def __init__(self, root_dir, split='train', transform=None, num_frames_per_video=16):
@@ -166,22 +167,28 @@ class OlympicActionDataset(Dataset):
                                       if os.path.isdir(os.path.join(root_dir, d))])
         self.class_to_idx = {sport: idx for idx, sport in enumerate(self.sport_categories)}
         
-        # Collect all video files with their labels
+        # Collect all individual frames with their labels
+        self.frame_data = []  # List of (frame, label) tuples
         self.video_files = []
         self.labels = []
         
+        print(f"Loading Olympic Action Dataset - {split} split...")
+        print("Extracting all frames from videos...")
+        
         for sport in self.sport_categories:
             sport_dir = os.path.join(root_dir, sport)
-            for video_file in os.listdir(sport_dir):
-                if video_file.endswith('.seq'):
-                    self.video_files.append(os.path.join(sport_dir, video_file))
-                    self.labels.append(self.class_to_idx[sport])
+            sport_files = [f for f in os.listdir(sport_dir) if f.endswith('.seq')]
+            
+            for video_file in sport_files:
+                video_path = os.path.join(sport_dir, video_file)
+                self.video_files.append(video_path)
+                self.labels.append(self.class_to_idx[sport])
         
-        # Create train/test split (80/20)
-        self._create_split()
+        # Create train/test split (80/20) and extract frames
+        self._create_split_and_extract_frames()
         
         print(f"Olympic Action Dataset - {split} split:")
-        print(f"Total videos: {len(self.video_files)}")
+        print(f"Total individual frames: {len(self.frame_data)}")
         print(f"Number of classes: {len(self.sport_categories)}")
         print(f"Classes: {self.sport_categories}")
         
