@@ -192,6 +192,20 @@ class OlympicActionDataset(Dataset):
         print(f"Number of classes: {len(self.sport_categories)}")
         print(f"Classes: {self.sport_categories}")
         
+    def _create_split_and_extract_frames(self):
+        """Create stratified train/test split and extract frames"""
+        
+        #split the data set first
+        self._create_split()
+        self._extract_frames()
+        
+    def _extract_frames(self):
+        """Extract frames from videos"""
+        for i, video_path in enumerate(self.video_files):
+            frames = self._read_seq_file(video_path)
+            self.frame_data.extend(frames)
+            self.labels.append(self.labels[i])
+        
     def _create_split(self):
         """Create stratified train/test split"""
         # Group videos by class
@@ -293,7 +307,7 @@ def get_olympic_action_transforms():
     Based on the .seq file analysis, the original dimensions are 480x360.
     We'll resize to 224x224 to match standard model inputs.
     """
-    transform_train = transforms.Compose([
+    transform_train = transforms.Compose([``
         transforms.Resize((224, 224)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(degrees=10),
