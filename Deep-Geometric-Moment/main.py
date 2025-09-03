@@ -15,7 +15,7 @@ import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
+import torchvision
 import numpy as np
 from PIL import Image
 from model import ResNet18
@@ -39,6 +39,7 @@ parser.add_argument('--lr', '--learning-rate', default=0.1, type=float, metavar=
 parser.add_argument('--gamma', type=float, default=0.1, help='LR is multiplied by gamma on schedule.')
 parser.add_argument('--momentum', default=0.9, type=float, metavar='M', help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=1e-4, type=float, metavar='W', help='weight decay (default: 1e-4)')
+
 # Checkpoints
 parser.add_argument('-c', '--checkpoint', default='checkpoint', type=str, metavar='PATH', help='path to save checkpoint (default: checkpoint)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path to latest checkpoint (default: none)')
@@ -47,6 +48,10 @@ parser.add_argument('--resume', default='', type=str, metavar='PATH', help='path
 parser.add_argument('--manualSeed', type=int, help='manual seed')
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true', help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true', help='use pre-trained model')
+
+# Options to run inference on a model checkpoint path
+parser.add_argument('--inference', default='', type=str, metavar='PATH', help='path to model checkpoint (default: none)')
+
 #Device options
 parser.add_argument('--gpu-id', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 
@@ -611,11 +616,13 @@ class UCFSportsDataset(data.Dataset):
         actual_idx = self.indices[idx]
         
         # Get image and label from Deep Lake dataset
-        sample = self.deeplake_ds[actual_idx]
+        sample = self.deeplake_ds[actual_idx]        
         
         # Extract image and label
         image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
+        
+        torchvision.utils.save_image(image, f'image_{label}.png') 
         
         # Handle different image formats from Deep Lake
         if len(image.shape) == 4:  # (1, C, H, W) format
@@ -656,7 +663,7 @@ class UCFSportsDataset(data.Dataset):
         # Apply transforms
         if self.transform:
             image = self.transform(image)
-        
+                    
         return image, label
 
 def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
@@ -813,6 +820,8 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
     torch.save(state, filepath)
     if is_best:
         shutil.copyfile(filepath, os.path.join(checkpoint, 'model_best.pth.tar'))
+
+
 
 if __name__ == '__main__':
     
