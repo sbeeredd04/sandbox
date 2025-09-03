@@ -15,12 +15,12 @@ import torch.optim as optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-import deeplake
+
 import numpy as np
 from PIL import Image
 from model import ResNet18
 from torch.optim.lr_scheduler import LambdaLR
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig, Stanford40Dataset, get_stanford40_transforms
+from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
 import math
 import wandb
 wandb.login()
@@ -106,9 +106,9 @@ def main():
         dataloader = datasets.CIFAR10
         num_classes = 10
         
-    elif args.dataset == 'stanford_40':
-        # Use our custom Stanford40Dataset
-        num_classes = 40
+    elif args.dataset == 'olympic_action':
+        #use custom dataset module
+        num_classes = 16
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset
@@ -117,24 +117,27 @@ def main():
         dataloader = datasets.CIFAR100
         num_classes = 100
         
-    #transform for stanford_40
-    if args.dataset == 'stanford_40':
-        # Use Stanford 40 specific transforms and dataloaders
-        transform_train, transform_test = get_stanford40_transforms()
+    # Olympic Action dataset
+    if args.dataset == 'olympic_action':
+        print("Loading Olympic Action dataset...")
+        # Import Olympic Action dataset utilities
+        from utils.olympic_action import create_olympic_action_dataloaders
         
-        # Create Stanford 40 datasets
-        trainset = Stanford40Dataset(root_dir='./data', split='train', transform=transform_train)
-        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
-        
-        # Test loader
-        testset = Stanford40Dataset(root_dir='./data', split='test', transform=transform_test)
-        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        # Create Olympic Action datasets and dataloaders
+        train_loader, val_loader, num_classes = create_olympic_action_dataloaders(
+            root_dir='./data/olympic_sports',
+            batch_size=args.train_batch,
+            num_workers=args.workers,
+            num_frames_per_video=16
+        )
+        print(f"Olympic Action dataset loaded successfully with {num_classes} classes")
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset transforms
         transform_train, transform_test = get_ucf_sports_transforms()
         
         # Load UCF Sports dataset using Deep Lake
+        import deeplake
         ds = deeplake.load('hub://activeloop/ucf-sports-action')
         
         # Create UCF Sports datasets
@@ -158,8 +161,12 @@ def main():
         # UCF Sports uses 224x224 images
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=224)
+    elif args.dataset == 'olympic_action':
+        # Olympic Action uses 224x224 images (resized from 480x360)
+        from model import DGMResNet, BasicBlock
+        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=224)
     else:
-        # CIFAR and Stanford40 use 32x32 images
+        # CIFAR uses 32x32 images
         model = ResNet18(num_classes=num_classes)
     
     model = torch.nn.DataParallel(model).cuda()
@@ -172,8 +179,8 @@ def main():
     scheduler = WarmupCosineSchedule(optimizer, warmup_steps=100, t_total=args.epochs*len(train_loader))
 
     # Resume
-    if args.dataset == 'stanford_40':
-        title = 'stanford40-DGM-ResNet18'
+    if args.dataset == 'olympic_action':
+        title = 'olympic_action-DGM-ResNet18'
     elif args.dataset == 'ucf_sports':
         title = 'ucf-sports-DGM-ResNet18'
     else:
@@ -198,6 +205,8 @@ def main():
         print('\nEvaluation only')
         if args.dataset == 'ucf_sports':
             test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, start_epoch, use_cuda)
+        elif args.dataset == 'olympic_action':
+            test_loss, test_acc = test_olympic_action(val_loader, model, criterion, start_epoch, use_cuda)
         else:
             test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda)
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
@@ -209,12 +218,15 @@ def main():
 
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, scheduler.get_last_lr()[0]))
         
-        if args.dataset == 'stanford_40':
-            train_loss, train_acc = train_stanford_40(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_stanford_40(val_loader, model, criterion, epoch, use_cuda)
+        if args.dataset == 'olympic_action':
+            print(f"Training Olympic Action model for epoch {epoch + 1}")
+            train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            print(f"Testing Olympic Action model for epoch {epoch + 1}")
+            test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
         elif args.dataset == 'ucf_sports':
             train_loss, train_acc = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda)
+
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
@@ -305,62 +317,6 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
     bar.finish()
     return (losses.avg, top1.avg)
 
-def train_stanford_40(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
-    
-    model.train()
-
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
-    losses = AverageMeter()
-    top1 = AverageMeter()
-    top5 = AverageMeter()
-    
-    end = time.time()
-    bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (inputs, targets) in enumerate(train_loader):
-        # measure data loading time
-        data_time.update(time.time() - end)
-
-        if use_cuda:
-            inputs, targets = inputs.cuda(), targets.cuda()
-        inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
-        
-        # compute output
-        outputs = model(inputs)
-        loss = criterion(outputs, targets)
-        
-        # measure accuracy and record loss
-        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
-        losses.update(loss.item(), inputs.size(0))
-        top1.update(prec1.item(), inputs.size(0))
-        top5.update(prec5.item(), inputs.size(0))
-        
-        # compute gradient and do SGD step
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-        scheduler.step()
-        
-        # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
-        
-        # plot progress
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
-                    batch=batch_idx + 1,
-                    size=len(train_loader),
-                    data=data_time.val,
-                    bt=batch_time.val,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    loss=losses.avg,
-                    top1=top1.avg,
-                    top5=top5.avg,
-                    )
-        bar.next()
-    bar.finish()
-    return (losses.avg, top1.avg)
-
 def test(val_loader, model, criterion, epoch, use_cuda):
     global best_acc
 
@@ -412,7 +368,88 @@ def test(val_loader, model, criterion, epoch, use_cuda):
     bar.finish()
     return (losses.avg, top1.avg)
 
-def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
+def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
+    
+    model.train()
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    
+    end = time.time()
+    bar = Bar('Processing', max=len(train_loader))
+    
+    print(f"Starting Olympic Action training for epoch {epoch + 1}")
+    print(f"Number of training batches: {len(train_loader)}")
+    
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+        
+        # Debug: Print input shape for first batch
+        if batch_idx == 0:
+            print(f"Input shape: {inputs.shape}")
+            print(f"Targets shape: {targets.shape}")
+            print(f"Targets: {targets}")
+        
+        # Handle video data: inputs shape is (batch_size, num_frames, C, H, W)
+        # Take a random frame from each video sequence for training
+        batch_size, num_frames, C, H, W = inputs.shape
+        frame_indices = torch.randint(0, num_frames, (batch_size,))
+        inputs = inputs[torch.arange(batch_size), frame_indices]  # Shape: (batch_size, C, H, W)
+        
+        if batch_idx == 0:
+            print(f"After frame selection - Input shape: {inputs.shape}")
+        
+        # compute output
+        outputs = model(inputs)
+        loss = criterion(outputs, targets)
+        
+        if batch_idx == 0:
+            print(f"Output shape: {outputs.shape}")
+            print(f"Loss: {loss.item()}")
+        
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+        
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        scheduler.step()
+        
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(train_loader),
+                    data=data_time.val,
+                    bt=batch_time.val,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+    bar.finish()
+    print(f"Olympic Action training completed for epoch {epoch + 1}")
+    print(f"Final training loss: {losses.avg:.4f}, Final training accuracy: {top1.avg:.4f}")
+    return (losses.avg, top1.avg)
+
+def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
     global best_acc
     
     batch_time = AverageMeter()
@@ -426,6 +463,9 @@ def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
     
+    print(f"Starting Olympic Action testing for epoch {epoch + 1}")
+    print(f"Number of test batches: {len(val_loader)}")
+    
     for batch_idx, (inputs, targets) in enumerate(val_loader):
         # measure data loading time
         data_time.update(time.time() - end)
@@ -434,9 +474,28 @@ def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
         
+        # Debug: Print input shape for first batch
+        if batch_idx == 0:
+            print(f"Test input shape: {inputs.shape}")
+            print(f"Test targets shape: {targets.shape}")
+            print(f"Test targets: {targets}")
+        
+        # Handle video data: inputs shape is (batch_size, num_frames, C, H, W)
+        # For testing, take the middle frame from each video sequence
+        batch_size, num_frames, C, H, W = inputs.shape
+        middle_frame = num_frames // 2
+        inputs = inputs[:, middle_frame]  # Shape: (batch_size, C, H, W)
+        
+        if batch_idx == 0:
+            print(f"After frame selection - Test input shape: {inputs.shape}")
+        
         # compute output
         outputs = model(inputs)
         loss = criterion(outputs, targets)
+        
+        if batch_idx == 0:
+            print(f"Test output shape: {outputs.shape}")
+            print(f"Test loss: {loss.item()}")
         
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -462,6 +521,8 @@ def test_stanford_40(val_loader, model, criterion, epoch, use_cuda):
                     )
         bar.next()
     bar.finish()
+    print(f"Olympic Action testing completed for epoch {epoch + 1}")
+    print(f"Final test loss: {losses.avg:.4f}, Final test accuracy: {top1.avg:.4f}")
     return (losses.avg, top1.avg)
 
 def get_ucf_sports_transforms():
