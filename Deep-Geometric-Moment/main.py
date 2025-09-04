@@ -287,7 +287,7 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
         loss = criterion(outputs, targets)
 
         # measure accuracy and record loss
@@ -345,7 +345,7 @@ def test(val_loader, model, criterion, epoch, use_cuda):
         inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
 
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
         loss = criterion(outputs, targets)
 
         # measure accuracy and record loss
@@ -413,7 +413,7 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
             print(f"After frame selection - Input shape: {inputs.shape}")
         
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
         loss = criterion(outputs, targets)
         
         if batch_idx == 0:
@@ -495,7 +495,7 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
             print(f"After frame selection - Test input shape: {inputs.shape}")
         
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
         loss = criterion(outputs, targets)
         
         if batch_idx == 0:
@@ -622,7 +622,8 @@ class UCFSportsDataset(data.Dataset):
         image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
         
-        torchvision.utils.save_image(image, f'image_{label}.png') 
+        # Store original image for return (create a processed version for wandb logging)
+        original_image_for_wandb = self._prepare_image_for_wandb(image.copy())
         
         # Handle different image formats from Deep Lake
         if len(image.shape) == 4:  # (1, C, H, W) format
@@ -660,11 +661,89 @@ class UCFSportsDataset(data.Dataset):
             print(f"Error converting image to PIL: {e}")
             image = Image.new('RGB', (224, 224), color=(128, 128, 128))
         
+        # Resize original image to consistent size for batching
+        original_pil_resized = image.resize((224, 224))  # Resize to consistent size
+        original_pil_array = np.array(original_pil_resized)
+        
         # Apply transforms
+        transformed_image = None
         if self.transform:
-            image = self.transform(image)
-                    
-        return image, label
+            transformed_image = self.transform(image)
+        else:
+            # Convert to tensor if no transforms
+            transform_to_tensor = transforms.ToTensor()
+            transformed_image = transform_to_tensor(image)
+        
+        # Return: (transformed_tensor, label, original_as_numpy, original_for_wandb)
+        return transformed_image, label, original_pil_array, original_image_for_wandb
+    
+    def _prepare_image_for_wandb(self, np_image):
+        """Prepare numpy image for wandb logging"""
+        # Create a copy to avoid modifying original
+        img_for_log = np_image.copy()
+        
+        # Handle different image formats from Deep Lake
+        if len(img_for_log.shape) == 4:  # (1, C, H, W) format
+            img_for_log = img_for_log.squeeze(0)
+        
+        # If image is in (C, H, W) format, convert to (H, W, C) for wandb
+        if len(img_for_log.shape) == 3 and img_for_log.shape[0] in [1, 3, 4]:
+            img_for_log = np.transpose(img_for_log, (1, 2, 0))
+        
+        # Handle data type - ensure it's in proper range for wandb
+        if img_for_log.dtype != np.uint8:
+            if img_for_log.max() <= 1.0:
+                img_for_log = (img_for_log * 255).astype(np.uint8)
+            else:
+                img_for_log = img_for_log.astype(np.uint8)
+        
+        # Resize to consistent size (224x224) using PIL
+        img_pil = Image.fromarray(img_for_log, mode='RGB')
+        img_pil_resized = img_pil.resize((224, 224))
+        img_for_log_resized = np.array(img_pil_resized)
+        
+        return img_for_log_resized
+
+def log_simple_images_to_wandb(original_image, transformed_tensor, imgr_tensor, epoch, batch_idx, sample_idx, label, phase="train", log_frequency=50):
+    """Simple logging of three images to wandb"""
+    if batch_idx % log_frequency != 0:
+        return
+    
+    # Only log first sample from each batch to avoid overwhelming wandb
+    if sample_idx >= 1:
+        return
+    
+    def tensor_to_numpy(tensor):
+        """Convert tensor to numpy for wandb"""
+        if tensor is None:
+            return None
+        
+        img = tensor.clone().detach().cpu()
+        
+        # Denormalize if needed
+        if img.min() < 0:
+            mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+            std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+            img = img * std + mean
+        
+        # Clamp and convert
+        img = torch.clamp(img, 0, 1)
+        img = (img * 255).byte().permute(1, 2, 0).numpy()
+        return img
+    
+    # Log original image
+    if original_image is not None:
+        wandb.log({f"{phase}_original_e{epoch}_b{batch_idx}": wandb.Image(original_image, caption=f"Original - Label: {label}")})
+    
+    # Log transformed image
+    transformed_np = tensor_to_numpy(transformed_tensor)
+    if transformed_np is not None:
+        wandb.log({f"{phase}_transformed_e{epoch}_b{batch_idx}": wandb.Image(transformed_np, caption=f"Transformed - Label: {label}")})
+    
+    # Log model output
+    imgr_np = tensor_to_numpy(imgr_tensor)
+    if imgr_np is not None:
+        wandb.log({f"{phase}_imgr_e{epoch}_b{batch_idx}": wandb.Image(imgr_np, caption=f"Model Output - Label: {label}")})
 
 def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
     """Training function for UCF Sports Action dataset"""
@@ -679,7 +758,10 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     end = time.time()
 
     bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (inputs, targets) in enumerate(train_loader):
+    for batch_idx, batch_data in enumerate(train_loader):
+        # Unpack the batch data - now includes original images as numpy arrays
+        inputs, targets, original_numpy_images, original_wandb_images = batch_data
+        
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -688,9 +770,23 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
         targets = targets.long()        
         loss = criterion(outputs, targets)
+
+        # Log three images simply
+        for sample_idx in range(min(1, inputs.size(0))):  # Log first sample only
+            log_simple_images_to_wandb(
+                original_image=original_wandb_images[sample_idx],
+                transformed_tensor=inputs[sample_idx],
+                imgr_tensor=imgr[sample_idx] if imgr is not None else None,
+                epoch=epoch,
+                batch_idx=batch_idx,
+                sample_idx=sample_idx,
+                label=targets[sample_idx].item(),
+                phase="train",
+                log_frequency=50
+            )
 
         #log to wandb
         if batch_idx == 200:
@@ -753,7 +849,10 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
-    for batch_idx, (inputs, targets) in enumerate(val_loader):
+    for batch_idx, batch_data in enumerate(val_loader):
+        # Unpack the batch data - now includes original images as numpy arrays
+        inputs, targets, original_numpy_images, original_wandb_images = batch_data
+        
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -768,7 +867,21 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
             inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
         # compute output
-        outputs = model(inputs)
+        outputs, imgr = model(inputs)
+        
+        # Log three images simply
+        for sample_idx in range(min(1, inputs.size(0))):  # Log first sample only
+            log_simple_images_to_wandb(
+                original_image=original_wandb_images[sample_idx],
+                transformed_tensor=inputs[sample_idx],
+                imgr_tensor=imgr[sample_idx] if imgr is not None else None,
+                epoch=epoch,
+                batch_idx=batch_idx,
+                sample_idx=sample_idx,
+                label=targets[sample_idx].item(),
+                phase="test",
+                log_frequency=50
+            )
         
         # Ensure targets are in valid range
         num_classes = outputs.shape[1]
@@ -825,6 +938,16 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
 
 if __name__ == '__main__':
     
-    with wandb.init(project="ucf-sports-dgm-resnet18", name="ucf-sports-dgm-resnet18") as run:
+    #get the arg of the currect dataset 
+    dataset_arg = args.dataset
+    
+    if dataset_arg == 'ucf_sports':
+        project_name = "ucf-sports-dgm-resnet18"
+    elif dataset_arg == 'olympic_action':
+        project_name = "olympic-action-dgm-resnet18"
+    else:
+        project_name = "cifar-dgm-resnet18"
+
+    with wandb.init(project=project_name, name=project_name) as run:
         wandb.config.update(args)
         main()
