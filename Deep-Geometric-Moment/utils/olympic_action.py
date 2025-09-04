@@ -307,7 +307,7 @@ def get_olympic_action_transforms():
     Based on the .seq file analysis, the original dimensions are 480x360.
     We'll resize to 224x224 to match standard model inputs.
     """
-    transform_train = transforms.Compose([``
+    transform_train = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.RandomHorizontalFlip(p=0.5),
         transforms.RandomRotation(degrees=10),

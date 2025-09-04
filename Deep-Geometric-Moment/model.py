@@ -6,7 +6,6 @@ import numpy as np
 from torch.autograd import Variable
 from utils import *
 from utils.visualize import colorize, show_batch
-import wandb
 import torchvision
 
 class BasicBlock(nn.Module):
@@ -199,9 +198,7 @@ class DGMResNet(nn.Module):
         imgr = (imgr.view(-1, 1, self.hw, self.hw))
         imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
         
-        #save image to local directory
-        torchvision.utils.save_image(imgr, 'imgr.png')
-        return cl
+        return cl, imgr
 
 
 def ResNet18(num_classes=100):
