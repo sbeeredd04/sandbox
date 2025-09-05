@@ -318,6 +318,11 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         targets = targets.long()        
         loss = criterion(outputs, targets)
         
+        if batch_idx == 0:
+            #save images 
+            torchvision.utils.save_image(inputs, f"inputs_{batch_idx}.png")
+            torchvision.utils.save_image(imgr, f"imgr_{batch_idx}.png")
+        
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
         losses.update(loss.item(), inputs.size(0))

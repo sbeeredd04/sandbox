@@ -27,15 +27,8 @@ def get_ucf_sports_transforms():
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
     ])
-    
-    transform_test = transforms.Compose([
-        transforms.Resize((224, 224)),  # Direct resize for testing
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
-    ])
-    
-    return transform_train, transform_test
 
+    return transform_train, transform_train
 
 class UCFSportsDataset(data.Dataset):
     """UCF Sports Action Dataset using Deep Lake"""
@@ -109,7 +102,7 @@ class UCFSportsDataset(data.Dataset):
         
         # Ensure we have a 3D array
         if len(image.shape) != 3:
-            raise ValueError(f"Expected 3D image after processing, got shape: {image.shape}")
+            raise ValueError(f"Expected 3 dimensional image after processing, got shape: {image.shape}")
         
         # Determine if image is in CHW or HWC format and convert to HWC
         if image.shape[2] == 3:  # Already HWC format (Height, Width, 3)
