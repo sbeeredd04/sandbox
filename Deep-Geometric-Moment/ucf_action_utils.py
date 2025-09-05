@@ -2,11 +2,9 @@ import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
-import torchvision.utils
 from PIL import Image
 from collections import defaultdict
 import random
-import os
 
 
 def get_ucf_sports_transforms():
@@ -27,8 +25,6 @@ def get_ucf_sports_transforms():
         transforms.RandomCrop(224, padding=28),  # Random crop to 224x224 with padding (equivalent to padding=4 for 32x32)
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
-        
-        #save the image to local bef
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
     ])
     
@@ -43,26 +39,18 @@ def get_ucf_sports_transforms():
 
 class UCFSportsDataset(data.Dataset):
     """UCF Sports Action Dataset using Deep Lake"""
-    def __init__(self, deeplake_ds, split='train', transform=None, debug=True):
+    def __init__(self, deeplake_ds, split='train', transform=None):
         self.deeplake_ds = deeplake_ds
         self.transform = transform
         self.split = split
-        self.debug = debug
-        self.debug_counter = 0
-        
-        # Create debug directory
-        if self.debug:
-            self.debug_dir = f"debug_images_{split}"
-            os.makedirs(self.debug_dir, exist_ok=True)
-            print(f"Debug mode enabled. Images will be saved to: {self.debug_dir}")
-        
+    
         # Create stratified train/test split
-        total_samples = len(deeplake_ds)
+        total_samples = len(self.deeplake_ds)
         
         # Get all labels first to create stratified split
         all_labels = []
         for i in range(total_samples):
-            sample = deeplake_ds[i]
+            sample = self.deeplake_ds[i]
             label = int(sample.labels.numpy()[0])
             all_labels.append(label)
         
@@ -84,7 +72,7 @@ class UCFSportsDataset(data.Dataset):
         random.shuffle(train_indices)
         random.shuffle(test_indices)
         
-        if split == 'train':
+        if self.split == 'train':
             self.indices = train_indices
         else:  # test
             self.indices = test_indices
@@ -109,49 +97,48 @@ class UCFSportsDataset(data.Dataset):
         sample = self.deeplake_ds[actual_idx]        
         
         # Extract image and label
-        image = sample.images.numpy()
+        raw_image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
         
         # Handle different image formats from Deep Lake
-        if len(image.shape) == 4:  # (1, C, H, W) format
+        image = raw_image.copy()
+        
+        # Remove batch dimension if present
+        if len(image.shape) == 4:
             image = image.squeeze(0)
-        elif len(image.shape) == 3:  # (C, H, W) format
-            pass
-        else:
-            image = image.squeeze()
         
-        # Ensure we have a 3D tensor (C, H, W)
+        # Ensure we have a 3D array
         if len(image.shape) != 3:
-            raise ValueError(f"Unexpected image shape after processing: {image.shape}")
+            raise ValueError(f"Expected 3D image after processing, got shape: {image.shape}")
         
-        # Convert CHW to HWC for PIL
-        image = image.transpose(1, 2, 0)
-        
-        # Handle different data types and normalize to uint8
-        if image.dtype in [np.float32, np.float64]:
-            if image.max() <= 1.0:
-                image = (image * 255).astype(np.uint8)
-            else:
-                image = image.astype(np.uint8)
+        # Determine if image is in CHW or HWC format and convert to HWC
+        if image.shape[2] == 3:  # Already HWC format (Height, Width, 3)
+            image_hwc = image
+        elif image.shape[0] == 3:  # CHW format (3, Height, Width)
+            image_hwc = image.transpose(1, 2, 0)  # Convert CHW to HWC
         else:
-            image = image.astype(np.uint8)
+            raise ValueError(f"Unexpected image format: shape={image.shape}. Expected either HWC with 3 channels or CHW with 3 channels.")
         
-        # Ensure values are in valid range
-        image = np.clip(image, 0, 255).astype(np.uint8)
+        # Convert to uint8 if needed
+        if image_hwc.dtype != np.uint8:
+            if image_hwc.max() <= 1.0:
+                image_hwc = (image_hwc * 255).astype(np.uint8)
+            else:
+                image_hwc = np.clip(image_hwc, 0, 255).astype(np.uint8)
         
         # Convert to PIL Image
         try:
-            image = Image.fromarray(image, mode='RGB')
+            pil_image = Image.fromarray(image_hwc, mode='RGB')
         except Exception as e:
             print(f"Error converting image to PIL: {e}")
-            image = Image.new('RGB', (224, 224), color=(128, 128, 128))
+            pil_image = Image.new('RGB', (224, 224), color=(128, 128, 128))
         
         # Apply transforms
         if self.transform:
-            transformed_image = self.transform(image)
+            transformed_image = self.transform(pil_image)
         else:
             # Convert to tensor if no transforms
-            transform_to_tensor = transforms.ToTensor()
-            transformed_image = transform_to_tensor(image)
+            to_tensor = transforms.ToTensor()
+            transformed_image = to_tensor(pil_image)
         
         return transformed_image, label
