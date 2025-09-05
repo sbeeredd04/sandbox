@@ -9,34 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import wandb
 from utils import AverageMeter, accuracy, Bar
 import torchvision
-
-
-def prepare_image_for_wandb(img_tensor):
-    """
-    Convert PyTorch tensor to format expected by wandb.Image
-    Args:
-        img_tensor: (C, H, W) tensor, typically in [0, 1] range
-    Returns:
-        numpy array in HWC format, uint8, range [0, 255]
-    """
-    img = img_tensor.detach().cpu()
-    
-    # Handle single channel by repeating to 3 channels
-    if img.shape[0] == 1:
-        img = img.repeat(3, 1, 1)
-    
-    # Convert from CHW to HWC
-    img = img.permute(1, 2, 0)
-    
-    # Normalize to [0, 1] if needed and convert to [0, 255] uint8
-    if img.max() > 1.0:
-        # Already in [0, 255] range
-        img = img.clamp(0, 255).byte().numpy()
-    else:
-        # In [0, 1] range, scale to [0, 255]
-        img = (img * 255).clamp(0, 255).byte().numpy()
-    
-    return img
+import cv2
 
 class WarmupCosineSchedule(LambdaLR):
     def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
@@ -304,7 +277,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     train_predictions_table = wandb.Table(columns=columns)
 
     bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (inputs, targets) in enumerate(train_loader):
+    for batch_idx, (inputs, targets, copy_image) in enumerate(train_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -318,39 +291,54 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         targets = targets.long()        
         loss = criterion(outputs, targets)
         
-        if batch_idx == 0:
-            #save images 
-            torchvision.utils.save_image(inputs, f"inputs_{batch_idx}.png")
-            torchvision.utils.save_image(imgr, f"imgr_{batch_idx}.png")
-        
+                
+        if batch_idx < 10: 
+            print(f"="*100)
+            print(f"Shape of inputs: {inputs.shape}")
+            print(f"Min of inputs: {inputs.min()}")
+            print(f"Max of inputs: {inputs.max()}")
+            print(f"="*10)
+            print(f"Shape of imgr: {imgr.shape}")
+            print(f"Min of imgr: {imgr.min()}")
+            print(f"Max of imgr: {imgr.max()}")
+            print(f"="*10)
+            print(f"Shape of copy_image: {copy_image.shape}")
+            print(f"Min of copy_image: {copy_image.min()}")
+            print(f"Max of copy_image: {copy_image.max()}")
+            print(f"="*100)
+            
+            #visualize the copy image 256 256 3
+            for i in range(copy_image.shape[0]):
+                cv2.imwrite(f"copy_image_{batch_idx}_{i}.png", copy_image[i].cpu().numpy())
+            
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
         losses.update(loss.item(), inputs.size(0))
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        # Add predictions to cumulative table for each image in the batch
-        for i in range(inputs.shape[0]):
-            # Get predicted class and confidence
-            predicted_class = torch.argmax(outputs[i]).item()
-            prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
-            
-            # Convert tensors to wandb.Image format using our helper function
-            original_img = wandb.Image(prepare_image_for_wandb(inputs[i]))
-            reconstructed_img = wandb.Image(prepare_image_for_wandb(imgr[i]))
-            
-            # Add row to cumulative table
-            train_predictions_table.add_data(
-                epoch,
-                batch_idx,
-                i,
-                original_img,
-                reconstructed_img,
-                targets[i].item(),
-                predicted_class,
-                f"{prediction_confidence:.3f}"
-            )
-
+        if batch_idx < 10: 
+            # Add predictions to cumulative table for each image in the batch
+            for i in range(inputs.shape[0]):
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                
+                # Convert tensors to wandb.Image format using our helper function
+                original_img = wandb.Image(copy_image[i])
+                reconstructed_img = wandb.Image(imgr[i])
+                
+                # Add row to cumulative table
+                train_predictions_table.add_data(
+                    epoch,
+                    batch_idx,
+                    i,
+                    original_img,
+                    reconstructed_img,
+                    targets[i].item(),
+                    predicted_class,
+                    f"{prediction_confidence:.3f}"
+                )
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -410,7 +398,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
-    for batch_idx, (inputs, targets) in enumerate(val_loader):
+    for batch_idx, (inputs, targets, copy_image) in enumerate(val_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -431,14 +419,16 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         # Ensure targets are in valid range
         num_classes = outputs.shape[1]
         targets = torch.clamp(targets, 0, num_classes - 1)
-
-        # Compute loss with error handling
-        try:
-            loss = criterion(outputs, targets)
-        except RuntimeError as e:
-            print(f"ERROR in loss computation at batch {batch_idx}: {e}")
-            # Skip this batch
-            continue
+        loss = criterion(outputs, targets)
+        
+        if batch_idx < 10: 
+            print(f"TESTING="*100)
+            print(f"Shape of inputs: {inputs.shape}")
+            print(f"Inputs: {inputs}")
+            print(f"="*10)
+            print(f"Shape of imgr: {imgr.shape}")
+            print(f"Imgr: {imgr}")
+            print(f"="*100)
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -446,27 +436,28 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
         
-        # Add predictions to cumulative table for each image in the batch
-        for i in range(inputs.shape[0]):
-            # Get predicted class and confidence
-            predicted_class = torch.argmax(outputs[i]).item()
-            prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
-            
-            # Convert tensors to wandb.Image format using our helper function
-            original_img = wandb.Image(prepare_image_for_wandb(inputs[i]))
-            reconstructed_img = wandb.Image(prepare_image_for_wandb(imgr[i]))
-            
-            # Add row to cumulative table
-            test_predictions_table.add_data(
-                epoch,
-                batch_idx,
-                i,
-                original_img,
-                reconstructed_img,
-                targets[i].item(),
-                predicted_class,
-                f"{prediction_confidence:.3f}"
-            )
+        if batch_idx < 10: 
+            # Add predictions to cumulative table for each image in the batch
+            for i in range(inputs.shape[0]):
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                
+                # Convert tensors to wandb.Image format using our helper function
+                original_img = wandb.Image(copy_image[i])
+                reconstructed_img = wandb.Image(imgr[i])
+                
+                # Add row to cumulative table
+                test_predictions_table.add_data(
+                    epoch,
+                    batch_idx,
+                    i,
+                    original_img,
+                    reconstructed_img,
+                    targets[i].item(),
+                    predicted_class,
+                    f"{prediction_confidence:.3f}"
+                )
 
 
         # measure elapsed time
