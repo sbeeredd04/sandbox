@@ -133,18 +133,18 @@ def main():
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset transforms
-        transform_train, transform_test = get_ucf_sports_transforms()
+        transform = get_ucf_sports_transforms()
         
         # Load UCF Sports dataset using Deep Lake
         import deeplake
         ds = deeplake.load('hub://activeloop/ucf-sports-action')
         
         # Create UCF Sports datasets
-        trainset = UCFSportsDataset(ds, split='train', transform=transform_train)
+        trainset = UCFSportsDataset(ds, split='train', transform=transform)
         train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
         
         # Test loader
-        testset = UCFSportsDataset(ds, split='test', transform=transform_test)
+        testset = UCFSportsDataset(ds, split='test', transform=transform)
         val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
         
     else:
@@ -159,11 +159,11 @@ def main():
     if args.dataset == 'ucf_sports':
         # UCF Sports uses 224x224 images
         from model import DGMResNet, BasicBlock
-        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=224)
+        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
     elif args.dataset == 'olympic_action':
         # Olympic Action uses 224x224 images (resized from 480x360)
         from model import DGMResNet, BasicBlock
-        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=224)
+        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
     else:
         # CIFAR uses 32x32 images
         model = ResNet18(num_classes=num_classes)

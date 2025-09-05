@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from PIL import Image
 from collections import defaultdict
 import random
-
+import cv2
 
 def get_ucf_sports_transforms():
     """Get UCF Sports Action dataset transforms with aggressive augmentation for 224x224"""
@@ -18,17 +18,18 @@ def get_ucf_sports_transforms():
         transforms.ColorJitter(0.8, 0.8, 0.8, 0.25)
     ]), p=0.3)
     
-    transform_train = transforms.Compose([
+    transform = transforms.Compose([
         transforms.Resize((256, 256)),  # Resize to 256x256 first
-        transforms2,  # Color jitter
-        transforms1,  # Affine transforms
-        transforms.RandomCrop(224, padding=28),  # Random crop to 224x224 with padding (equivalent to padding=4 for 32x32)
-        transforms.RandomHorizontalFlip(),
+        # transforms2,  # Color jitter
+        # transforms1,  # Affine transforms
+        # transforms.RandomCrop(224, padding=28),  # Random crop to 224x224 with padding (equivalent to padding=4 for 32x32)
+        # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
     ])
 
-    return transform_train, transform_train
+
+    return transform
 
 class UCFSportsDataset(data.Dataset):
     """UCF Sports Action Dataset using Deep Lake"""
@@ -70,15 +71,6 @@ class UCFSportsDataset(data.Dataset):
         else:  # test
             self.indices = test_indices
     
-    def _get_label_distribution(self):
-        """Get distribution of labels in current split"""
-        label_counts = {}
-        for i, sample in enumerate(self.deeplake_ds):
-            #for all samples
-            label = int(sample.labels.numpy()[0])
-            label_counts[label] = label_counts.get(label, 0) + 1
-        return label_counts
-    
     def __len__(self):
         return len(self.indices)
     
@@ -87,51 +79,14 @@ class UCFSportsDataset(data.Dataset):
         actual_idx = self.indices[idx]
         
         # Get image and label from Deep Lake dataset
-        sample = self.deeplake_ds[actual_idx]        
+        sample = self.deeplake_ds[actual_idx]      
         
-        # Extract image and label
-        raw_image = sample.images.numpy()
+        image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
+       
+        pil_image = Image.fromarray(image, mode='RGB')
+        copy_image = pil_image.resize((256, 256))
+        copy_image = np.array(copy_image)
+        transformed_image = self.transform(pil_image)
         
-        # Handle different image formats from Deep Lake
-        image = raw_image.copy()
-        
-        # Remove batch dimension if present
-        if len(image.shape) == 4:
-            image = image.squeeze(0)
-        
-        # Ensure we have a 3D array
-        if len(image.shape) != 3:
-            raise ValueError(f"Expected 3 dimensional image after processing, got shape: {image.shape}")
-        
-        # Determine if image is in CHW or HWC format and convert to HWC
-        if image.shape[2] == 3:  # Already HWC format (Height, Width, 3)
-            image_hwc = image
-        elif image.shape[0] == 3:  # CHW format (3, Height, Width)
-            image_hwc = image.transpose(1, 2, 0)  # Convert CHW to HWC
-        else:
-            raise ValueError(f"Unexpected image format: shape={image.shape}. Expected either HWC with 3 channels or CHW with 3 channels.")
-        
-        # Convert to uint8 if needed
-        if image_hwc.dtype != np.uint8:
-            if image_hwc.max() <= 1.0:
-                image_hwc = (image_hwc * 255).astype(np.uint8)
-            else:
-                image_hwc = np.clip(image_hwc, 0, 255).astype(np.uint8)
-        
-        # Convert to PIL Image
-        try:
-            pil_image = Image.fromarray(image_hwc, mode='RGB')
-        except Exception as e:
-            print(f"Error converting image to PIL: {e}")
-            pil_image = Image.new('RGB', (224, 224), color=(128, 128, 128))
-        
-        # Apply transforms
-        if self.transform:
-            transformed_image = self.transform(pil_image)
-        else:
-            # Convert to tensor if no transforms
-            to_tensor = transforms.ToTensor()
-            transformed_image = to_tensor(pil_image)
-        
-        return transformed_image, label
+        return transformed_image, label, copy_image
