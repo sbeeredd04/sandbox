@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import LambdaLR
 import wandb
 from utils import AverageMeter, accuracy, Bar
 import torchvision
-import cv2
+import imageio
 
 class WarmupCosineSchedule(LambdaLR):
     def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
@@ -277,7 +277,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     train_predictions_table = wandb.Table(columns=columns)
 
     bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (inputs, targets, copy_image) in enumerate(train_loader):
+    for batch_idx, (inputs, targets, image) in enumerate(train_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -292,7 +292,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         loss = criterion(outputs, targets)
         
                 
-        if batch_idx < 10: 
+        if batch_idx < 1: 
             print(f"="*100)
             print(f"Shape of inputs: {inputs.shape}")
             print(f"Min of inputs: {inputs.min()}")
@@ -302,14 +302,19 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
             print(f"Min of imgr: {imgr.min()}")
             print(f"Max of imgr: {imgr.max()}")
             print(f"="*10)
-            print(f"Shape of copy_image: {copy_image.shape}")
-            print(f"Min of copy_image: {copy_image.min()}")
-            print(f"Max of copy_image: {copy_image.max()}")
+            print(f"Shape of copy_image: {image.shape}")
+            print(f"Min of copy_image: {image.min()}")
+            print(f"Max of copy_image: {image.max()}")
             print(f"="*100)
             
             #visualize the copy image 256 256 3
-            for i in range(copy_image.shape[0]):
-                cv2.imwrite(f"copy_image_{batch_idx}_{i}.png", copy_image[i].cpu().numpy())
+            for i in range(image.shape[0]):
+                imageio.imwrite(f"./data/debug/original_image_{batch_idx}_{i}.png", image[i].cpu().numpy())
+            for i in range(inputs.shape[0]):
+                imageio.imwrite(f"./data/debug/inputs_{batch_idx}_{i}.png", inputs[i].cpu().numpy())
+            for i in range(imgr.shape[0]):
+                imageio.imwrite(f"./data/debug/imgr_{batch_idx}_{i}.png", imgr[i].cpu().numpy())
+                
             
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -317,28 +322,28 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        if batch_idx < 10: 
-            # Add predictions to cumulative table for each image in the batch
-            for i in range(inputs.shape[0]):
-                # Get predicted class and confidence
-                predicted_class = torch.argmax(outputs[i]).item()
-                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+        # if batch_idx < 10: 
+        #     # Add predictions to cumulative table for each image in the batch
+        #     for i in range(inputs.shape[0]):
+        #         # Get predicted class and confidence
+        #         predicted_class = torch.argmax(outputs[i]).item()
+        #         prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
                 
-                # Convert tensors to wandb.Image format using our helper function
-                original_img = wandb.Image(copy_image[i])
-                reconstructed_img = wandb.Image(imgr[i])
+        #         # Convert tensors to wandb.Image format using our helper function
+        #         original_img = wandb.Image(copy_image[i])
+        #         reconstructed_img = wandb.Image(imgr[i])
                 
-                # Add row to cumulative table
-                train_predictions_table.add_data(
-                    epoch,
-                    batch_idx,
-                    i,
-                    original_img,
-                    reconstructed_img,
-                    targets[i].item(),
-                    predicted_class,
-                    f"{prediction_confidence:.3f}"
-                )
+        #         # Add row to cumulative table
+        #         train_predictions_table.add_data(
+        #             epoch,
+        #             batch_idx,
+        #             i,
+        #             original_img,
+        #             reconstructed_img,
+        #             targets[i].item(),
+        #             predicted_class,
+        #             f"{prediction_confidence:.3f}"
+        #         )
         
         # compute gradient and do SGD step
         optimizer.zero_grad()

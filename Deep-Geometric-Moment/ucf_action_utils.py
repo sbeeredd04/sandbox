@@ -83,10 +83,13 @@ class UCFSportsDataset(data.Dataset):
         
         image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
+        
        
         pil_image = Image.fromarray(image, mode='RGB')
-        copy_image = pil_image.resize((256, 256))
-        copy_image = np.array(copy_image)
-        transformed_image = self.transform(pil_image)
+
+        original_image = pil_image.resize((256, 256))
+        original_image = np.array(original_image)
         
-        return transformed_image, label, copy_image
+        transformed_image = self.transform(pil_image)
+
+        return transformed_image, label, original_image
