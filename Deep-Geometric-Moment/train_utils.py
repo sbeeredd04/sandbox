@@ -10,6 +10,8 @@ import wandb
 from utils import AverageMeter, accuracy, Bar
 import torchvision
 import imageio
+import cv2
+import matplotlib.pyplot as plt
 
 class WarmupCosineSchedule(LambdaLR):
     def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
@@ -273,7 +275,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     end = time.time()
 
     # Create cumulative table for all predictions in this epoch
-    columns = ["epoch", "batch_idx", "image_idx", "original_image", "reconstructed_image", "true_label", "predicted_label", "prediction_confidence"]
+    columns = ["epoch", "batch_idx", "image_idx", "original_image", "transformed_image", "imgr_visualization", "true_label", "predicted_label", "prediction_confidence"]
     train_predictions_table = wandb.Table(columns=columns)
 
     bar = Bar('Processing', max=len(train_loader))
@@ -295,26 +297,44 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         if batch_idx < 1: 
             print(f"="*100)
             print(f"Shape of inputs: {inputs.shape}")
+            print(f"Type: {inputs.type()}")
             print(f"Min of inputs: {inputs.min()}")
             print(f"Max of inputs: {inputs.max()}")
             print(f"="*10)
             print(f"Shape of imgr: {imgr.shape}")
+            print(f"Type: {imgr.type()}")
             print(f"Min of imgr: {imgr.min()}")
             print(f"Max of imgr: {imgr.max()}")
             print(f"="*10)
             print(f"Shape of copy_image: {image.shape}")
+            print(f"Type: {image.type()}")
             print(f"Min of copy_image: {image.min()}")
             print(f"Max of copy_image: {image.max()}")
             print(f"="*100)
             
             #visualize the copy image 256 256 3
             for i in range(image.shape[0]):
-                imageio.imwrite(f"./data/debug/original_image_{batch_idx}_{i}.png", image[i].cpu().numpy())
-            for i in range(inputs.shape[0]):
-                imageio.imwrite(f"./data/debug/inputs_{batch_idx}_{i}.png", inputs[i].cpu().numpy())
+                img_np = image[i].cpu().numpy()
+                imageio.imwrite(f'./data/debug/original_image_{i}.png', img_np)
+                        
+            # Save imgr using matplotlib for better grayscale visualization
             for i in range(imgr.shape[0]):
-                imageio.imwrite(f"./data/debug/imgr_{batch_idx}_{i}.png", imgr[i].cpu().numpy())
+                img = imgr[i, 0].detach().cpu().numpy()
+                # Apply viridis colormap and rescale to uint8
+                img_colored = plt.cm.viridis(img)
+                img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
+                imageio.imwrite(f'./data/debug/imgr_viridis_{i}.png', img_colored)
                 
+            mean = np.array([0.485, 0.456, 0.406])
+            std = np.array([0.229, 0.224, 0.225])
+            for i in range(inputs.shape[0]):
+                inp = inputs[i].detach().cpu().numpy()
+                # de-normalize
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
+                inp = (inp * 255).astype(np.uint8)
+                imageio.imwrite(f'./data/debug/transformed_image_{i}.png', inp)
             
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -322,28 +342,44 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        # if batch_idx < 10: 
-        #     # Add predictions to cumulative table for each image in the batch
-        #     for i in range(inputs.shape[0]):
-        #         # Get predicted class and confidence
-        #         predicted_class = torch.argmax(outputs[i]).item()
-        #         prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+        if batch_idx < 4: 
+            # Add predictions to cumulative table for each image in the batch
+            for i in range(inputs.shape[0]):
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
                 
-        #         # Convert tensors to wandb.Image format using our helper function
-        #         original_img = wandb.Image(copy_image[i])
-        #         reconstructed_img = wandb.Image(imgr[i])
+                # Process images same as debug visualization
+                # 1. Original image
+                original_img = wandb.Image(image[i].cpu().numpy())
                 
-        #         # Add row to cumulative table
-        #         train_predictions_table.add_data(
-        #             epoch,
-        #             batch_idx,
-        #             i,
-        #             original_img,
-        #             reconstructed_img,
-        #             targets[i].item(),
-        #             predicted_class,
-        #             f"{prediction_confidence:.3f}"
-        #         )
+                # 2. Transformed (denormalized) input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
+                transformed_img = wandb.Image((inp * 255).astype(np.uint8))
+                
+                # 3. imgr visualization with viridis colormap
+                img = imgr[i, 0].detach().cpu().numpy()
+                img_colored = plt.cm.viridis(img)
+                img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
+                imgr_visualization = wandb.Image(img_colored)
+                
+                # Add row to cumulative table
+                train_predictions_table.add_data(
+                    epoch,
+                    batch_idx,
+                    i,
+                    original_img,
+                    transformed_img,
+                    imgr_visualization,
+                    targets[i].item(),
+                    predicted_class,
+                    f"{prediction_confidence:.3f}"
+                )
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -398,12 +434,12 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
     model.eval()
 
     # Create cumulative table for all predictions in this epoch
-    columns = ["epoch", "batch_idx", "image_idx", "original_image", "reconstructed_image", "true_label", "predicted_label", "prediction_confidence"]
+    columns = ["epoch", "batch_idx", "image_idx", "original_image", "transformed_image", "imgr_visualization", "true_label", "predicted_label", "prediction_confidence"]
     test_predictions_table = wandb.Table(columns=columns)
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
-    for batch_idx, (inputs, targets, copy_image) in enumerate(val_loader):
+    for batch_idx, (inputs, targets, image) in enumerate(val_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -426,14 +462,48 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         targets = torch.clamp(targets, 0, num_classes - 1)
         loss = criterion(outputs, targets)
         
-        if batch_idx < 10: 
-            print(f"TESTING="*100)
+        if batch_idx < 1: 
+            print(f"="*100)
             print(f"Shape of inputs: {inputs.shape}")
-            print(f"Inputs: {inputs}")
+            print(f"Type: {inputs.type()}")
+            print(f"Min of inputs: {inputs.min()}")
+            print(f"Max of inputs: {inputs.max()}")
             print(f"="*10)
             print(f"Shape of imgr: {imgr.shape}")
-            print(f"Imgr: {imgr}")
+            print(f"Type: {imgr.type()}")
+            print(f"Min of imgr: {imgr.min()}")
+            print(f"Max of imgr: {imgr.max()}")
+            print(f"="*10)
+            print(f"Shape of copy_image: {image.shape}")
+            print(f"Type: {image.type()}")
+            print(f"Min of copy_image: {image.min()}")
+            print(f"Max of copy_image: {image.max()}")
             print(f"="*100)
+            
+            #visualize the copy image 256 256 3
+            for i in range(image.shape[0]):
+                img_np = image[i].cpu().numpy()
+                imageio.imwrite(f'./data/debug/original_image_{i}.png', img_np)
+                        
+            # Save imgr using matplotlib for better grayscale visualization
+            for i in range(imgr.shape[0]):
+                img = imgr[i, 0].detach().cpu().numpy()
+                # Apply viridis colormap and rescale to uint8
+                img_colored = plt.cm.viridis(img)
+                img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
+                imageio.imwrite(f'./data/debug/imgr_viridis_{i}.png', img_colored)
+                
+            mean = np.array([0.485, 0.456, 0.406])
+            std = np.array([0.229, 0.224, 0.225])
+            for i in range(inputs.shape[0]):
+                inp = inputs[i].detach().cpu().numpy()
+                # de-normalize
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
+                inp = (inp * 255).astype(np.uint8)
+                imageio.imwrite(f'./data/debug/transformed_image_{i}.png', inp)
+            
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -441,16 +511,31 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
         
-        if batch_idx < 10: 
+        if batch_idx < 4: 
             # Add predictions to cumulative table for each image in the batch
             for i in range(inputs.shape[0]):
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
                 
-                # Convert tensors to wandb.Image format using our helper function
-                original_img = wandb.Image(copy_image[i])
-                reconstructed_img = wandb.Image(imgr[i])
+                # Process images same as debug visualization
+                # 1. Original image
+                original_img = wandb.Image(image[i].cpu().numpy())
+                
+                # 2. Transformed (denormalized) input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
+                transformed_img = wandb.Image((inp * 255).astype(np.uint8))
+                
+                # 3. imgr visualization with viridis colormap
+                img = imgr[i, 0].detach().cpu().numpy()
+                img_colored = plt.cm.viridis(img)
+                img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
+                imgr_visualization = wandb.Image(img_colored)
                 
                 # Add row to cumulative table
                 test_predictions_table.add_data(
@@ -458,7 +543,8 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
                     batch_idx,
                     i,
                     original_img,
-                    reconstructed_img,
+                    transformed_img,
+                    imgr_visualization,
                     targets[i].item(),
                     predicted_class,
                     f"{prediction_confidence:.3f}"
