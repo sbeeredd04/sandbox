@@ -113,17 +113,23 @@ def run_inference(model_path, image_path, use_cuda=True):
         image_files = [image_path]
         is_batch_processing = False
     
-    # UCF Sports class names
-    class_names = ds.labels.info['class_names']
-    print(f"Class names: {class_names}")
+    # Get UCF Sports class names using utility functions with grouping
+    from ucf_action_utils import get_ucf_class_mappings
+    
+    (grouped_class_names, original_to_grouped_id, grouped_to_original_ids, 
+     get_class_name, get_grouped_class_id, grouping_rules) = get_ucf_class_mappings(ds, group_similar=True)
+    
+    print(f"Grouped class names: {grouped_class_names}")
+    print(f"Original to grouped ID mapping: {original_to_grouped_id}")
     
     # Load the model
     print(f"Loading model from {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
     
-    # Create model architecture
+    # Create model architecture - use grouped classes count
     from model import DGMResNet, BasicBlock
-    model = DGMResNet(BasicBlock, num_classes=13, hw=256)
+    model = DGMResNet(BasicBlock, num_classes=len(grouped_class_names), hw=256)
+    print(f"Created inference model with {len(grouped_class_names)} output classes (grouped)")
     
     # Load the state dict - handle DataParallel prefix
     if 'state_dict' in checkpoint:
@@ -182,7 +188,8 @@ def run_inference(model_path, image_path, use_cuda=True):
                 
                 predicted_class = predicted_class.item()
                 confidence = confidence.item()
-                class_name = class_names[predicted_class]
+                # Model now outputs grouped class IDs directly
+                class_name = grouped_class_names[predicted_class] if predicted_class < len(grouped_class_names) else "Unknown"
                 
                 # Store results
                 result = {
@@ -217,15 +224,17 @@ def run_inference(model_path, image_path, use_cuda=True):
                 plt.title(f'IMRG Visualization\nPredicted: {class_name}')
                 plt.axis('off')
                 
-                # Plot 3: Class probabilities bar chart
+                # Plot 3: Class probabilities bar chart (already grouped)
                 plt.subplot(1, 3, 3)
                 probs = probabilities[0].cpu().numpy()
-                bars = plt.bar(range(len(class_names)), probs)
+                
+                # Model now outputs grouped class probabilities directly
+                bars = plt.bar(range(len(grouped_class_names)), probs)
                 bars[predicted_class].set_color('red')  # Highlight predicted class
                 plt.title(f'Class Probabilities\nConfidence: {confidence:.3f}')
                 plt.xlabel('Class Index')
                 plt.ylabel('Probability')
-                plt.xticks(range(len(class_names)), [f'{i}' for i in range(len(class_names))], rotation=45)
+                plt.xticks(range(len(grouped_class_names)), [f'{i}' for i in range(len(grouped_class_names))], rotation=45)
                 
                 plt.tight_layout()
                 
@@ -247,7 +256,7 @@ def run_inference(model_path, image_path, use_cuda=True):
     
     # Create summary visualization if processing multiple images
     if is_batch_processing and results:
-        create_batch_summary(results, class_names, image_path)
+        create_batch_summary(results, grouped_class_names, image_path)
     
     # Return results
     if is_batch_processing:
@@ -430,7 +439,7 @@ def main():
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset
-        num_classes = 13 
+        num_classes = 10
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
@@ -454,13 +463,17 @@ def main():
         # UCF Sports Action dataset transforms
         transform = get_ucf_sports_transforms()
         
-        # Create UCF Sports datasets
-        trainset = UCFSportsDataset(ds, split='train', transform=transform)
+        # Create UCF Sports datasets with grouped classes
+        trainset = UCFSportsDataset(ds, split='train', transform=transform, use_grouped_classes=True)
         train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
         
         # Test loader
-        testset = UCFSportsDataset(ds, split='test', transform=transform)
+        testset = UCFSportsDataset(ds, split='test', transform=transform, use_grouped_classes=True)
         val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        
+        # Update num_classes to use grouped classes count
+        num_classes = trainset.get_num_classes()
+        print(f"Using {num_classes} grouped classes for training")
         
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
@@ -475,6 +488,7 @@ def main():
         # UCF Sports uses 224x224 images
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
+        print(f"Created model with {num_classes} output classes")
     elif args.dataset == 'olympic_action':
         # Olympic Action uses 224x224 images (resized from 480x360)
         from model import DGMResNet, BasicBlock
