@@ -40,6 +40,18 @@ class UCFSportsDataset(data.Dataset):
     
         # Create stratified train/test split
         total_samples = len(self.deeplake_ds)
+        print(f"Total samples: {total_samples}")
+        
+        # Get class names from Deep Lake dataset
+        self.class_names = self.deeplake_ds.labels.info['class_names']
+        print(f"Class names from dataset: {self.class_names}")
+        
+        # Create label name to ID mapping
+        self.label_name_to_id = {name: idx for idx, name in enumerate(self.class_names)}
+        self.label_id_to_name = {idx: name for idx, name in enumerate(self.class_names)}
+        
+        print(f"Label name to ID mapping: {self.label_name_to_id}")
+        print(f"Label ID to name mapping: {self.label_id_to_name}")
         
         # Get all labels first to create stratified split
         all_labels = []
@@ -47,20 +59,34 @@ class UCFSportsDataset(data.Dataset):
             sample = self.deeplake_ds[i]
             label = int(sample.labels.numpy()[0])
             all_labels.append(label)
+            
+        print(f"All labels: {all_labels}")
         
         # Create stratified indices
         label_to_indices = defaultdict(list)
-        for idx, label in enumerate(all_labels):
+        for idx in range(total_samples):
+            label = all_labels[idx]
             label_to_indices[label].append(idx)
         
-        # Split each class 80/20
+        print(f"Label to indices: {label_to_indices}")
+        
+        # Print statistics for each class
+        print(f"\nClass distribution:")
+        for label_id, indices in label_to_indices.items():
+            label_name = self.label_id_to_name[label_id]
+            print(f"  {label_name} (ID: {label_id}): {len(indices)} samples")
+        
+        # Split each class 90/10
         train_indices = []
         test_indices = []
         
         for label, indices in label_to_indices.items():
-            n_train = int(0.8 * len(indices))
+            n_train = int(0.9 * len(indices))
             train_indices.extend(indices[:n_train])
             test_indices.extend(indices[n_train:])
+            
+            label_name = self.label_id_to_name[label]
+            print(f"  {label_name}: {n_train} train, {len(indices) - n_train} test")
         
         # Shuffle the indices
         random.shuffle(train_indices)
@@ -68,8 +94,14 @@ class UCFSportsDataset(data.Dataset):
         
         if self.split == 'train':
             self.indices = train_indices
+            print(f"\nTrain split: {len(self.indices)} samples")
         else:  # test
             self.indices = test_indices
+            print(f"\nTest split: {len(self.indices)} samples")
+        
+        # Print class distribution after indices are assigned
+        distribution = self.get_class_distribution()
+        print(f"Class distribution: {distribution}")
     
     def __len__(self):
         return len(self.indices)
@@ -84,7 +116,6 @@ class UCFSportsDataset(data.Dataset):
         image = sample.images.numpy()
         label = int(sample.labels.numpy()[0])
         
-       
         pil_image = Image.fromarray(image, mode='RGB')
 
         original_image = pil_image.resize((256, 256))
@@ -93,3 +124,24 @@ class UCFSportsDataset(data.Dataset):
         transformed_image = self.transform(pil_image)
 
         return transformed_image, label, original_image
+    
+    def get_class_name(self, label_id):
+        """Convert label ID to class name"""
+        return self.label_id_to_name.get(label_id, "Unknown")
+    
+    def get_class_id(self, label_name):
+        """Convert class name to label ID"""
+        return self.label_name_to_id.get(label_name, -1)
+    
+    def get_all_class_names(self):
+        """Get all class names in order"""
+        return self.class_names.copy()
+    
+    def get_class_distribution(self):
+        """Get class distribution for current split"""
+        distribution = defaultdict(int)
+        for idx in self.indices:
+            sample = self.deeplake_ds[idx]
+            label = int(sample.labels.numpy()[0])
+            distribution[label] += 1
+        return dict(distribution)

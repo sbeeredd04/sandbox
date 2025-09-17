@@ -185,20 +185,42 @@ class DGMResNet(nn.Module):
 
         #second level onward
         x, xb, m, bases, gridt = self.lvl2(x, m, xb, gridt, bases)
+        
+        #visualizaiton
+        imgr1 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr1 = imgr1.view(imgr1.size(0), -1)
+        imgr1 = imgr1 - imgr1.min(1, keepdim=True)[0]
+        imgr1 = imgr1/imgr1.max(1, keepdim=True)[0]
+        imgr1 = (imgr1.view(-1, 1, self.hw, self.hw))
+        imgr1 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr1)
+        
         x, xb, m, bases, gridt = self.lvl3(x, m, xb, gridt, bases)
+        imgr2 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr2 = imgr2.view(imgr2.size(0), -1)
+        imgr2 = imgr2 - imgr2.min(1, keepdim=True)[0]
+        imgr2 = imgr2/imgr2.max(1, keepdim=True)[0]
+        imgr2 = (imgr2.view(-1, 1, self.hw, self.hw))
+        imgr2 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr2)
+        
         x, xb, m, bases, gridt = self.lvl4(x, m, xb, gridt, bases)
+        imgr3 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr3 = imgr3.view(imgr3.size(0), -1)
+        imgr3 = imgr3 - imgr3.min(1, keepdim=True)[0]
+        imgr3 = imgr3/imgr3.max(1, keepdim=True)[0]
+        imgr3 = (imgr3.view(-1, 1, self.hw, self.hw))
+        imgr3 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr3)
 
         cl = self.linear(self.do(m))
 
         # visualization
-        imgr = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        imgr = imgr.view(imgr.size(0), -1)
-        imgr = imgr - imgr.min(1, keepdim=True)[0]
-        imgr = imgr/imgr.max(1, keepdim=True)[0]
-        imgr = (imgr.view(-1, 1, self.hw, self.hw))
-        imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
+        imgr4 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr4 = imgr4.view(imgr4.size(0), -1)
+        imgr4 = imgr4 - imgr4.min(1, keepdim=True)[0]
+        imgr4 = imgr4/imgr4.max(1, keepdim=True)[0]
+        imgr4 = (imgr4.view(-1, 1, self.hw, self.hw))
+        imgr4 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr4)
         
-        return cl, imgr
+        return cl, imgr1, imgr2, imgr3, imgr4
 
 
 def ResNet18(num_classes=100):
