@@ -275,9 +275,8 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     top5 = AverageMeter()
     end = time.time()
 
-    # Create cumulative table for all predictions in this epoch
-    columns = ["epoch", "batch_idx", "image_idx", "original_image", "transformed_image", "imgr_visualization1", "imgr_visualization2", "imgr_visualization3", "imgr_visualization4", "true_label", "predicted_label", "prediction_confidence"]
-    train_predictions_table = wandb.Table(columns=columns)
+    # Initialize step counter for wandb logging
+    train_steps = epoch * len(train_loader)
 
     bar = Bar('Processing', max=len(train_loader))
     for batch_idx, (inputs, targets, image) in enumerate(train_loader):
@@ -293,49 +292,6 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
         targets = targets.long()        
         loss = criterion(outputs, targets)
-        
-                
-        # if batch_idx < 1: 
-        #     print(f"="*100)
-        #     print(f"Shape of inputs: {inputs.shape}")
-        #     print(f"Type: {inputs.type()}")
-        #     print(f"Min of inputs: {inputs.min()}")
-        #     print(f"Max of inputs: {inputs.max()}")
-        #     print(f"="*10)
-        #     print(f"Shape of imgr: {imgr.shape}")
-        #     print(f"Type: {imgr.type()}")
-        #     print(f"Min of imgr: {imgr.min()}")
-        #     print(f"Max of imgr: {imgr.max()}")
-        #     print(f"="*10)
-        #     print(f"Shape of copy_image: {image.shape}")
-        #     print(f"Type: {image.type()}")
-        #     print(f"Min of copy_image: {image.min()}")
-        #     print(f"Max of copy_image: {image.max()}")
-        #     print(f"="*100)
-            
-        #     #visualize the copy image 256 256 3
-        #     for i in range(image.shape[0]):
-        #         img_np = image[i].cpu().numpy()
-        #         imageio.imwrite(f'./data/debug/original_image_{i}.png', img_np)
-                        
-        #     # Save imgr using matplotlib for better grayscale visualization
-        #     for i in range(imgr.shape[0]):
-        #         img = imgr[i, 0].detach().cpu().numpy()
-        #         # Apply viridis colormap and rescale to uint8
-        #         img_colored = plt.cm.viridis(img)
-        #         img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
-        #         imageio.imwrite(f'./data/debug/imgr_viridis_{i}.png', img_colored)
-                
-        #     mean = np.array([0.485, 0.456, 0.406])
-        #     std = np.array([0.229, 0.224, 0.225])
-        #     for i in range(inputs.shape[0]):
-        #         inp = inputs[i].detach().cpu().numpy()
-        #         # de-normalize
-        #         inp = (inp * std[:, None, None]) + mean[:, None, None]
-        #         inp = np.clip(inp, 0, 1)
-        #         inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-        #         inp = (inp * 255).astype(np.uint8)
-        #         imageio.imwrite(f'./data/debug/transformed_image_{i}.png', inp)
             
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -343,16 +299,21 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        # if batch_idx < 4: 
-        #     # Add predictions to cumulative table for each image in the batch
+        # # Log images with step-based logging for first few batches
+        # if batch_idx < 2: 
+        #     # Process each image in the batch
         #     for i in range(inputs.shape[0]):
+        #         current_step = train_steps + batch_idx * inputs.shape[0] + i
+                
         #         # Get predicted class and confidence
         #         predicted_class = torch.argmax(outputs[i]).item()
         #         prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+        #         true_class = targets[i].item()
                 
-        #         # Process images same as debug visualization
+        #         # Process images for logging
         #         # 1. Original image
-        #         original_img = wandb.Image(image[i].cpu().numpy())
+        #         original_img = wandb.Image(image[i].cpu().numpy(), 
+        #                                  caption=f"Original | True: {true_class} | Pred: {predicted_class} | Conf: {prediction_confidence:.3f}")
                 
         #         # 2. Transformed (denormalized) input image
         #         mean = np.array([0.485, 0.456, 0.406])
@@ -361,26 +322,39 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         #         inp = (inp * std[:, None, None]) + mean[:, None, None]
         #         inp = np.clip(inp, 0, 1)
         #         inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-        #         transformed_img = wandb.Image((inp * 255).astype(np.uint8))
+        #         transformed_img = wandb.Image((inp * 255).astype(np.uint8), 
+        #                                     caption=f"Transformed | True: {true_class} | Pred: {predicted_class}")
                 
-        #         # 3. imgr visualization with viridis colormap
-        #         img = imgr[i, 0].detach().cpu().numpy()
-        #         img_colored = plt.cm.viridis(img)
-        #         img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
-        #         imgr_visualization = wandb.Image(img_colored)
+        #         # 3-6. IMGR visualizations with viridis colormap
+        #         img1 = imgr1[i, 0].detach().cpu().numpy()
+        #         img_colored1 = plt.cm.viridis(img1)
+        #         img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+        #         imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | True: {true_class} | Pred: {predicted_class}")
                 
-        #         # Add row to cumulative table
-        #         train_predictions_table.add_data(
-        #             epoch,
-        #             batch_idx,
-        #             i,
-        #             original_img,
-        #             transformed_img,
-        #             imgr_visualization,
-        #             targets[i].item(),
-        #             predicted_class,
-        #             f"{prediction_confidence:.3f}"
-        #         )
+        #         img2 = imgr2[i, 0].detach().cpu().numpy()
+        #         img_colored2 = plt.cm.viridis(img2)
+        #         img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+        #         imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | True: {true_class} | Pred: {predicted_class}")
+                
+        #         img3 = imgr3[i, 0].detach().cpu().numpy()
+        #         img_colored3 = plt.cm.viridis(img3)
+        #         img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+        #         imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | True: {true_class} | Pred: {predicted_class}")
+                
+        #         img4 = imgr4[i, 0].detach().cpu().numpy()
+        #         img_colored4 = plt.cm.viridis(img4)
+        #         img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+        #         imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | True: {true_class} | Pred: {predicted_class}")
+                
+        #         # Log all 6 images with step-based logging
+        #         wandb.log({
+        #             "train_images": [original_img, transformed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+        #             "train_true_class": true_class,
+        #             "train_predicted_class": predicted_class,
+        #             "train_confidence": prediction_confidence,
+        #             "train_epoch": epoch,
+        #             "train_batch": batch_idx
+        #         }, step=current_step)
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -406,7 +380,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
                     )
         bar.next()
         
-        #log to wandb epoch metrics and cumulative predictions table
+        # Log epoch metrics 
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
@@ -414,10 +388,6 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
             'train_top1': top1.avg,
             'train_top5': top5.avg,
         })
-
-    wandb.log({
-        'train_predictions': train_predictions_table
-    })
     
     bar.finish()
     return (losses.avg, top1.avg)
@@ -434,9 +404,8 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
     # switch to evaluate mode
     model.eval()
 
-    # Create cumulative table for all predictions in this epoch
-    columns = ["epoch", "batch_idx", "image_idx", "original_image", "transformed_image", "imgr_visualization1", "imgr_visualization2", "imgr_visualization3", "imgr_visualization4", "true_label", "predicted_label", "prediction_confidence"]
-    test_predictions_table = wandb.Table(columns=columns)
+    # Initialize step counter for wandb logging
+    test_steps = epoch * len(val_loader)
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
@@ -462,49 +431,6 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         num_classes = outputs.shape[1]
         targets = torch.clamp(targets, 0, num_classes - 1)
         loss = criterion(outputs, targets)
-        
-        # if batch_idx < 1: 
-        #     print(f"="*100)
-        #     print(f"Shape of inputs: {inputs.shape}")
-        #     print(f"Type: {inputs.type()}")
-        #     print(f"Min of inputs: {inputs.min()}")
-        #     print(f"Max of inputs: {inputs.max()}")
-        #     print(f"="*10)
-        #     print(f"Shape of imgr: {imgr.shape}")
-        #     print(f"Type: {imgr.type()}")
-        #     print(f"Min of imgr: {imgr.min()}")
-        #     print(f"Max of imgr: {imgr.max()}")
-        #     print(f"="*10)
-        #     print(f"Shape of copy_image: {image.shape}")
-        #     print(f"Type: {image.type()}")
-        #     print(f"Min of copy_image: {image.min()}")
-        #     print(f"Max of copy_image: {image.max()}")
-        #     print(f"="*100)
-            
-        #     #visualize the copy image 256 256 3
-        #     for i in range(image.shape[0]):
-        #         img_np = image[i].cpu().numpy()
-        #         imageio.imwrite(f'./data/debug/original_image_{i}.png', img_np)
-                        
-        #     # Save imgr using matplotlib for better grayscale visualization
-        #     for i in range(imgr.shape[0]):
-        #         img = imgr[i, 0].detach().cpu().numpy()
-        #         # Apply viridis colormap and rescale to uint8
-        #         img_colored = plt.cm.viridis(img)
-        #         img_colored = (img_colored[:, :, :3] * 255).astype(np.uint8)
-        #         imageio.imwrite(f'./data/debug/imgr_viridis_{i}.png', img_colored)
-                
-        #     mean = np.array([0.485, 0.456, 0.406])
-        #     std = np.array([0.229, 0.224, 0.225])
-        #     for i in range(inputs.shape[0]):
-        #         inp = inputs[i].detach().cpu().numpy()
-        #         # de-normalize
-        #         inp = (inp * std[:, None, None]) + mean[:, None, None]
-        #         inp = np.clip(inp, 0, 1)
-        #         inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-        #         inp = (inp * 255).astype(np.uint8)
-        #         imageio.imwrite(f'./data/debug/transformed_image_{i}.png', inp)
-            
 
         # measure accuracy and record loss
         prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
@@ -512,16 +438,21 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
         
+        # Log images with step-based logging for first few batches
         if batch_idx < 2: 
-            # Add predictions to cumulative table for each image in the batch
+            # Process each image in the batch
             for i in range(inputs.shape[0]):
+                current_step = test_steps + batch_idx * inputs.shape[0] + i
+                
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
                 
-                # Process images same as debug visualization
+                # Process images for logging
                 # 1. Original image
-                original_img = wandb.Image(image[i].cpu().numpy())
+                original_img = wandb.Image(image[i].cpu().numpy(), 
+                                         caption=f"Original | True: {true_class} | Pred: {predicted_class} | Conf: {prediction_confidence:.3f}")
                 
                 # 2. Transformed (denormalized) input image
                 mean = np.array([0.485, 0.456, 0.406])
@@ -530,45 +461,39 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
                 inp = (inp * std[:, None, None]) + mean[:, None, None]
                 inp = np.clip(inp, 0, 1)
                 inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-                transformed_img = wandb.Image((inp * 255).astype(np.uint8))
+                transformed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                            caption=f"Transformed | True: {true_class} | Pred: {predicted_class}")
                 
-                # 3. imgr visualization with viridis colormap
+                # 3-6. IMGR visualizations with viridis colormap
                 img1 = imgr1[i, 0].detach().cpu().numpy()
                 img_colored1 = plt.cm.viridis(img1)
                 img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
-                imgr_visualization1 = wandb.Image(img_colored1)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | True: {true_class} | Pred: {predicted_class}")
                 
                 img2 = imgr2[i, 0].detach().cpu().numpy()
                 img_colored2 = plt.cm.viridis(img2)
                 img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
-                imgr_visualization2 = wandb.Image(img_colored2)
-                
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | True: {true_class} | Pred: {predicted_class}")
                 
                 img3 = imgr3[i, 0].detach().cpu().numpy()
                 img_colored3 = plt.cm.viridis(img3)
                 img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
-                imgr_visualization3 = wandb.Image(img_colored3)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | True: {true_class} | Pred: {predicted_class}")
                 
                 img4 = imgr4[i, 0].detach().cpu().numpy()
                 img_colored4 = plt.cm.viridis(img4)
                 img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
-                imgr_visualization4 = wandb.Image(img_colored4)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | True: {true_class} | Pred: {predicted_class}")
                 
-                # Add row to cumulative table
-                test_predictions_table.add_data(
-                    epoch,
-                    batch_idx,
-                    i,
-                    original_img,
-                    transformed_img,
-                    imgr_visualization1,
-                    imgr_visualization2,
-                    imgr_visualization3,
-                    imgr_visualization4,
-                    targets[i].item(),
-                    predicted_class,
-                    f"{prediction_confidence:.3f}"
-                )
+                # Log all 6 images with step-based logging
+                wandb.log({
+                    "test_images": [original_img, transformed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "test_true_class": true_class,
+                    "test_predicted_class": predicted_class,
+                    "test_confidence": prediction_confidence,
+                    "test_epoch": epoch,
+                    "test_batch": batch_idx
+                }, step=current_step)
 
 
         # measure elapsed time
@@ -589,7 +514,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         
         bar.next()
         
-        #log to wandb epoch metrics and cumulative predictions table
+        # Log epoch metrics
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
@@ -597,10 +522,6 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
             'test_top1': top1.avg,
             'test_top5': top5.avg,
         })
-        
-    wandb.log({
-        f'test_predictions_epoch_{epoch}': test_predictions_table
-    })
         
     bar.finish()
     return (losses.avg, top1.avg)
