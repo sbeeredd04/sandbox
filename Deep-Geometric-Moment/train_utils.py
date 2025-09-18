@@ -263,7 +263,7 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
     return (losses.avg, top1.avg)
 
 
-def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
+def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):
     """Training function for UCF Sports Action dataset"""
     # switch to train mode
     model.train()
@@ -275,8 +275,9 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
     top5 = AverageMeter()
     end = time.time()
 
-    # Initialize step counter for wandb logging
-    train_steps = epoch * len(train_loader)
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = epoch * len(train_loader)
 
     bar = Bar('Processing', max=len(train_loader))
     for batch_idx, (inputs, targets, image) in enumerate(train_loader):
@@ -303,7 +304,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         # if batch_idx < 2: 
         #     # Process each image in the batch
         #     for i in range(inputs.shape[0]):
-        #         current_step = train_steps + batch_idx * inputs.shape[0] + i
+        #         current_step = global_step + batch_idx * inputs.shape[0] + i
                 
         #         # Get predicted class and confidence
         #         predicted_class = torch.argmax(outputs[i]).item()
@@ -390,10 +391,11 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         })
     
     bar.finish()
-    return (losses.avg, top1.avg)
+    final_global_step = global_step + len(train_loader) * train_loader.batch_size
+    return (losses.avg, top1.avg, final_global_step)
 
 
-def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
+def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=None):
     """Testing function for UCF Sports Action dataset"""
     batch_time = AverageMeter()
     data_time = AverageMeter()
@@ -404,8 +406,9 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
     # switch to evaluate mode
     model.eval()
 
-    # Initialize step counter for wandb logging
-    test_steps = epoch * len(val_loader)
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = epoch * 10000  # Large offset to avoid conflicts
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
@@ -442,7 +445,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         if batch_idx < 2: 
             # Process each image in the batch
             for i in range(inputs.shape[0]):
-                current_step = test_steps + batch_idx * inputs.shape[0] + i
+                current_step = global_step + batch_idx * inputs.shape[0] + i
                 
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
@@ -524,4 +527,5 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda):
         })
         
     bar.finish()
-    return (losses.avg, top1.avg)
+    final_global_step = global_step + len(val_loader) * val_loader.batch_size
+    return (losses.avg, top1.avg, final_global_step)
