@@ -1,5 +1,6 @@
 import os
 import shutil
+import sys
 import time
 import math
 import numpy as np
@@ -13,6 +14,9 @@ import imageio
 import cv2
 import matplotlib.pyplot as plt
 import random
+import torchvision.transforms.functional as F
+from PIL import Image
+
 
 class WarmupCosineSchedule(LambdaLR):
     def __init__(self, optimizer, warmup_steps, t_total, cycles=.5, last_epoch=-1):
@@ -288,6 +292,15 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+        
+        # Processing is now handled in the dataset's __getitem__ method
+        # inputs already contain the processed (GroundingDINO + SAM) images
+        
+        if batch_idx < 1:
+            print(f"Processed inputs shape: {inputs.shape}")
+            # Get class name for first sample for debugging
+            class_name = train_loader.dataset.get_class_name(targets[0].item())
+            print(f"Class name: {class_name}")
 
         # compute output
         outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)

@@ -465,11 +465,18 @@ def main():
         
         # Create UCF Sports datasets with grouped classes
         trainset = UCFSportsDataset(ds, split='train', transform=transform, use_grouped_classes=True)
-        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        
+        # Use num_workers=0 for UCF Sports to avoid CUDA multiprocessing issues with GroundingDINO/SAM
+        ucf_workers = 0 if args.workers > 0 else 0
+        if args.workers > 0:
+            print(f"Warning: Setting num_workers=0 for UCF Sports dataset to avoid CUDA multiprocessing issues")
+            print(f"Original num_workers was {args.workers}")
+        
+        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=ucf_workers)
         
         # Test loader
         testset = UCFSportsDataset(ds, split='test', transform=transform, use_grouped_classes=True)
-        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=ucf_workers)
         
         # Update num_classes to use grouped classes count
         num_classes = trainset.get_num_classes()

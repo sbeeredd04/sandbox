@@ -2,10 +2,19 @@ import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+import torchvision.transforms.functional as F
 from PIL import Image
 from collections import defaultdict
 import random
 import cv2
+import os
+import sys
+
+# Add GroundingDINO to path and import
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'GroundingDINO'))
+from groundingdino.util.inference import load_model, predict, annotate
+import groundingdino.datasets.transforms as T
+from segment_anything import SamPredictor, sam_model_registry
 
 def get_ucf_class_mappings(deeplake_ds, group_similar=True):
 
@@ -117,6 +126,33 @@ class UCFSportsDataset(data.Dataset):
         self.transform = transform
         self.split = split
         self.use_grouped_classes = use_grouped_classes
+        
+        # Model initialization will be done lazily in __getitem__ to avoid CUDA multiprocessing issues
+        self.model_grounding = None
+        self.predictor = None
+        self.grounding_transform = None
+        
+        # Model configuration
+        self.grounding_config_path = "../GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+        self.grounding_weights_path = "../GroundingDINO/weights/groundingdino_swint_ogc.pth"
+        self.sam_model_type = "vit_b"
+        
+        # SAM checkpoint paths
+        if self.sam_model_type == "vit_h":
+            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_h_4b8939.pth"
+        elif self.sam_model_type == "vit_l":
+            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_l_0b3195.pth"
+        else:  # vit_b
+            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_b_01ec64.pth"
+        
+        # Debug counter for saving images
+        self.debug_save_count = 0
+        self.max_debug_saves = 10
+        
+        # Create debug directory if it doesn't exist
+        import os
+        self.debug_dir = "debug_images"
+        os.makedirs(self.debug_dir, exist_ok=True)
     
         # Create stratified train/test split
         total_samples = len(self.deeplake_ds)
@@ -165,7 +201,7 @@ class UCFSportsDataset(data.Dataset):
             else:
                 all_labels.append(original_label)
             
-        print(f"All original labels: {all_original_labels}")
+        # print(f"All original labels: {all_original_labels}")
         if self.use_grouped_classes:
             print(f"All grouped labels: {all_labels}")
         
@@ -216,7 +252,41 @@ class UCFSportsDataset(data.Dataset):
     def __len__(self):
         return len(self.indices)
     
+    def _initialize_models(self):
+        """Initialize models lazily to avoid CUDA multiprocessing issues"""
+        try:
+            if self.model_grounding is None:
+                # Initialize GroundingDINO model
+                self.model_grounding = load_model(self.grounding_config_path, self.grounding_weights_path)
+                
+                # Initialize GroundingDINO transform
+                self.grounding_transform = T.Compose([
+                    T.RandomResize([800], max_size=1333),
+                    T.ToTensor(),
+                    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
+                ])
+            
+            if self.predictor is None:
+                # Initialize SAM model
+                sam = sam_model_registry[self.sam_model_type](checkpoint=self.sam_checkpoint_path)
+                sam.cuda()
+                self.predictor = SamPredictor(sam)
+                
+        except RuntimeError as e:
+            if "Cannot re-initialize CUDA in forked subprocess" in str(e):
+                # This is a multiprocessing issue - fall back to using original images
+                print(f"Warning: CUDA multiprocessing error detected. Falling back to original images without GroundingDINO/SAM processing.")
+                print(f"To fix this, set num_workers=0 in DataLoader or use multiprocessing start method 'spawn'")
+                self.model_grounding = "DISABLED"  # Mark as disabled
+                self.predictor = "DISABLED"
+                self.grounding_transform = None
+            else:
+                raise e
+    
     def __getitem__(self, idx):
+        # Initialize models lazily (per worker process)
+        self._initialize_models()
+        
         # Get the actual index from our split indices
         actual_idx = self.indices[idx]
         
@@ -237,13 +307,117 @@ class UCFSportsDataset(data.Dataset):
             label = original_label
         
         pil_image = Image.fromarray(image, mode='RGB')
-
         original_image = pil_image.resize((256, 256))
-        original_image = np.array(original_image)
+        original_image_np = np.array(original_image)
         
-        transformed_image = self.transform(pil_image)
+        # Get class name for GroundingDINO
+        class_name = self.get_class_name(label)
+        
+        # Check if models are available (not disabled due to multiprocessing issues)
+        if self.model_grounding == "DISABLED" or self.predictor == "DISABLED":
+            # Models are disabled, use original image without processing
+            transformed_image = self.transform(pil_image)
+            return transformed_image, label, original_image_np
+        
+        # Apply GroundingDINO processing
+        # Transform the PIL image to the format expected by GroundingDINO
+        image_transformed, _ = self.grounding_transform(original_image, None)
+        
+        # Use GroundingDINO to detect objects
+        boxes, logits, phrases = predict(
+            model=self.model_grounding,
+            image=image_transformed,
+            caption=class_name,
+            box_threshold=0.35,
+            text_threshold=0.25
+        )
+        
+        # Debug saving (only for first 10 images)
+        should_debug = (self.debug_save_count < self.max_debug_saves and 
+                       random.random() < 0.1)  # 10% chance for randomness
+        
+        if should_debug:
+            debug_idx = self.debug_save_count
+            self.debug_save_count += 1
+            
+            # Save original image
+            cv2.imwrite(f"{self.debug_dir}/step1_original_{debug_idx}_{class_name}.jpg", 
+                       cv2.cvtColor(original_image_np, cv2.COLOR_RGB2BGR))
+            
+            # Save GroundingDINO detection results with bounding boxes
+            if len(boxes) > 0:
+                annotated_image = annotate(image_source=original_image, boxes=boxes, logits=logits, phrases=phrases)
+                cv2.imwrite(f"{self.debug_dir}/step2_grounding_{debug_idx}_{class_name}.jpg", 
+                           annotated_image)
+                print(f"Debug {debug_idx}: Found {len(boxes)} boxes for {class_name}: {phrases}")
+            else:
+                print(f"Debug {debug_idx}: No boxes found for {class_name}")
+        
+        # Use SAM model to segment the image
+        self.predictor.set_image(original_image_np)
+        masks, _, _ = self.predictor.predict(
+            point_coords=None,
+            point_labels=None,
+            box=boxes[0] if len(boxes) > 0 else None,  # Handle case where no boxes found
+        )
+        
+        # Convert mask to proper input format
+        if len(masks) > 0:
+            mask = masks[0]  # Take first mask
+            
+            if should_debug:
+                # Save SAM mask
+                cv2.imwrite(f"{self.debug_dir}/step3_sam_mask_{debug_idx}_{class_name}.jpg", 
+                           (mask * 255).astype(np.uint8))
+            
+            # Convert mask to match input tensor format (C, H, W)
+            if mask.ndim == 2:  # If mask is (H, W)
+                mask = np.expand_dims(mask, axis=0)  # Make it (1, H, W)
+            if mask.shape[0] == 1:  # If single channel
+                mask = np.repeat(mask, 3, axis=0)  # Convert to 3 channels (3, H, W)
+            
+            # Create masked image with background zeroed out
+            masked_image_np = original_image_np.copy()
+            # Apply mask to each channel
+            for c in range(3):
+                masked_image_np[:, :, c] = masked_image_np[:, :, c] * mask[c]
+            
+            if should_debug:
+                # Save masked image (background zeroed out)
+                cv2.imwrite(f"{self.debug_dir}/step4_masked_{debug_idx}_{class_name}.jpg", 
+                           cv2.cvtColor(masked_image_np.astype(np.uint8), cv2.COLOR_RGB2BGR))
+            
+            # Convert masked image to PIL and apply transforms
+            masked_image_pil = Image.fromarray(masked_image_np.astype(np.uint8))
+            transformed_image = self.transform(masked_image_pil)
+            
+            if should_debug:
+                # Save final transformed tensor as image for visualization
+                # Convert tensor back to image format for saving
+                tensor_for_save = transformed_image.clone()
+                # Denormalize
+                mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
+                std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
+                tensor_for_save = tensor_for_save * std + mean
+                tensor_for_save = torch.clamp(tensor_for_save, 0, 1)
+                
+                # Convert to numpy and save
+                final_image_np = (tensor_for_save.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
+                cv2.imwrite(f"{self.debug_dir}/step5_final_tensor_{debug_idx}_{class_name}.jpg", 
+                           cv2.cvtColor(final_image_np, cv2.COLOR_RGB2BGR))
+                
+                print(f"Debug {debug_idx}: Saved complete pipeline for {class_name}")
+        else:
+            # If no mask found, use original image
+            transformed_image = self.transform(pil_image)
+            
+            if should_debug:
+                print(f"Debug {debug_idx}: No mask found, using original image for {class_name}")
+                # Save original as final since no mask was applied
+                cv2.imwrite(f"{self.debug_dir}/step4_no_mask_{debug_idx}_{class_name}.jpg", 
+                           cv2.cvtColor(original_image_np, cv2.COLOR_RGB2BGR))
 
-        return transformed_image, label, original_image
+        return transformed_image, label, original_image_np
     
     def get_class_name(self, label_id):
         """Convert label ID to class name"""
