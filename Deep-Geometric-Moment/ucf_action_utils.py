@@ -10,10 +10,8 @@ import cv2
 import os
 import sys
 
-# Add GroundingDINO to path and import
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'GroundingDINO'))
-from groundingdino.util.inference import load_model, predict, annotate
-import groundingdino.datasets.transforms as T
+# Import YOLO-World and SAM
+from ultralytics import YOLO
 from segment_anything import SamPredictor, sam_model_registry
 
 def get_ucf_class_mappings(deeplake_ds, group_similar=True):
@@ -127,27 +125,25 @@ class UCFSportsDataset(data.Dataset):
         self.split = split
         self.use_grouped_classes = use_grouped_classes
         
-        # Model initialization will be done lazily in __getitem__ to avoid CUDA multiprocessing issues
-        self.model_grounding = None
-        self.predictor = None
-        self.grounding_transform = None
+        # Initialize YOLO-World model
+        self.yolo_model = YOLO('yolov8s-world.pt')
         
-        # Model configuration
-        self.grounding_config_path = "../GroundingDINO/groundingdino/config/GroundingDINO_SwinT_OGC.py"
-        self.grounding_weights_path = "../GroundingDINO/weights/groundingdino_swint_ogc.pth"
-        self.sam_model_type = "vit_b"
-        
-        # SAM checkpoint paths
-        if self.sam_model_type == "vit_h":
-            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_h_4b8939.pth"
-        elif self.sam_model_type == "vit_l":
-            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_l_0b3195.pth"
+        # Initialize SAM model
+        model_type = "vit_b"
+        if model_type == "vit_h":
+            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_h_4b8939.pth")
+        elif model_type == "vit_l":
+            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_l_0b3195.pth")
         else:  # vit_b
-            self.sam_checkpoint_path = "./checkpoints/SAM/sam_vit_b_01ec64.pth"
+            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_b_01ec64.pth")
+                    
+        sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+        sam.cuda()
+        self.predictor = SamPredictor(sam)
         
         # Debug settings
         self.debug_save_count = 0
-        self.max_debug_saves = 10
+        self.max_debug_saves = 0
         self.debug_dir = "debug_pipeline"
         os.makedirs(self.debug_dir, exist_ok=True)
     
@@ -245,61 +241,15 @@ class UCFSportsDataset(data.Dataset):
         # Print class distribution after indices are assigned
         distribution = self.get_class_distribution()
         print(f"Class distribution: {distribution}")
+        
+        # Set YOLO-World classes based on our dataset classes
+        print(f"Setting YOLO-World classes: {self.class_names}")
+        self.yolo_model.set_classes(self.class_names)
     
     def __len__(self):
         return len(self.indices)
     
-    def _initialize_models(self):
-        """Initialize models lazily to avoid CUDA multiprocessing issues"""
-        try:
-            if self.model_grounding is None:
-                # Initialize GroundingDINO model
-                print("Initializing GroundingDINO model...")
-                self.model_grounding = load_model(self.grounding_config_path, self.grounding_weights_path)
-                
-                # Initialize GroundingDINO transform
-                self.grounding_transform = T.Compose([
-                    T.RandomResize([800], max_size=1333),
-                    T.ToTensor(),
-                    T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
-                ])
-                print("GroundingDINO model initialized successfully.")
-            
-            if self.predictor is None:
-                # Initialize SAM model
-                print("Initializing SAM model...")
-                sam = sam_model_registry[self.sam_model_type](checkpoint=self.sam_checkpoint_path)
-                sam.cuda()
-                self.predictor = SamPredictor(sam)
-                print("SAM model initialized successfully.")
-                
-        except Exception as e:
-            error_msg = str(e)
-            print(f"Error initializing models: {error_msg}")
-            
-            if "Cannot re-initialize CUDA in forked subprocess" in error_msg:
-                # This is a multiprocessing issue
-                print(f"Warning: CUDA multiprocessing error detected. Falling back to original images without GroundingDINO/SAM processing.")
-                print(f"To fix this, set num_workers=0 in DataLoader or use multiprocessing start method 'spawn'")
-            elif "_C" in error_msg or "name '_C' is not defined" in error_msg:
-                # This is a GroundingDINO C++ extension issue
-                print(f"Warning: GroundingDINO C++ extensions not properly compiled. This is a common installation issue.")
-                print(f"GroundingDINO requires proper compilation of C++ extensions for MultiScaleDeformableAttention.")
-                print(f"Falling back to original images without GroundingDINO/SAM processing.")
-                print(f"To fix this, please reinstall GroundingDINO with proper C++ compilation.")
-            else:
-                print(f"Warning: Unexpected error during model initialization. Falling back to original images.")
-                print(f"Error details: {error_msg}")
-            
-            # Mark models as disabled for any error
-            self.model_grounding = "DISABLED"  # Mark as disabled
-            self.predictor = "DISABLED"
-            self.grounding_transform = None
-    
     def __getitem__(self, idx):
-        # Initialize models lazily (per worker process)
-        self._initialize_models()
-        
         # Get the actual index from our split indices
         actual_idx = self.indices[idx]
         
@@ -326,12 +276,6 @@ class UCFSportsDataset(data.Dataset):
         # Get class name for GroundingDINO
         class_name = self.get_class_name(label)
         
-        # Check if models are available (not disabled due to multiprocessing issues)
-        if self.model_grounding == "DISABLED" or self.predictor == "DISABLED":
-            # Models are disabled, use original image without processing
-            transformed_image = self.transform(pil_image)
-            return transformed_image, label, original_image_np
-        
         # Debug saving flag - save first few samples for debugging
         should_debug = self.debug_save_count < self.max_debug_saves
         debug_idx = self.debug_save_count if should_debug else -1
@@ -343,25 +287,46 @@ class UCFSportsDataset(data.Dataset):
                        cv2.cvtColor(original_image_np, cv2.COLOR_RGB2BGR))
             print(f"Debug {debug_idx}: Saved original image for {class_name}")
         
-        # Apply GroundingDINO processing
-        # Transform the PIL image to the format expected by GroundingDINO
-        image_transformed, _ = self.grounding_transform(original_image, None)
+        # Apply YOLO-World processing
+        # Save image temporarily for YOLO-World (it expects file path or PIL image)
+        temp_image_path = f"temp_image_{idx}.jpg"
+        original_image.save(temp_image_path)
         
-        # Use GroundingDINO to detect objects
-        boxes, logits, phrases = predict(
-            model=self.model_grounding,
-            image=image_transformed,
-            caption=class_name,
-            box_threshold=0.35,
-            text_threshold=0.25
-        )
+        # Use YOLO-World to detect objects
+        results = self.yolo_model.predict(temp_image_path, verbose=False)
+        
+        # Extract bounding boxes from YOLO-World results
+        boxes = []
+        confidences = []
+        class_names_detected = []
+        
+        if len(results) > 0 and results[0].boxes is not None:
+            for box in results[0].boxes:
+                # Convert from YOLO format (x1, y1, x2, y2) to required format
+                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
+                boxes.append([x1, y1, x2, y2])
+                confidences.append(float(box.conf[0].cpu().numpy()))
+                class_id = int(box.cls[0].cpu().numpy())
+                class_names_detected.append(self.yolo_model.names[class_id])
+        
+        # Clean up temporary file
+        if os.path.exists(temp_image_path):
+            os.remove(temp_image_path)
         
         if should_debug:
-            # Step 2: Save GroundingDINO detection results
+            # Step 2: Save YOLO-World detection results
             if len(boxes) > 0:
-                annotated_image = annotate(image_source=original_image, boxes=boxes, logits=logits, phrases=phrases)
-                cv2.imwrite(f"{self.debug_dir}/step2_grounding_{debug_idx}_{class_name}.jpg", annotated_image)
-                print(f"Debug {debug_idx}: Found {len(boxes)} boxes for {class_name}: {phrases}")
+                # Draw bounding boxes on image for visualization
+                annotated_image_np = original_image_np.copy()
+                for i, (box, conf, cls_name) in enumerate(zip(boxes, confidences, class_names_detected)):
+                    x1, y1, x2, y2 = map(int, box)
+                    cv2.rectangle(annotated_image_np, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(annotated_image_np, f"{cls_name}: {conf:.2f}", (x1, y1-10), 
+                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                
+                cv2.imwrite(f"{self.debug_dir}/step2_yoloworld_{debug_idx}_{class_name}.jpg", 
+                           cv2.cvtColor(annotated_image_np, cv2.COLOR_RGB2BGR))
+                print(f"Debug {debug_idx}: Found {len(boxes)} boxes for {class_name}: {class_names_detected}")
             else:
                 print(f"Debug {debug_idx}: No boxes found for {class_name}")
         
@@ -370,7 +335,7 @@ class UCFSportsDataset(data.Dataset):
         masks, _, _ = self.predictor.predict(
             point_coords=None,
             point_labels=None,
-            box=boxes[0] if len(boxes) > 0 else None,  # Handle case where no boxes found
+            box=np.array(boxes[0]) if len(boxes) > 0 else None,  # Convert to numpy array and handle case where no boxes found
         )
         
         # Convert mask to proper input format
