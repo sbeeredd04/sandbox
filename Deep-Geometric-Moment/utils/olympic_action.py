@@ -301,28 +301,26 @@ class OlympicActionDataset(Dataset):
 
 
 def get_olympic_action_transforms():
-    """
-    Get transforms for Olympic Action dataset
+
+    transforms1 = transforms.RandomApply(torch.nn.ModuleList([
+        transforms.RandomAffine(90, translate=(0.2, 0.2), scale=(0.6, 1.3))
+    ]), p=0.4)
     
-    Based on the .seq file analysis, the original dimensions are 480x360.
-    We'll resize to 224x224 to match standard model inputs.
-    """
-    transform_train = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomRotation(degrees=10),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+    transforms2 = transforms.RandomApply(torch.nn.ModuleList([
+        transforms.ColorJitter(0.8, 0.8, 0.8, 0.25)
+    ]), p=0.3)
+    
+    transform = transforms.Compose([
+        transforms.Resize((256, 256)),  # Resize to 256x256 first
+        # transforms2,  # Color jitter
+        # transforms1,  # Affine transforms
+        # transforms.RandomCrop(224, padding=28),  # Random crop to 224x224 with padding (equivalent to padding=4 for 32x32)
+        # transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
     ])
-    
-    transform_test = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
-    ])
-    
-    return transform_train, transform_test
+
+    return transform, transform
 
 
 def olympic_collate_fn(batch):
