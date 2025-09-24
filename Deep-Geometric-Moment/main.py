@@ -31,9 +31,18 @@ from train_utils import (
     train_olympic_action, test_olympic_action, 
     train_ucf_sports, test_ucf_sports
 )
-from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms
-import deeplake
-ds = deeplake.load('hub://activeloop/ucf-sports-action')
+# UCF imports are conditional to avoid dependency issues
+try:
+    from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms
+except ImportError:
+    print("Warning: UCF Sports utilities not available due to missing dependencies")
+# DeepLake import is conditional for UCF Sports
+try:
+    import deeplake
+    ds = deeplake.load('hub://activeloop/ucf-sports-action')
+except ImportError:
+    ds = None
+    print("Warning: DeepLake not available for UCF Sports")
 
 wandb.login()
 
@@ -73,7 +82,7 @@ parser.add_argument('--gpu-id', default='0', type=str, help='id(s) for CUDA_VISI
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
 
-# Use CUDA
+# Use CUDA with proper multi-GPU setup
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 use_cuda = torch.cuda.is_available()
 
@@ -497,7 +506,48 @@ def main():
         # CIFAR uses 32x32 images
         model = ResNet18(num_classes=num_classes)
     
-    model = torch.nn.DataParallel(model).cuda()
+    # GPU setup with proper multi-GPU support for all datasets
+    if use_cuda:
+        if torch.cuda.device_count() > 1:
+            print(f"Using {torch.cuda.device_count()} GPUs with DataParallel for {args.dataset}")
+            
+            # Clear GPU cache before DataParallel to avoid memory issues
+            torch.cuda.empty_cache()
+            
+            # Initialize model on GPU first
+            model = model.cuda()
+            
+            try:
+                # Try DataParallel with NCCL backend fixes
+                print("Attempting DataParallel initialization...")
+                model = torch.nn.DataParallel(model)
+                
+                # Test a small forward pass to verify DataParallel works
+                print("Testing DataParallel with dummy input...")
+                test_input = torch.randn(2, 3, 256, 256).cuda()
+                with torch.no_grad():
+                    _ = model(test_input)
+                print("DataParallel test successful!")
+                
+                print(f"DataParallel successfully initialized on GPUs: {list(range(torch.cuda.device_count()))}")
+                
+            except Exception as e:
+                print(f"DataParallel failed: {e}")
+                print("Falling back to single GPU...")
+                
+                # Extract model from DataParallel if it was wrapped
+                if isinstance(model, torch.nn.DataParallel):
+                    model = model.module
+                
+                # Clear cache and use single GPU
+                torch.cuda.empty_cache()
+                model = model.cuda()
+                print("Successfully switched to single GPU mode")
+        else:
+            print(f"Using single GPU for {args.dataset} training")
+            model = model.cuda()
+    else:
+        print("Using CPU for training")
 
     cudnn.benchmark = True
     # Define loss function (criterion) and optimizer
@@ -541,15 +591,19 @@ def main():
     for epoch in range(start_epoch, args.epochs):
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, scheduler.get_last_lr()[0]))
         
-        if args.dataset == 'olympic_action':
-            train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
-        elif args.dataset == 'ucf_sports':
-            train_loss, train_acc = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda)
-        else:
-            train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
+        try:
+            if args.dataset == 'olympic_action':
+                train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+                test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
+            elif args.dataset == 'ucf_sports':
+                train_loss, train_acc = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+                test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda)
+            else:
+                train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+                test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
+        except RuntimeError as e:
+            error_msg = str(e)
+            raise e
 
         # Append logger file
         logger.append([scheduler.get_last_lr()[0], train_loss, test_loss, train_acc, test_acc])

@@ -60,8 +60,8 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
 
-        # compute output
-        outputs, imgr = model(inputs)
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
         loss = criterion(outputs, targets)
 
         # measure accuracy and record loss
@@ -117,8 +117,8 @@ def test(val_loader, model, criterion, epoch, use_cuda):
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
 
-        # compute output
-        outputs, imgr = model(inputs)
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
         loss = criterion(outputs, targets)
 
         # measure accuracy and record loss
@@ -173,8 +173,8 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
         frame_indices = torch.randint(0, num_frames, (batch_size,))
         inputs = inputs[torch.arange(batch_size), frame_indices]  # Shape: (batch_size, C, H, W)
         
-        # compute output
-        outputs, imgr = model(inputs)
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
         loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
@@ -187,7 +187,8 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        scheduler.step()
+        if scheduler is not None:
+            scheduler.step()
         
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -228,7 +229,9 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
         
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
-        inputs, targets = torch.autograd.Variable(inputs, volatile=True), torch.autograd.Variable(targets)
+        
+        with torch.no_grad():
+            inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
         
         # Handle video data: inputs shape is (batch_size, num_frames, C, H, W)
         # For testing, take the middle frame from each video sequence
@@ -236,8 +239,8 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
         middle_frame = num_frames // 2
         inputs = inputs[:, middle_frame]  # Shape: (batch_size, C, H, W)
         
-        # compute output
-        outputs, imgr = model(inputs)
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
         loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
