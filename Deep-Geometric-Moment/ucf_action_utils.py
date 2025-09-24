@@ -1,3 +1,27 @@
+"""
+UCF Sports Action Dataset utilities with OWL-ViT + SAM pipeline integration.
+
+This module provides:
+- UCF Sports dataset loading with Deep Lake
+- OWL-ViT object detection for human/action detection
+- SAM segmentation for background masking
+- Automatic filtering of images without bounding box detections
+- Logging of dropped images statistics
+- CUDA multiprocessing-safe model initialization
+
+Key changes from YOLO-World version:
+- Replaced YOLO-World with OWL-ViT for better text-based object detection
+- Added automatic image filtering when no bounding boxes are detected
+- Removed debugging code for cleaner production use
+- Added statistics tracking for dropped images
+- Implemented lazy CUDA initialization to avoid multiprocessing conflicts
+
+CUDA Multiprocessing Fix:
+- Models are initialized lazily in each process to avoid "Cannot re-initialize CUDA" errors
+- Thread-safe initialization with proper error handling and CPU fallback
+- Works with DataLoader multiprocessing (num_workers > 0)
+"""
+
 import numpy as np
 import torch
 import torch.utils.data as data
@@ -9,9 +33,10 @@ import random
 import cv2
 import os
 import sys
+import threading
 
-# Import YOLO-World and SAM
-from ultralytics import YOLO
+# Import OWL-ViT and SAM
+from transformers import OwlViTProcessor, OwlViTForObjectDetection
 from segment_anything import SamPredictor, sam_model_registry
 
 def get_ucf_class_mappings(deeplake_ds, group_similar=True):
@@ -124,27 +149,20 @@ class UCFSportsDataset(data.Dataset):
         self.split = split
         self.use_grouped_classes = use_grouped_classes
         
-        # Initialize YOLO-World model
-        self.yolo_model = YOLO('yolov8s-world.pt')
+        # Initialize models lazily to avoid CUDA multiprocessing issues
+        self.owlvit_model = None
+        self.owlvit_processor = None
+        self.device = None
+        self._model_initialized = False
         
-        # Initialize SAM model
-        model_type = "vit_b"
-        if model_type == "vit_h":
-            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_h_4b8939.pth")
-        elif model_type == "vit_l":
-            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_l_0b3195.pth")
-        else:  # vit_b
-            checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_b_01ec64.pth")
-                    
-        sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
-        sam.cuda()
-        self.predictor = SamPredictor(sam)
+        # Initialize SAM model lazily to avoid CUDA multiprocessing issues
+        self.sam_model = None
+        self.predictor = None
+        self._sam_initialized = False
         
-        # Debug settings
-        self.debug_save_count = 0
-        self.max_debug_saves = 0
-        self.debug_dir = "debug_pipeline"
-        os.makedirs(self.debug_dir, exist_ok=True)
+        # Logging for dropped images
+        self.dropped_images_count = 0
+        self.total_images_processed = 0
     
         # Create stratified train/test split
         total_samples = len(self.deeplake_ds)
@@ -241,14 +259,92 @@ class UCFSportsDataset(data.Dataset):
         distribution = self.get_class_distribution()
         print(f"Class distribution: {distribution}")
         
-        # Set YOLO-World classes based on our dataset classes
-        print(f"Setting YOLO-World classes: {self.class_names}")
-        self.yolo_model.set_classes(self.class_names)
+        # Create text queries for OWL-ViT based on our dataset classes
+        self.text_queries_mapping = {
+            'Diving': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing diving'],
+            'Golf-Swing': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing golf swing'],
+            'Kicking': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing kicking'],
+            'Lifting': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing lifting'],
+            'Riding-Horse': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing riding horse'],
+            'Run': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing running'],
+            'SkateBoarding': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing skateboarding'],
+            'Swing-Bench': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing swing bench'],
+            'Swing-SideAngle': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing swing side angle'],
+            'Walk': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing walking']
+        }
+        print(f"OWL-ViT text queries prepared for {len(self.text_queries_mapping)} classes")
+    
+    def _initialize_owlvit(self):
+        """Lazily initialize OWL-ViT model to avoid CUDA multiprocessing issues"""
+        if not self._model_initialized:
+            with threading.Lock():  # Thread-safe initialization
+                if not self._model_initialized:  # Double-check after acquiring lock
+                    print("Initializing OWL-ViT model...")
+                    self.owlvit_model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
+                    self.owlvit_processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32")
+                    
+                    # Use GPU if available, but handle CUDA initialization carefully
+                    if torch.cuda.is_available():
+                        try:
+                            self.device = torch.device("cuda")
+                            self.owlvit_model = self.owlvit_model.to(self.device)
+                            print(f"OWL-ViT model loaded on GPU: {self.device}")
+                        except RuntimeError as e:
+                            if "Cannot re-initialize CUDA" in str(e):
+                                print("CUDA re-initialization error detected, falling back to CPU")
+                                self.device = torch.device("cpu")
+                                self.owlvit_model = self.owlvit_model.to(self.device)
+                            else:
+                                raise e
+                    else:
+                        self.device = torch.device("cpu")
+                        print("CUDA not available, using CPU")
+                    
+                    self.owlvit_model.eval()
+                    self._model_initialized = True
+    
+    def _initialize_sam(self):
+        """Lazily initialize SAM model to avoid CUDA multiprocessing issues"""
+        if not self._sam_initialized:
+            with threading.Lock():  # Thread-safe initialization
+                if not self._sam_initialized:  # Double-check after acquiring lock
+                    print("Initializing SAM model...")
+                    model_type = "vit_b"
+                    if model_type == "vit_h":
+                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_h_4b8939.pth")
+                    elif model_type == "vit_l":
+                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_l_0b3195.pth")
+                    else:  # vit_b
+                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_b_01ec64.pth")
+                                
+                    sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+                    
+                    # Use GPU if available, but handle CUDA initialization carefully
+                    if torch.cuda.is_available():
+                        try:
+                            sam.cuda()
+                            print(f"SAM model loaded on GPU")
+                        except RuntimeError as e:
+                            if "Cannot re-initialize CUDA" in str(e):
+                                print("CUDA re-initialization error detected for SAM, falling back to CPU")
+                                sam.cpu()
+                            else:
+                                raise e
+                    else:
+                        sam.cpu()
+                        print("CUDA not available for SAM, using CPU")
+                    
+                    self.predictor = SamPredictor(sam)
+                    self._sam_initialized = True
     
     def __len__(self):
         return len(self.indices)
     
     def __getitem__(self, idx):
+        # Initialize models lazily to avoid CUDA multiprocessing issues
+        self._initialize_owlvit()
+        self._initialize_sam()
+        
         # Get the actual index from our split indices
         actual_idx = self.indices[idx]
         
@@ -272,80 +368,61 @@ class UCFSportsDataset(data.Dataset):
         original_image = pil_image.resize((256, 256))
         original_image_np = np.array(original_image)
         
-        # Get class name for GroundingDINO
+        # Get class name for OWL-ViT
         class_name = self.get_class_name(label)
         
-        # Debug saving flag - save first few samples for debugging
-        should_debug = self.debug_save_count < self.max_debug_saves
-        debug_idx = self.debug_save_count if should_debug else -1
+        # Get text queries for this class
+        text_queries = self.text_queries_mapping.get(class_name, ['human', 'person', 'people'])
         
-        if should_debug:
-            self.debug_save_count += 1
-            # Step 1: Save original image
-            cv2.imwrite(f"{self.debug_dir}/step1_original_{debug_idx}_{class_name}.jpg", 
-                       cv2.cvtColor(original_image_np, cv2.COLOR_RGB2BGR))
-            print(f"Debug {debug_idx}: Saved original image for {class_name}")
+        # Process image and text inputs with OWL-ViT
+        inputs = self.owlvit_processor(text=text_queries, images=original_image, return_tensors="pt").to(self.device)
         
-        # Apply YOLO-World processing
-        # Save image temporarily for YOLO-World (it expects file path or PIL image)
-        temp_image_path = f"temp_image_{idx}.jpg"
-        original_image.save(temp_image_path)
+        # Get predictions
+        with torch.no_grad():
+            outputs = self.owlvit_model(**inputs)
         
-        # Use YOLO-World to detect objects
-        results = self.yolo_model.predict(temp_image_path, verbose=False)
+        # Post-process to get boxes in original image coordinates
+        target_sizes = torch.Tensor([original_image.size[::-1]]).to(self.device)  # (height, width)
+        results = self.owlvit_processor.post_process(outputs=outputs, target_sizes=target_sizes)
         
-        # Extract bounding boxes from YOLO-World results
-        boxes = []
-        confidences = []
-        class_names_detected = []
+        # Extract results
+        boxes = results[0]["boxes"].cpu().numpy()
+        scores = results[0]["scores"].cpu().numpy()
+        labels = results[0]["labels"].cpu().numpy()
         
-        if len(results) > 0 and results[0].boxes is not None:
-            for box in results[0].boxes:
-                # Convert from YOLO format (x1, y1, x2, y2) to required format
-                x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                boxes.append([x1, y1, x2, y2])
-                confidences.append(float(box.conf[0].cpu().numpy()))
-                class_id = int(box.cls[0].cpu().numpy())
-                class_names_detected.append(self.yolo_model.names[class_id])
+        # Filter by confidence threshold
+        confidence_threshold = 0.1
+        valid_indices = scores >= confidence_threshold
         
-        # Clean up temporary file
-        if os.path.exists(temp_image_path):
-            os.remove(temp_image_path)
+        boxes = boxes[valid_indices]
+        scores = scores[valid_indices]
+        labels = labels[valid_indices]
         
-        if should_debug:
-            # Step 2: Save YOLO-World detection results
-            if len(boxes) > 0:
-                # Draw bounding boxes on image for visualization
-                annotated_image_np = original_image_np.copy()
-                for i, (box, conf, cls_name) in enumerate(zip(boxes, confidences, class_names_detected)):
-                    x1, y1, x2, y2 = map(int, box)
-                    cv2.rectangle(annotated_image_np, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                    cv2.putText(annotated_image_np, f"{cls_name}: {conf:.2f}", (x1, y1-10), 
-                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                
-                cv2.imwrite(f"{self.debug_dir}/step2_yoloworld_{debug_idx}_{class_name}.jpg", 
-                           cv2.cvtColor(annotated_image_np, cv2.COLOR_RGB2BGR))
-                print(f"Debug {debug_idx}: Found {len(boxes)} boxes for {class_name}: {class_names_detected}")
-            else:
-                print(f"Debug {debug_idx}: No boxes found for {class_name}")
+        # Check if any bounding boxes were detected
+        if len(boxes) == 0:
+            # No bounding boxes detected - skip this image
+            self.dropped_images_count += 1
+            self.total_images_processed += 1
+            
+            if self.total_images_processed % 100 == 0:
+                print(f"Dropped {self.dropped_images_count}/{self.total_images_processed} images ({(100*self.dropped_images_count/self.total_images_processed):.1f}%) due to no bounding box detection")
+            
+            # Return None to indicate this sample should be skipped
+            return None
         
-        # Use SAM model to segment the image
+        # Use SAM model to segment the image using the first detected bounding box
         self.predictor.set_image(original_image_np)
+        input_box = np.array(boxes[0])  # Use first detected box
+        
         masks, _, _ = self.predictor.predict(
             point_coords=None,
             point_labels=None,
-            box=np.array(boxes[0]) if len(boxes) > 0 else None,  # Convert to numpy array and handle case where no boxes found
+            box=input_box,
         )
         
         # Convert mask to proper input format
         if len(masks) > 0:
             mask = masks[0]  # Take first mask
-            
-            if should_debug:
-                # Step 3: Save SAM mask
-                cv2.imwrite(f"{self.debug_dir}/step3_sam_mask_{debug_idx}_{class_name}.jpg", 
-                           (mask * 255).astype(np.uint8))
-                print(f"Debug {debug_idx}: Saved SAM mask for {class_name}")
             
             # Create masked image where background is zeroed out
             masked_image_np = original_image_np.copy().astype(np.float32)
@@ -356,41 +433,14 @@ class UCFSportsDataset(data.Dataset):
             # Convert back to uint8
             masked_image_np = masked_image_np.astype(np.uint8)
             
-            if should_debug:
-                # Step 4: Save masked image (background zeroed out)
-                cv2.imwrite(f"{self.debug_dir}/step4_masked_bg_zero_{debug_idx}_{class_name}.jpg", 
-                           cv2.cvtColor(masked_image_np, cv2.COLOR_RGB2BGR))
-                print(f"Debug {debug_idx}: Saved masked image (background zeroed) for {class_name}")
-            
             # Convert masked image to PIL and apply transforms
             masked_image_pil = Image.fromarray(masked_image_np)
             transformed_image = self.transform(masked_image_pil)
-            
-            if should_debug:
-                # Step 5: Save final transformed tensor as image for visualization
-                # Convert tensor back to image format for saving
-                tensor_for_save = transformed_image.clone()
-                # Denormalize
-                mean = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1)
-                std = torch.tensor([0.229, 0.224, 0.225]).view(3, 1, 1)
-                tensor_for_save = tensor_for_save * std + mean
-                tensor_for_save = torch.clamp(tensor_for_save, 0, 1)
-                
-                # Convert to numpy and save
-                final_image_np = (tensor_for_save.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
-                cv2.imwrite(f"{self.debug_dir}/step5_final_tensor_{debug_idx}_{class_name}.jpg", 
-                           cv2.cvtColor(final_image_np, cv2.COLOR_RGB2BGR))
-                print(f"Debug {debug_idx}: Saved final transformed tensor for {class_name}")
         else:
             # If no mask found, use original image
             transformed_image = self.transform(pil_image)
-            
-            if should_debug:
-                print(f"Debug {debug_idx}: No mask found, using original image for {class_name}")
-                # Save original as final since no mask was applied
-                cv2.imwrite(f"{self.debug_dir}/step4_no_mask_{debug_idx}_{class_name}.jpg", 
-                           cv2.cvtColor(original_image_np, cv2.COLOR_RGB2BGR))
-
+        
+        self.total_images_processed += 1
         return transformed_image, label, original_image_np
     
     def get_class_name(self, label_id):
@@ -424,3 +474,89 @@ class UCFSportsDataset(data.Dataset):
     def get_num_classes(self):
         """Get the number of classes for model architecture"""
         return len(self.class_names)
+    
+    def get_dropped_images_stats(self):
+        """Get statistics about dropped images"""
+        if self.total_images_processed == 0:
+            return {"dropped": 0, "total": 0, "percentage": 0.0}
+        
+        percentage = (self.dropped_images_count / self.total_images_processed) * 100
+        return {
+            "dropped": self.dropped_images_count,
+            "total": self.total_images_processed,
+            "percentage": percentage
+        }
+
+
+def collate_fn_skip_none(batch):
+    """Custom collate function that filters out None values (dropped images)"""
+    # Filter out None values (dropped images)
+    batch = [item for item in batch if item is not None]
+    
+    if len(batch) == 0:
+        # Return empty batch if all images were dropped
+        return None, None, None
+    
+    # Separate the components
+    images, labels, original_images = zip(*batch)
+    
+    # Convert to tensors
+    images = torch.stack(images, 0)
+    labels = torch.tensor(labels, dtype=torch.long)
+    
+    return images, labels, original_images
+
+
+def setup_multiprocessing_for_cuda():
+    """
+    Setup multiprocessing to use 'spawn' method for CUDA compatibility.
+    Call this at the beginning of your main script before any DataLoader usage.
+    """
+    import multiprocessing as mp
+    
+    try:
+        # Try to set start method to 'spawn' for CUDA compatibility
+        mp.set_start_method('spawn', force=True)
+        print("✓ Multiprocessing set to 'spawn' method for CUDA compatibility")
+        return True
+    except RuntimeError as e:
+        if "context has already been set" in str(e):
+            current_method = mp.get_start_method()
+            if current_method == 'spawn':
+                print("✓ Multiprocessing already set to 'spawn' method")
+                return True
+            else:
+                print(f"⚠️  Multiprocessing already initialized with '{current_method}' method")
+                print("   CUDA multiprocessing may not work properly. Consider restarting the script.")
+                return False
+        else:
+            print(f"⚠️  Could not set multiprocessing to 'spawn': {e}")
+            return False
+
+
+def create_cuda_safe_dataloader(dataset, batch_size=32, shuffle=True, num_workers=4, **kwargs):
+    """
+    Create a DataLoader that's safe for CUDA multiprocessing.
+    
+    Args:
+        dataset: The dataset to create DataLoader for
+        batch_size: Batch size for the DataLoader
+        shuffle: Whether to shuffle the data
+        num_workers: Number of worker processes (0 for no multiprocessing)
+        **kwargs: Additional arguments for DataLoader
+    
+    Returns:
+        DataLoader with proper CUDA multiprocessing setup
+    """
+    # Setup multiprocessing for CUDA if using multiple workers
+    if num_workers > 0:
+        setup_multiprocessing_for_cuda()
+    
+    return data.DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        num_workers=num_workers,
+        collate_fn=collate_fn_skip_none,
+        **kwargs
+    )
