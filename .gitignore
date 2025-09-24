@@ -5,3 +5,11 @@ ResNet/resnet34_cifar10_final.pth
 *pycache*
 *.env*
 *.pth*
+*.pt*
+*.pth.tar*
+*.pth.tar.gz*
+*.pth.tar.xz*
+*.pth.tar.bz2*
+*.pth.tar.lzma*
+*.pth.tar.zst*
+*.pth.tar.zstd*
