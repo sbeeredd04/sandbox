@@ -31,7 +31,7 @@ from train_utils import (
     train_olympic_action, test_olympic_action, 
     train_ucf_sports, test_ucf_sports
 )
-from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms
+from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms, setup_multiprocessing_for_cuda, create_cuda_safe_dataloader
 import deeplake
 ds = deeplake.load('hub://activeloop/ucf-sports-action')
 
@@ -72,6 +72,9 @@ parser.add_argument('--gpu-id', default='0', type=str, help='id(s) for CUDA_VISI
 
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
+
+# Setup multiprocessing for CUDA compatibility
+setup_multiprocessing_for_cuda()
 
 # Use CUDA
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
@@ -465,11 +468,11 @@ def main():
         
         # Create UCF Sports datasets with grouped classes
         trainset = UCFSportsDataset(ds, split='train', transform=transform, use_grouped_classes=True)
-        train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        train_loader = create_cuda_safe_dataloader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
         
         # Test loader
         testset = UCFSportsDataset(ds, split='test', transform=transform, use_grouped_classes=True)
-        val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        val_loader = create_cuda_safe_dataloader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
         
         # Update num_classes to use grouped classes count
         num_classes = trainset.get_num_classes()

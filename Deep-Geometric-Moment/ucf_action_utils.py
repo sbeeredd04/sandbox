@@ -1,46 +1,77 @@
 """
-UCF Sports Action Dataset utilities with OWL-ViT + SAM pipeline integration.
+UCF Sports Action Dataset utilities with OWL-ViT + SAM preprocessing pipeline.
 
 This module provides:
 - UCF Sports dataset loading with Deep Lake
-- OWL-ViT object detection for human/action detection
-- SAM segmentation for background masking
-- Automatic filtering of images without bounding box detections
-- Logging of dropped images statistics
-- CUDA multiprocessing-safe model initialization
+- One-time preprocessing with OWL-ViT object detection + SAM segmentation
+- Automatic filtering of images without detections
+- Preprocessed dataset saved to disk for fast training
+- Efficient DataLoader that reads preprocessed images
 
-Key changes from YOLO-World version:
-- Replaced YOLO-World with OWL-ViT for better text-based object detection
-- Added automatic image filtering when no bounding boxes are detected
-- Removed debugging code for cleaner production use
-- Added statistics tracking for dropped images
-- Implemented lazy CUDA initialization to avoid multiprocessing conflicts
+Preprocessing Pipeline:
+1. Load image from Deep Lake
+2. Run OWL-ViT object detection with class-specific text queries
+3. Filter out images with no detections (skip to next image)
+4. Run SAM segmentation on detected bounding box
+5. Apply mask to remove background
+6. Apply transforms and save to disk with label
 
-CUDA Multiprocessing Fix:
-- Models are initialized lazily in each process to avoid "Cannot re-initialize CUDA" errors
-- Thread-safe initialization with proper error handling and CPU fallback
-- Works with DataLoader multiprocessing (num_workers > 0)
+Training Pipeline:
+1. Check if preprocessed data exists
+2. If not, run preprocessing pipeline
+3. Load preprocessed images from disk in __getitem__
 """
 
 import numpy as np
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
-import torchvision.transforms.functional as F
 from PIL import Image
 from collections import defaultdict
 import random
-import cv2
 import os
-import sys
-import threading
+import pickle
+from tqdm import tqdm
+import json
 
 # Import OWL-ViT and SAM
 from transformers import OwlViTProcessor, OwlViTForObjectDetection
 from segment_anything import SamPredictor, sam_model_registry
 
-def get_ucf_class_mappings(deeplake_ds, group_similar=True):
 
+# ============================================================================
+# Class Mapping Helper Functions (Module-level for pickle compatibility)
+# ============================================================================
+
+def get_class_name_mapping(original_label_id, original_to_grouped_id, grouped_id_to_label):
+    """Convert original label ID to grouped class name."""
+    if original_label_id in original_to_grouped_id:
+        grouped_id = original_to_grouped_id[original_label_id]
+        return grouped_id_to_label.get(grouped_id, "Unknown")
+    return "Unknown"
+
+
+def get_grouped_class_id_mapping(original_label_id, original_to_grouped_id):
+    """Convert original label ID to grouped class ID."""
+    return original_to_grouped_id.get(original_label_id, -1)
+
+
+def get_class_name_simple(label_id, label_id_to_name):
+    """Convert label ID to class name."""
+    return label_id_to_name.get(label_id, "Unknown")
+
+
+def get_ucf_class_mappings(deeplake_ds, group_similar=True):
+    """
+    Get class mappings for UCF Sports dataset.
+    
+    Args:
+        deeplake_ds: Deep Lake dataset
+        group_similar: Whether to group similar action classes
+        
+    Returns:
+        Tuple of class mappings (varies based on group_similar flag)
+    """
     original_class_names = deeplake_ds.labels.info['class_names']
     
     if group_similar:
@@ -57,8 +88,8 @@ def get_ucf_class_mappings(deeplake_ds, group_similar=True):
             'Run-Side': 'Run',
             'SkateBoarding-Front': 'SkateBoarding',
             'Diving-Side': 'Diving',
-            'Lifting': 'Lifting',  # Keep as is
-            'Riding-Horse': 'Riding-Horse'  # Keep as is
+            'Lifting': 'Lifting',
+            'Riding-Horse': 'Riding-Horse'
         }
         
         # Create mappings
@@ -89,474 +120,552 @@ def get_ucf_class_mappings(deeplake_ds, group_similar=True):
                     original_ids.append(orig_id)
             grouped_to_original_ids[grouped_id] = original_ids
         
-        def get_class_name(original_label_id):
-            """Convert original label ID to grouped class name"""
-            if original_label_id in original_to_grouped_id:
-                grouped_id = original_to_grouped_id[original_label_id]
-                return grouped_id_to_label.get(grouped_id, "Unknown")
-            return "Unknown"
-        
-        def get_grouped_class_id(original_label_id):
-            """Convert original label ID to grouped class ID"""
-            return original_to_grouped_id.get(original_label_id, -1)
-        
-        print(f"Original classes: {len(original_class_names)} -> Grouped classes: {len(grouped_class_names)}")
-        print(f"Grouped class names: {grouped_class_names}")
-        print(f"Original to grouped mapping: {original_to_grouped_id}")
+        print(f"✓ Original classes: {len(original_class_names)} -> Grouped classes: {len(grouped_class_names)}")
+        print(f"✓ Grouped class names: {grouped_class_names}")
         
         return (grouped_class_names, original_to_grouped_id, grouped_to_original_ids, 
-                get_class_name, get_grouped_class_id, grouping_rules)
+                grouped_id_to_label, grouping_rules)
     
     else:
         # Original behavior without grouping
         label_name_to_id = {name: idx for idx, name in enumerate(original_class_names)}
         label_id_to_name = {idx: name for idx, name in enumerate(original_class_names)}
         
-        def get_class_name(label_id):
-            """Convert label ID to class name"""
-            return label_id_to_name.get(label_id, "Unknown")
-        
-        return original_class_names, label_name_to_id, label_id_to_name, get_class_name
+        return original_class_names, label_name_to_id, label_id_to_name
 
-def get_ucf_sports_transforms():
-    """Get UCF Sports Action dataset transforms with aggressive augmentation for 224x224"""
-    # More aggressive transforms similar to CIFAR-10 but adapted for 224x224
-    transforms1 = transforms.RandomApply(torch.nn.ModuleList([
-        transforms.RandomAffine(90, translate=(0.2, 0.2), scale=(0.6, 1.3))
-    ]), p=0.4)
+
+def get_ucf_sports_transforms(image_size=224):
+    """
+    Get transforms for UCF Sports dataset (applied AFTER preprocessing).
     
-    transforms2 = transforms.RandomApply(torch.nn.ModuleList([
-        transforms.ColorJitter(0.8, 0.8, 0.8, 0.25)
-    ]), p=0.3)
-    
+    Args:
+        image_size: Target image size (default 224 for most vision models)
+        
+    Returns:
+        torchvision transforms composition
+    """
     transform = transforms.Compose([
-        transforms.Resize((256, 256)),  # Resize to 256x256 first
-        # transforms2,  # Color jitter
-        # transforms1,  # Affine transforms
-        # transforms.RandomCrop(224, padding=28),  # Random crop to 224x224 with padding (equivalent to padding=4 for 32x32)
-        # transforms.RandomHorizontalFlip(),
+        transforms.Resize((image_size, image_size)),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])  # ImageNet normalization
     ])
-
     return transform
 
-class UCFSportsDataset(data.Dataset):
-    """UCF Sports Action Dataset using Deep Lake with optional class grouping"""
-    def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True):
-        self.deeplake_ds = deeplake_ds
-        self.transform = transform
-        self.split = split
-        self.use_grouped_classes = use_grouped_classes
-        
-        # Initialize models lazily to avoid CUDA multiprocessing issues
-        self.owlvit_model = None
-        self.owlvit_processor = None
-        self.device = None
-        self._model_initialized = False
-        
-        # Initialize SAM model lazily to avoid CUDA multiprocessing issues
-        self.sam_model = None
-        self.predictor = None
-        self._sam_initialized = False
-        
-        # Logging for dropped images
-        self.dropped_images_count = 0
-        self.total_images_processed = 0
+
+# ============================================================================
+# OWL-ViT Text Queries
+# ============================================================================
+
+def get_owlvit_text_queries():
+    """
+    Get text queries for OWL-ViT detection for each action class.
     
-        # Create stratified train/test split
-        total_samples = len(self.deeplake_ds)
-        print(f"Total samples: {total_samples}")
+    Returns:
+        Dictionary mapping class names to list of text queries
+    """
+    text_queries_mapping = {
+        'Diving': ['human', 'person', 'people', 'body', 'human body'],
+        'Golf-Swing': ['human', 'person', 'people', 'body', 'human body'],
+        'Kicking': ['human', 'person', 'people', 'body', 'human body'],
+        'Lifting': ['human', 'person', 'people', 'body', 'human body'],
+        'Riding-Horse': ['human', 'person', 'people', 'body', 'human body'],
+        'Run': ['human', 'person', 'people', 'body', 'human body'],
+        'SkateBoarding': ['human', 'person', 'people', 'body', 'human body'],
+        'Swing-Bench': ['human', 'person', 'people', 'body', 'human body'],
+        'Swing-SideAngle': ['human', 'person', 'people', 'body', 'human body'],
+        'Walk': ['human', 'person', 'people', 'body', 'human body']
+    }
+    return text_queries_mapping
+
+
+# ============================================================================
+# Model Initialization Functions
+# ============================================================================
+
+def initialize_owlvit_model(device_id=8):
+    """
+    Initialize OWL-ViT model on specific GPU device.
+    
+    Args:
+        device_id: GPU device ID to use (default 8)
         
-        # Get original class names from Deep Lake dataset
-        self.original_class_names = self.deeplake_ds.labels.info['class_names']
-        print(f"Original class names from dataset: {self.original_class_names}")
+    Returns:
+        Tuple of (model, processor, device)
+    """
+    print(f"\n{'='*80}")
+    print(f"Initializing OWL-ViT model on GPU {device_id}...")
+    print(f"{'='*80}")
+    
+    # Load model and processor
+    model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
+    processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32")
+    
+    # Move to specific GPU device
+    device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu")
+    model = model.to(device)
+    model.eval()
+    
+    print(f"✓ OWL-ViT model loaded on {device}")
+    return model, processor, device
+
+
+def initialize_sam_model(device_id=9, model_type="vit_b"):
+    """
+    Initialize SAM model on specific GPU device.
+    
+    Args:
+        device_id: GPU device ID to use (default 9)
+        model_type: SAM model type ('vit_b', 'vit_l', or 'vit_h')
         
-        # Set up class mappings based on whether we're using grouped classes
-        if self.use_grouped_classes:
-            # Get grouped class mappings
-            (self.class_names, self.original_to_grouped_id, self.grouped_to_original_ids, 
-             self.get_grouped_class_name, self.get_grouped_class_id, self.grouping_rules) = get_ucf_class_mappings(
-                deeplake_ds, group_similar=True)
-            
-            print(f"Using GROUPED classes for training: {self.class_names}")
-            print(f"Reduced from {len(self.original_class_names)} to {len(self.class_names)} classes")
-            
-            # Create mappings for grouped classes
-            self.label_name_to_id = {name: idx for idx, name in enumerate(self.class_names)}
-            self.label_id_to_name = {idx: name for idx, name in enumerate(self.class_names)}
-            
+    Returns:
+        SAM predictor object
+    """
+    print(f"\n{'='*80}")
+    print(f"Initializing SAM model ({model_type}) on GPU {device_id}...")
+    print(f"{'='*80}")
+    
+    # Get checkpoint path
+    checkpoint_paths = {
+        "vit_h": "checkpoints/SAM/sam_vit_h_4b8939.pth",
+        "vit_l": "checkpoints/SAM/sam_vit_l_0b3195.pth",
+        "vit_b": "checkpoints/SAM/sam_vit_b_01ec64.pth"
+    }
+    
+    checkpoint_path = os.path.join(os.path.dirname(__file__), checkpoint_paths[model_type])
+    
+    if not os.path.exists(checkpoint_path):
+        raise FileNotFoundError(f"SAM checkpoint not found at {checkpoint_path}")
+    
+    # Load SAM model
+    sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
+    
+    # Move to specific GPU device
+    device = torch.device(f"cuda:{device_id}" if torch.cuda.is_available() else "cpu")
+    sam = sam.to(device)
+    
+    predictor = SamPredictor(sam)
+    print(f"✓ SAM model loaded on {device}")
+    
+    return predictor
+
+
+# ============================================================================
+# Preprocessing Functions
+# ============================================================================
+
+def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processor, 
+                             owlvit_device, sam_predictor, text_queries_mapping, 
+                             confidence_threshold=0.1):
+    """
+    Run OWL-ViT detection and SAM segmentation on a single image.
+    
+    Args:
+        image_np: Image as numpy array (H, W, 3)
+        class_name: Action class name for text queries
+        owlvit_model: OWL-ViT model
+        owlvit_processor: OWL-ViT processor
+        owlvit_device: Device for OWL-ViT
+        sam_predictor: SAM predictor
+        text_queries_mapping: Dictionary of class names to text queries
+        confidence_threshold: Minimum confidence for detections
+        
+    Returns:
+        Tuple of (masked_image_np, success_flag)
+        - masked_image_np: Image with background removed (or None if detection failed)
+        - success_flag: True if detection and segmentation succeeded
+    """
+    # Convert to PIL for OWL-ViT
+    pil_image = Image.fromarray(image_np, mode='RGB')
+    
+    # Get text queries for this class
+    text_queries = text_queries_mapping.get(class_name, ['human', 'person', 'people'])
+    
+    # Run OWL-ViT detection
+    inputs = owlvit_processor(text=text_queries, images=pil_image, return_tensors="pt").to(owlvit_device)
+    
+    with torch.no_grad():
+        outputs = owlvit_model(**inputs)
+    
+    # Post-process to get boxes
+    target_sizes = torch.Tensor([pil_image.size[::-1]]).to(owlvit_device)  # (height, width)
+    results = owlvit_processor.post_process(outputs=outputs, target_sizes=target_sizes)
+    
+    # Extract results
+    boxes = results[0]["boxes"].cpu().numpy()
+    scores = results[0]["scores"].cpu().numpy()
+    
+    # Filter by confidence threshold
+    valid_indices = scores >= confidence_threshold
+    boxes = boxes[valid_indices]
+    scores = scores[valid_indices]
+    
+    # Check if any detections found
+    if len(boxes) == 0:
+        return None, False
+    
+    # Run SAM segmentation on first detected box
+    sam_predictor.set_image(image_np)
+    input_box = np.array(boxes[0])  # Use highest confidence box
+    
+    masks, _, _ = sam_predictor.predict(
+        point_coords=None,
+        point_labels=None,
+        box=input_box,
+    )
+    
+    # Apply mask to remove background
+    if len(masks) > 0:
+        mask = masks[0]  # Take first mask
+        
+        # Create masked image (background = black)
+        masked_image_np = image_np.copy().astype(np.float32)
+        for c in range(3):
+            masked_image_np[:, :, c] = masked_image_np[:, :, c] * mask
+        
+        masked_image_np = masked_image_np.astype(np.uint8)
+        return masked_image_np, True
+    
+    return None, False
+
+
+def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings, 
+                                use_grouped_classes=True, owlvit_device_id=8, 
+                                sam_device_id=9, image_size=256):
+    """
+    Preprocess entire dataset: OWL-ViT detection + SAM segmentation + save to disk.
+    
+    Args:
+        deeplake_ds: Deep Lake dataset
+        save_dir: Directory to save preprocessed images
+        class_mappings: Tuple of class mapping dictionaries
+        use_grouped_classes: Whether to use grouped classes
+        owlvit_device_id: GPU device for OWL-ViT
+        sam_device_id: GPU device for SAM
+        image_size: Resize images to this size before processing
+        
+    Returns:
+        Tuple of (processed_indices, dropped_count, label_to_name_mapping)
+    """
+    print(f"\n{'='*80}")
+    print(f"PREPROCESSING UCF SPORTS DATASET")
+    print(f"{'='*80}")
+    
+    # Create save directory
+    os.makedirs(save_dir, exist_ok=True)
+    
+    # Initialize models on specific GPUs
+    owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
+    sam_predictor = initialize_sam_model(sam_device_id)
+    
+    # Get text queries
+    text_queries_mapping = get_owlvit_text_queries()
+    
+    # Unpack class mappings
+    if use_grouped_classes:
+        class_names, original_to_grouped_id, grouped_to_original_ids, grouped_id_to_label, _ = class_mappings
+        label_id_to_name = grouped_id_to_label
+    else:
+        class_names, _, label_id_to_name = class_mappings
+    
+    # Process each image
+    total_samples = len(deeplake_ds)
+    processed_indices = []
+    dropped_count = 0
+    
+    print(f"\n{'='*80}")
+    print(f"Processing {total_samples} images...")
+    print(f"{'='*80}\n")
+    
+    for idx in tqdm(range(total_samples), desc="Preprocessing images"):
+        sample = deeplake_ds[idx]
+        image = sample.images.numpy()
+        original_label = int(sample.labels.numpy()[0])
+        
+        # Convert to grouped label if needed
+        if use_grouped_classes:
+            label = original_to_grouped_id.get(original_label, -1)
+            if label == -1:
+                print(f"⚠️  Warning: Could not map original label {original_label}")
+                continue
         else:
-            # Use original classes
-            self.class_names = self.original_class_names
-            self.label_name_to_id = {name: idx for idx, name in enumerate(self.class_names)}
-            self.label_id_to_name = {idx: name for idx, name in enumerate(self.class_names)}
-            print(f"Using ORIGINAL classes for training: {self.class_names}")
+            label = original_label
         
-        print(f"Label name to ID mapping: {self.label_name_to_id}")
-        print(f"Label ID to name mapping: {self.label_id_to_name}")
+        # Resize image
+        pil_image = Image.fromarray(image, mode='RGB')
+        resized_image = pil_image.resize((image_size, image_size))
+        image_np = np.array(resized_image)
         
-        # Get all labels first to create stratified split
-        all_original_labels = []
-        all_labels = []  # Will store grouped labels if using grouped classes
+        # Get class name
+        class_name = label_id_to_name.get(label, "Unknown")
         
-        for i in range(total_samples):
-            sample = self.deeplake_ds[i]
-            original_label = int(sample.labels.numpy()[0])
-            all_original_labels.append(original_label)
+        # Run detection and segmentation
+        masked_image_np, success = detect_and_segment_image(
+            image_np, class_name, owlvit_model, owlvit_processor, 
+            owlvit_device, sam_predictor, text_queries_mapping
+        )
+        
+        if not success or masked_image_np is None:
+            dropped_count += 1
+            continue
+        
+        # Save preprocessed image
+        save_path = os.path.join(save_dir, f"img_{idx:05d}_label_{label}.png")
+        Image.fromarray(masked_image_np).save(save_path)
+        
+        # Record this index as successfully processed
+        processed_indices.append({
+            'original_idx': idx,
+            'save_path': save_path,
+            'label': label,
+            'original_label': original_label
+        })
+    
+    # Save metadata
+    metadata = {
+        'processed_indices': processed_indices,
+        'dropped_count': dropped_count,
+        'total_original': total_samples,
+        'label_id_to_name': label_id_to_name,
+        'class_names': class_names,
+        'use_grouped_classes': use_grouped_classes
+    }
+    
+    metadata_path = os.path.join(save_dir, 'metadata.pkl')
+    with open(metadata_path, 'wb') as f:
+        pickle.dump(metadata, f)
+    
+    # Save human-readable stats
+    stats_path = os.path.join(save_dir, 'preprocessing_stats.json')
+    stats = {
+        'total_original_images': total_samples,
+        'successfully_processed': len(processed_indices),
+        'dropped_images': dropped_count,
+        'drop_rate_percent': (dropped_count / total_samples) * 100,
+        'label_id_to_name': label_id_to_name,
+        'class_names': class_names
+    }
+    
+    with open(stats_path, 'w') as f:
+        json.dump(stats, f, indent=2)
+    
+    # Print summary
+    print(f"\n{'='*80}")
+    print(f"PREPROCESSING COMPLETE")
+    print(f"{'='*80}")
+    print(f"✓ Total original images: {total_samples}")
+    print(f"✓ Successfully processed: {len(processed_indices)}")
+    print(f"✗ Dropped (no detection): {dropped_count}")
+    print(f"✗ Drop rate: {(dropped_count / total_samples) * 100:.1f}%")
+    print(f"✓ Saved to: {save_dir}")
+    print(f"{'='*80}\n")
+    
+    return processed_indices, dropped_count, label_id_to_name
+
+
+# ============================================================================
+# Dataset Class
+# ============================================================================
+
+class UCFSportsDataset(data.Dataset):
+    """
+    UCF Sports Action Dataset that uses preprocessed images.
+    
+    Images are preprocessed once with OWL-ViT + SAM and saved to disk.
+    __getitem__ simply loads preprocessed images from disk.
+    """
+    
+    def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True,
+                 data_dir='./data/ucf_preprocessed', force_preprocess=False,
+                 owlvit_device_id=8, sam_device_id=9):
+        """
+        Initialize UCF Sports dataset with preprocessing.
+        
+        Args:
+            deeplake_ds: Deep Lake dataset
+            split: 'train' or 'test'
+            transform: Transforms to apply when loading images
+            use_grouped_classes: Whether to group similar action classes
+            data_dir: Directory to save/load preprocessed data
+            force_preprocess: Force reprocessing even if preprocessed data exists
+            owlvit_device_id: GPU device for OWL-ViT during preprocessing
+            sam_device_id: GPU device for SAM during preprocessing
+        """
+        self.deeplake_ds = deeplake_ds
+        self.split = split
+        self.transform = transform or get_ucf_sports_transforms()
+        self.use_grouped_classes = use_grouped_classes
+        self.data_dir = data_dir
+        
+        print(f"\n{'='*80}")
+        print(f"Initializing UCF Sports Dataset - {split.upper()} split")
+        print(f"{'='*80}")
+        
+        # Get class mappings
+        self.class_mappings = get_ucf_class_mappings(deeplake_ds, group_similar=use_grouped_classes)
+        
+        if use_grouped_classes:
+            self.class_names, self.original_to_grouped_id, _, self.label_id_to_name, _ = self.class_mappings
+        else:
+            self.class_names, _, self.label_id_to_name = self.class_mappings
+        
+        print(f"✓ Number of classes: {len(self.class_names)}")
+        print(f"✓ Class names: {self.class_names}")
+        
+        # Check if preprocessing needed
+        metadata_path = os.path.join(data_dir, 'metadata.pkl')
+        
+        if force_preprocess or not os.path.exists(metadata_path):
+            print(f"\n⚠️  Preprocessed data not found or force_preprocess=True")
+            print(f"Starting preprocessing pipeline...")
             
-            if self.use_grouped_classes:
-                grouped_label = self.original_to_grouped_id.get(original_label, -1)
-                all_labels.append(grouped_label)
-            else:
-                all_labels.append(original_label)
+            # Run preprocessing
+            processed_indices, dropped_count, label_id_to_name = preprocess_and_save_dataset(
+                deeplake_ds, data_dir, self.class_mappings, use_grouped_classes,
+                owlvit_device_id, sam_device_id
+            )
             
-        # print(f"All original labels: {all_original_labels}")
-        if self.use_grouped_classes:
-            print(f"All grouped labels: {all_labels}")
+            self.processed_indices = processed_indices
+            self.label_id_to_name = label_id_to_name
+        else:
+            # Load preprocessed metadata
+            print(f"✓ Loading preprocessed data from {data_dir}")
+            with open(metadata_path, 'rb') as f:
+                metadata = pickle.load(f)
+            
+            self.processed_indices = metadata['processed_indices']
+            self.label_id_to_name = metadata['label_id_to_name']
+            
+            print(f"✓ Loaded {len(self.processed_indices)} preprocessed images")
         
-        # Create stratified indices based on the labels we're actually using for training
+        # Create stratified train/test split (90/10)
+        self._create_train_test_split()
+        
+        print(f"\n{'='*80}")
+        print(f"Dataset initialized successfully")
+        print(f"{'='*80}\n")
+    
+    def _create_train_test_split(self):
+        """Create stratified train/test split based on labels."""
+        # Group indices by label
         label_to_indices = defaultdict(list)
-        for idx in range(total_samples):
-            label = all_labels[idx]
+        for idx, item in enumerate(self.processed_indices):
+            label = item['label']
             label_to_indices[label].append(idx)
-        
-        print(f"Label to indices: {label_to_indices}")
-        
-        # Print statistics for each class
-        print(f"\nClass distribution (for training):")
-        for label_id, indices in label_to_indices.items():
-            if label_id in self.label_id_to_name:
-                label_name = self.label_id_to_name[label_id]
-                print(f"  {label_name} (ID: {label_id}): {len(indices)} samples")
-            else:
-                print(f"  Unknown class (ID: {label_id}): {len(indices)} samples")
         
         # Split each class 90/10
         train_indices = []
         test_indices = []
         
-        for label, indices in label_to_indices.items():
-            n_train = int(0.9 * len(indices))
-            train_indices.extend(indices[:n_train])
-            test_indices.extend(indices[n_train:])
-            
-            label_name = self.label_id_to_name[label]
-            print(f"  {label_name}: {n_train} train, {len(indices) - n_train} test")
+        print(f"\n{'='*80}")
+        print(f"Creating stratified train/test split (90/10)")
+        print(f"{'='*80}")
         
-        # Shuffle the indices
+        for label, indices in sorted(label_to_indices.items()):
+            n_samples = len(indices)
+            n_train = int(0.9 * n_samples)
+            
+            # Shuffle indices for this class
+            indices_shuffled = indices.copy()
+            random.shuffle(indices_shuffled)
+            
+            train_indices.extend(indices_shuffled[:n_train])
+            test_indices.extend(indices_shuffled[n_train:])
+            
+            label_name = self.label_id_to_name.get(label, "Unknown")
+            print(f"  {label_name:20s} (ID: {label:2d}): {n_train:3d} train, {n_samples - n_train:3d} test  (total: {n_samples:3d})")
+        
+        # Shuffle again
         random.shuffle(train_indices)
         random.shuffle(test_indices)
         
+        # Assign to this dataset
         if self.split == 'train':
             self.indices = train_indices
-            print(f"\nTrain split: {len(self.indices)} samples")
-        else:  # test
+        else:
             self.indices = test_indices
-            print(f"\nTest split: {len(self.indices)} samples")
         
-        # Print class distribution after indices are assigned
-        distribution = self.get_class_distribution()
-        print(f"Class distribution: {distribution}")
+        print(f"\n✓ {self.split.capitalize()} split: {len(self.indices)} samples")
+        self._print_class_distribution()
+    
+    def _print_class_distribution(self):
+        """Print class distribution for current split."""
+        distribution = defaultdict(int)
+        for idx in self.indices:
+            label = self.processed_indices[idx]['label']
+            distribution[label] += 1
         
-        # Create text queries for OWL-ViT based on our dataset classes
-        self.text_queries_mapping = {
-            'Diving': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing diving'],
-            'Golf-Swing': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing golf swing'],
-            'Kicking': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing kicking'],
-            'Lifting': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing lifting'],
-            'Riding-Horse': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing riding horse'],
-            'Run': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing running'],
-            'SkateBoarding': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing skateboarding'],
-            'Swing-Bench': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing swing bench'],
-            'Swing-SideAngle': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing swing side angle'],
-            'Walk': ['human', 'person', 'people', 'body', 'human body', 'human being', 'doing walking']
-        }
-        print(f"OWL-ViT text queries prepared for {len(self.text_queries_mapping)} classes")
-    
-    def _initialize_owlvit(self):
-        """Lazily initialize OWL-ViT model to avoid CUDA multiprocessing issues"""
-        if not self._model_initialized:
-            with threading.Lock():  # Thread-safe initialization
-                if not self._model_initialized:  # Double-check after acquiring lock
-                    print("Initializing OWL-ViT model...")
-                    self.owlvit_model = OwlViTForObjectDetection.from_pretrained("google/owlvit-base-patch32")
-                    self.owlvit_processor = OwlViTProcessor.from_pretrained("google/owlvit-base-patch32")
-                    
-                    # Use GPU if available, but handle CUDA initialization carefully
-                    if torch.cuda.is_available():
-                        try:
-                            self.device = torch.device("cuda")
-                            self.owlvit_model = self.owlvit_model.to(self.device)
-                            print(f"OWL-ViT model loaded on GPU: {self.device}")
-                        except RuntimeError as e:
-                            if "Cannot re-initialize CUDA" in str(e):
-                                print("CUDA re-initialization error detected, falling back to CPU")
-                                self.device = torch.device("cpu")
-                                self.owlvit_model = self.owlvit_model.to(self.device)
-                            else:
-                                raise e
-                    else:
-                        self.device = torch.device("cpu")
-                        print("CUDA not available, using CPU")
-                    
-                    self.owlvit_model.eval()
-                    self._model_initialized = True
-    
-    def _initialize_sam(self):
-        """Lazily initialize SAM model to avoid CUDA multiprocessing issues"""
-        if not self._sam_initialized:
-            with threading.Lock():  # Thread-safe initialization
-                if not self._sam_initialized:  # Double-check after acquiring lock
-                    print("Initializing SAM model...")
-                    model_type = "vit_b"
-                    if model_type == "vit_h":
-                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_h_4b8939.pth")
-                    elif model_type == "vit_l":
-                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_l_0b3195.pth")
-                    else:  # vit_b
-                        checkpoint_path = os.path.join(os.path.dirname(__file__), "checkpoints", "SAM", "sam_vit_b_01ec64.pth")
-                                
-                    sam = sam_model_registry[model_type](checkpoint=checkpoint_path)
-                    
-                    # Use GPU if available, but handle CUDA initialization carefully
-                    if torch.cuda.is_available():
-                        try:
-                            sam.cuda()
-                            print(f"SAM model loaded on GPU")
-                        except RuntimeError as e:
-                            if "Cannot re-initialize CUDA" in str(e):
-                                print("CUDA re-initialization error detected for SAM, falling back to CPU")
-                                sam.cpu()
-                            else:
-                                raise e
-                    else:
-                        sam.cpu()
-                        print("CUDA not available for SAM, using CPU")
-                    
-                    self.predictor = SamPredictor(sam)
-                    self._sam_initialized = True
+        print(f"\nClass distribution ({self.split} split):")
+        for label, count in sorted(distribution.items()):
+            label_name = self.label_id_to_name.get(label, "Unknown")
+            percentage = (count / len(self.indices)) * 100
+            print(f"  {label_name:20s} (ID: {label:2d}): {count:3d} samples ({percentage:5.1f}%)")
     
     def __len__(self):
+        """Return number of samples in this split."""
         return len(self.indices)
     
     def __getitem__(self, idx):
-        # Initialize models lazily to avoid CUDA multiprocessing issues
-        self._initialize_owlvit()
-        self._initialize_sam()
+        """
+        Load preprocessed image and label from disk.
         
-        # Get the actual index from our split indices
+        Args:
+            idx: Index in the current split
+            
+        Returns:
+            Tuple of (image_tensor, label)
+        """
+        # Get actual index in processed_indices
         actual_idx = self.indices[idx]
+        item = self.processed_indices[actual_idx]
         
-        # Get image and label from Deep Lake dataset
-        sample = self.deeplake_ds[actual_idx]      
+        # Load image from disk
+        image_path = item['save_path']
+        image = Image.open(image_path).convert('RGB')
         
-        image = sample.images.numpy()
-        original_label = int(sample.labels.numpy()[0])
+        # Apply transforms
+        if self.transform:
+            image = self.transform(image)
         
-        # Convert to grouped label if using grouped classes
-        if self.use_grouped_classes:
-            # Convert original label to grouped label
-            grouped_label = self.original_to_grouped_id.get(original_label, -1)
-            if grouped_label == -1:
-                print(f"Warning: Could not map original label {original_label} to grouped label")
-            label = grouped_label
-        else:
-            label = original_label
+        label = item['label']
         
-        pil_image = Image.fromarray(image, mode='RGB')
-        original_image = pil_image.resize((256, 256))
-        original_image_np = np.array(original_image)
-        
-        # Get class name for OWL-ViT
-        class_name = self.get_class_name(label)
-        
-        # Get text queries for this class
-        text_queries = self.text_queries_mapping.get(class_name, ['human', 'person', 'people'])
-        
-        # Process image and text inputs with OWL-ViT
-        inputs = self.owlvit_processor(text=text_queries, images=original_image, return_tensors="pt").to(self.device)
-        
-        # Get predictions
-        with torch.no_grad():
-            outputs = self.owlvit_model(**inputs)
-        
-        # Post-process to get boxes in original image coordinates
-        target_sizes = torch.Tensor([original_image.size[::-1]]).to(self.device)  # (height, width)
-        results = self.owlvit_processor.post_process(outputs=outputs, target_sizes=target_sizes)
-        
-        # Extract results
-        boxes = results[0]["boxes"].cpu().numpy()
-        scores = results[0]["scores"].cpu().numpy()
-        labels = results[0]["labels"].cpu().numpy()
-        
-        # Filter by confidence threshold
-        confidence_threshold = 0.1
-        valid_indices = scores >= confidence_threshold
-        
-        boxes = boxes[valid_indices]
-        scores = scores[valid_indices]
-        labels = labels[valid_indices]
-        
-        # Check if any bounding boxes were detected
-        if len(boxes) == 0:
-            # No bounding boxes detected - skip this image
-            self.dropped_images_count += 1
-            self.total_images_processed += 1
-            
-            if self.total_images_processed % 100 == 0:
-                print(f"Dropped {self.dropped_images_count}/{self.total_images_processed} images ({(100*self.dropped_images_count/self.total_images_processed):.1f}%) due to no bounding box detection")
-            
-            # Return None to indicate this sample should be skipped
-            return None
-        
-        # Use SAM model to segment the image using the first detected bounding box
-        self.predictor.set_image(original_image_np)
-        input_box = np.array(boxes[0])  # Use first detected box
-        
-        masks, _, _ = self.predictor.predict(
-            point_coords=None,
-            point_labels=None,
-            box=input_box,
-        )
-        
-        # Convert mask to proper input format
-        if len(masks) > 0:
-            mask = masks[0]  # Take first mask
-            
-            # Create masked image where background is zeroed out
-            masked_image_np = original_image_np.copy().astype(np.float32)
-            # Apply mask to each channel - zero out background
-            for c in range(3):
-                masked_image_np[:, :, c] = masked_image_np[:, :, c] * mask
-            
-            # Convert back to uint8
-            masked_image_np = masked_image_np.astype(np.uint8)
-            
-            # Convert masked image to PIL and apply transforms
-            masked_image_pil = Image.fromarray(masked_image_np)
-            transformed_image = self.transform(masked_image_pil)
-        else:
-            # If no mask found, use original image
-            transformed_image = self.transform(pil_image)
-        
-        self.total_images_processed += 1
-        return transformed_image, label, original_image_np
+        return image, label
     
     def get_class_name(self, label_id):
-        """Convert label ID to class name"""
+        """Convert label ID to class name."""
         return self.label_id_to_name.get(label_id, "Unknown")
     
-    def get_class_id(self, label_name):
-        """Convert class name to label ID"""
-        return self.label_name_to_id.get(label_name, -1)
-    
-    def get_all_class_names(self):
-        """Get all class names in order"""
-        return self.class_names.copy()
-    
-    def get_class_distribution(self):
-        """Get class distribution for current split"""
-        distribution = defaultdict(int)
-        for idx in self.indices:
-            sample = self.deeplake_ds[idx]
-            original_label = int(sample.labels.numpy()[0])
-            
-            if self.use_grouped_classes:
-                # Convert to grouped label
-                grouped_label = self.original_to_grouped_id.get(original_label, -1)
-                distribution[grouped_label] += 1
-            else:
-                distribution[original_label] += 1
-                
-        return dict(distribution)
-    
     def get_num_classes(self):
-        """Get the number of classes for model architecture"""
+        """Get number of classes."""
         return len(self.class_names)
     
-    def get_dropped_images_stats(self):
-        """Get statistics about dropped images"""
-        if self.total_images_processed == 0:
-            return {"dropped": 0, "total": 0, "percentage": 0.0}
-        
-        percentage = (self.dropped_images_count / self.total_images_processed) * 100
-        return {
-            "dropped": self.dropped_images_count,
-            "total": self.total_images_processed,
-            "percentage": percentage
-        }
+    def get_all_class_names(self):
+        """Get all class names."""
+        return self.class_names.copy()
 
 
-def collate_fn_skip_none(batch):
-    """Custom collate function that filters out None values (dropped images)"""
-    # Filter out None values (dropped images)
-    batch = [item for item in batch if item is not None]
-    
-    if len(batch) == 0:
-        # Return empty batch if all images were dropped
-        return None, None, None
-    
-    # Separate the components
-    images, labels, original_images = zip(*batch)
-    
-    # Convert to tensors
-    images = torch.stack(images, 0)
-    labels = torch.tensor(labels, dtype=torch.long)
-    
-    return images, labels, original_images
+# ============================================================================
+# DataLoader Functions
+# ============================================================================
 
-
-def setup_multiprocessing_for_cuda():
+def create_dataloader(dataset, batch_size=32, shuffle=True, num_workers=4, **kwargs):
     """
-    Setup multiprocessing to use 'spawn' method for CUDA compatibility.
-    Call this at the beginning of your main script before any DataLoader usage.
-    """
-    import multiprocessing as mp
-    
-    try:
-        # Try to set start method to 'spawn' for CUDA compatibility
-        mp.set_start_method('spawn', force=True)
-        print("✓ Multiprocessing set to 'spawn' method for CUDA compatibility")
-        return True
-    except RuntimeError as e:
-        if "context has already been set" in str(e):
-            current_method = mp.get_start_method()
-            if current_method == 'spawn':
-                print("✓ Multiprocessing already set to 'spawn' method")
-                return True
-            else:
-                print(f"⚠️  Multiprocessing already initialized with '{current_method}' method")
-                print("   CUDA multiprocessing may not work properly. Consider restarting the script.")
-                return False
-        else:
-            print(f"⚠️  Could not set multiprocessing to 'spawn': {e}")
-            return False
-
-
-def create_cuda_safe_dataloader(dataset, batch_size=32, shuffle=True, num_workers=4, **kwargs):
-    """
-    Create a DataLoader that's safe for CUDA multiprocessing.
+    Create a DataLoader for preprocessed dataset.
     
     Args:
-        dataset: The dataset to create DataLoader for
-        batch_size: Batch size for the DataLoader
-        shuffle: Whether to shuffle the data
-        num_workers: Number of worker processes (0 for no multiprocessing)
-        **kwargs: Additional arguments for DataLoader
-    
+        dataset: UCFSportsDataset instance
+        batch_size: Batch size
+        shuffle: Whether to shuffle
+        num_workers: Number of worker processes
+        **kwargs: Additional DataLoader arguments
+        
     Returns:
-        DataLoader with proper CUDA multiprocessing setup
+        DataLoader instance
     """
-    # Setup multiprocessing for CUDA if using multiple workers
-    if num_workers > 0:
-        setup_multiprocessing_for_cuda()
-    
     return data.DataLoader(
         dataset,
         batch_size=batch_size,
         shuffle=shuffle,
         num_workers=num_workers,
-        collate_fn=collate_fn_skip_none,
+        pin_memory=True,
         **kwargs
     )
