@@ -209,7 +209,7 @@ def initialize_owlvit_model(device_id=8):
     return model, processor, device
 
 
-def initialize_sam_model(device_id=9, model_type="vit_b"):
+def initialize_sam_model(device_id=7, model_type="vit_b"):
     """
     Initialize SAM model on specific GPU device.
     
@@ -330,7 +330,7 @@ def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processo
 
 def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings, 
                                 use_grouped_classes=True, owlvit_device_id=8, 
-                                sam_device_id=9, image_size=256):
+                                sam_device_id=7, image_size=256):
     """
     Preprocess entire dataset: OWL-ViT detection + SAM segmentation + save to disk.
     
@@ -476,7 +476,7 @@ class UCFSportsDataset(data.Dataset):
     
     def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True,
                  data_dir='./data/ucf_preprocessed', force_preprocess=False,
-                 owlvit_device_id=8, sam_device_id=9):
+                 owlvit_device_id=8, sam_device_id=7):
         """
         Initialize UCF Sports dataset with preprocessing.
         
