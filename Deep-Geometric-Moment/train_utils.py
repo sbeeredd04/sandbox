@@ -271,7 +271,7 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
 
 
 def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):
-    """Training function for UCF Sports Action dataset"""
+    """Training function for UCF Sports Action dataset with preprocessed images"""
     # switch to train mode
     model.train()
 
@@ -287,7 +287,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         global_step = epoch * len(train_loader)
 
     bar = Bar('Processing', max=len(train_loader))
-    for batch_idx, (inputs, targets, image) in enumerate(train_loader):
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -296,11 +296,11 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
         
-        # Processing is now handled in the dataset's __getitem__ method
-        # inputs already contain the processed (GroundingDINO + SAM) images
+        # Inputs already contain preprocessed images (OWL-ViT detection + SAM segmentation)
+        # loaded from disk - no on-the-fly processing needed
         
         if batch_idx < 1:
-            print(f"Processed inputs shape: {inputs.shape}")
+            print(f"Preprocessed inputs shape: {inputs.shape}")
             # Get class name for first sample for debugging
             class_name = train_loader.dataset.get_class_name(targets[0].item())
             print(f"Class name: {class_name}")
@@ -316,62 +316,62 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
 
-        # # Log images with step-based logging for first few batches
-        # if batch_idx < 2: 
-        #     # Process each image in the batch
-        #     for i in range(inputs.shape[0]):
-        #         current_step = global_step + batch_idx * inputs.shape[0] + i
+        # Log images with step-based logging for first few batches
+        if batch_idx < 2: 
+            # Process each image in the batch
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
+                current_step = global_step + batch_idx * inputs.shape[0] + i
                 
-        #         # Get predicted class and confidence
-        #         predicted_class = torch.argmax(outputs[i]).item()
-        #         prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
-        #         true_class = targets[i].item()
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
                 
-        #         # Process images for logging
-        #         # 1. Original image
-        #         original_img = wandb.Image(image[i].cpu().numpy(), 
-        #                                  caption=f"Original | True: {true_class} | Pred: {predicted_class} | Conf: {prediction_confidence:.3f}")
+                # Get class names
+                true_class_name = train_loader.dataset.get_class_name(true_class)
+                pred_class_name = train_loader.dataset.get_class_name(predicted_class)
                 
-        #         # 2. Transformed (denormalized) input image
-        #         mean = np.array([0.485, 0.456, 0.406])
-        #         std = np.array([0.229, 0.224, 0.225])
-        #         inp = inputs[i].detach().cpu().numpy()
-        #         inp = (inp * std[:, None, None]) + mean[:, None, None]
-        #         inp = np.clip(inp, 0, 1)
-        #         inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-        #         transformed_img = wandb.Image((inp * 255).astype(np.uint8), 
-        #                                     caption=f"Transformed | True: {true_class} | Pred: {predicted_class}")
+                # Process images for logging
+                # 1. Preprocessed input (denormalized)
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Preprocessed | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
                 
-        #         # 3-6. IMGR visualizations with viridis colormap
-        #         img1 = imgr1[i, 0].detach().cpu().numpy()
-        #         img_colored1 = plt.cm.viridis(img1)
-        #         img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
-        #         imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | True: {true_class} | Pred: {predicted_class}")
+                # 2-5. IMGR visualizations with viridis colormap
+                img1 = imgr1[i, 0].detach().cpu().numpy()
+                img_colored1 = plt.cm.viridis(img1)
+                img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
                 
-        #         img2 = imgr2[i, 0].detach().cpu().numpy()
-        #         img_colored2 = plt.cm.viridis(img2)
-        #         img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
-        #         imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | True: {true_class} | Pred: {predicted_class}")
+                img2 = imgr2[i, 0].detach().cpu().numpy()
+                img_colored2 = plt.cm.viridis(img2)
+                img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
                 
-        #         img3 = imgr3[i, 0].detach().cpu().numpy()
-        #         img_colored3 = plt.cm.viridis(img3)
-        #         img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
-        #         imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | True: {true_class} | Pred: {predicted_class}")
+                img3 = imgr3[i, 0].detach().cpu().numpy()
+                img_colored3 = plt.cm.viridis(img3)
+                img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
                 
-        #         img4 = imgr4[i, 0].detach().cpu().numpy()
-        #         img_colored4 = plt.cm.viridis(img4)
-        #         img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
-        #         imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | True: {true_class} | Pred: {predicted_class}")
+                img4 = imgr4[i, 0].detach().cpu().numpy()
+                img_colored4 = plt.cm.viridis(img4)
+                img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
                 
-        #         # Log all 6 images with step-based logging
-        #         wandb.log({
-        #             "train_images": [original_img, transformed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
-        #             "train_true_class": true_class,
-        #             "train_predicted_class": predicted_class,
-        #             "train_confidence": prediction_confidence,
-        #             "train_epoch": epoch,
-        #             "train_batch": batch_idx
-        #         }, step=current_step)
+                # Log all images with step-based logging
+                wandb.log({
+                    "train_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "train_true_class": true_class_name,
+                    "train_predicted_class": pred_class_name,
+                    "train_confidence": prediction_confidence,
+                    "train_epoch": epoch,
+                    "train_batch": batch_idx
+                }, step=current_step)
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -412,7 +412,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
 
 
 def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=None):
-    """Testing function for UCF Sports Action dataset"""
+    """Testing function for UCF Sports Action dataset with preprocessed images"""
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -428,7 +428,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
-    for batch_idx, (inputs, targets, image) in enumerate(val_loader):
+    for batch_idx, (inputs, targets) in enumerate(val_loader):
         
         # measure data loading time
         data_time.update(time.time() - end)
@@ -460,7 +460,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
         # Log images with step-based logging for first few batches
         if batch_idx < 2: 
             # Process each image in the batch
-            for i in range(inputs.shape[0]):
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
                 current_step = global_step + batch_idx * inputs.shape[0] + i
                 
                 # Get predicted class and confidence
@@ -468,47 +468,47 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
                 true_class = targets[i].item()
                 
-                # Process images for logging
-                # 1. Original image
-                original_img = wandb.Image(image[i].cpu().numpy(), 
-                                         caption=f"Original | True: {true_class} | Pred: {predicted_class} | Conf: {prediction_confidence:.3f}")
+                # Get class names
+                true_class_name = val_loader.dataset.get_class_name(true_class)
+                pred_class_name = val_loader.dataset.get_class_name(predicted_class)
                 
-                # 2. Transformed (denormalized) input image
+                # Process images for logging
+                # 1. Preprocessed input (denormalized)
                 mean = np.array([0.485, 0.456, 0.406])
                 std = np.array([0.229, 0.224, 0.225])
                 inp = inputs[i].detach().cpu().numpy()
                 inp = (inp * std[:, None, None]) + mean[:, None, None]
                 inp = np.clip(inp, 0, 1)
                 inp = np.transpose(inp, (1, 2, 0))  # C,H,W to H,W,C
-                transformed_img = wandb.Image((inp * 255).astype(np.uint8), 
-                                            caption=f"Transformed | True: {true_class} | Pred: {predicted_class}")
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Preprocessed | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
                 
-                # 3-6. IMGR visualizations with viridis colormap
+                # 2-5. IMGR visualizations with viridis colormap
                 img1 = imgr1[i, 0].detach().cpu().numpy()
                 img_colored1 = plt.cm.viridis(img1)
                 img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
-                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | True: {true_class} | Pred: {predicted_class}")
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
                 
                 img2 = imgr2[i, 0].detach().cpu().numpy()
                 img_colored2 = plt.cm.viridis(img2)
                 img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
-                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | True: {true_class} | Pred: {predicted_class}")
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
                 
                 img3 = imgr3[i, 0].detach().cpu().numpy()
                 img_colored3 = plt.cm.viridis(img3)
                 img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
-                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | True: {true_class} | Pred: {predicted_class}")
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
                 
                 img4 = imgr4[i, 0].detach().cpu().numpy()
                 img_colored4 = plt.cm.viridis(img4)
                 img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
-                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | True: {true_class} | Pred: {predicted_class}")
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
                 
-                # Log all 6 images with step-based logging
+                # Log all images with step-based logging
                 wandb.log({
-                    "test_images": [original_img, transformed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
-                    "test_true_class": true_class,
-                    "test_predicted_class": predicted_class,
+                    "test_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "test_true_class": true_class_name,
+                    "test_predicted_class": pred_class_name,
                     "test_confidence": prediction_confidence,
                     "test_epoch": epoch,
                     "test_batch": batch_idx

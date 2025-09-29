@@ -31,7 +31,7 @@ from train_utils import (
     train_olympic_action, test_olympic_action, 
     train_ucf_sports, test_ucf_sports
 )
-from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms, setup_multiprocessing_for_cuda, create_cuda_safe_dataloader
+from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms, create_dataloader
 import deeplake
 ds = deeplake.load('hub://activeloop/ucf-sports-action')
 
@@ -70,11 +70,14 @@ parser.add_argument('--image-path', default='', type=str, metavar='PATH', help='
 # Device options
 parser.add_argument('--gpu-id', default='0', type=str, help='id(s) for CUDA_VISIBLE_DEVICES')
 
+# UCF Sports preprocessing options
+parser.add_argument('--ucf-data-dir', default='./data/ucf_preprocessed', type=str, help='directory for preprocessed UCF Sports data')
+parser.add_argument('--ucf-force-preprocess', action='store_true', help='force reprocessing of UCF Sports data even if it exists')
+parser.add_argument('--ucf-owlvit-device', default=8, type=int, help='GPU device for OWL-ViT during preprocessing')
+parser.add_argument('--ucf-sam-device', default=9, type=int, help='GPU device for SAM during preprocessing')
+
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
-
-# Setup multiprocessing for CUDA compatibility
-setup_multiprocessing_for_cuda()
 
 # Use CUDA
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
@@ -463,20 +466,58 @@ def main():
         print(f"Olympic Action dataset loaded successfully with {num_classes} classes")
         
     elif args.dataset == 'ucf_sports':
-        # UCF Sports Action dataset transforms
+        # UCF Sports Action dataset with preprocessing
+        print(f"\n{'='*80}")
+        print(f"Setting up UCF Sports Action Dataset")
+        print(f"{'='*80}")
+        print(f"Data directory: {args.ucf_data_dir}")
+        print(f"Force preprocess: {args.ucf_force_preprocess}")
+        print(f"OWL-ViT device: cuda:{args.ucf_owlvit_device}")
+        print(f"SAM device: cuda:{args.ucf_sam_device}")
+        
+        # Get transforms for the preprocessed data
         transform = get_ucf_sports_transforms()
         
-        # Create UCF Sports datasets with grouped classes
-        trainset = UCFSportsDataset(ds, split='train', transform=transform, use_grouped_classes=True)
-        train_loader = create_cuda_safe_dataloader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
+        # Create UCF Sports datasets with grouped classes and preprocessing
+        trainset = UCFSportsDataset(
+            ds, 
+            split='train', 
+            transform=transform, 
+            use_grouped_classes=True,
+            data_dir=args.ucf_data_dir,
+            force_preprocess=args.ucf_force_preprocess,
+            owlvit_device_id=args.ucf_owlvit_device,
+            sam_device_id=args.ucf_sam_device
+        )
+        train_loader = create_dataloader(
+            trainset, 
+            batch_size=args.train_batch, 
+            shuffle=True, 
+            num_workers=args.workers
+        )
         
-        # Test loader
-        testset = UCFSportsDataset(ds, split='test', transform=transform, use_grouped_classes=True)
-        val_loader = create_cuda_safe_dataloader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
+        # Test loader (uses same preprocessed data)
+        testset = UCFSportsDataset(
+            ds, 
+            split='test', 
+            transform=transform, 
+            use_grouped_classes=True,
+            data_dir=args.ucf_data_dir,
+            force_preprocess=False,  # Don't reprocess for test set
+            owlvit_device_id=args.ucf_owlvit_device,
+            sam_device_id=args.ucf_sam_device
+        )
+        val_loader = create_dataloader(
+            testset, 
+            batch_size=args.test_batch, 
+            shuffle=False, 
+            num_workers=args.workers
+        )
         
         # Update num_classes to use grouped classes count
         num_classes = trainset.get_num_classes()
-        print(f"Using {num_classes} grouped classes for training")
+        print(f"\n✓ Using {num_classes} grouped classes for training")
+        print(f"✓ Class names: {trainset.get_all_class_names()}")
         
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
