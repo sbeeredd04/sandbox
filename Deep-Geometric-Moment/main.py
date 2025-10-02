@@ -94,12 +94,24 @@ if use_cuda:
 best_acc = 0  # best test accuracy
 
 
-def run_inference(model_path, image_path, use_cuda=True):
+def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0):
+    """
+    Run inference on images using the same preprocessing pipeline as training.
     
+    Args:
+        model_path: Path to the trained model checkpoint
+        image_path: Path to image file or directory of images
+        use_cuda: Whether to use CUDA for model inference
+        owlvit_device_id: GPU device ID for OWL-ViT
+        sam_device_id: GPU device ID for SAM
+    
+    Returns:
+        Results of inference (format depends on batch vs single image)
+    """
     # Determine if we're processing a single image or multiple images
     if os.path.isdir(image_path):
         # Get all image files from the directory
-        image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', '*.webp']
+        image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.bmp', '*.tiff', '*.webp', '*.avif']
         image_files = []
         for ext in image_extensions:
             image_files.extend(glob.glob(os.path.join(image_path, ext)))
@@ -119,17 +131,30 @@ def run_inference(model_path, image_path, use_cuda=True):
         image_files = [image_path]
         is_batch_processing = False
     
-    # Get UCF Sports class names using utility functions with grouping
-    from ucf_action_utils import get_ucf_class_mappings
+    # Import necessary functions from ucf_action_utils
+    from ucf_action_utils import (
+        get_ucf_class_mappings, 
+        initialize_owlvit_model, 
+        initialize_sam_model,
+        get_owlvit_text_queries,
+        detect_and_segment_image,
+        get_ucf_sports_transforms
+    )
     
+    # Get UCF Sports class names using utility functions with grouping
     (grouped_class_names, original_to_grouped_id, grouped_to_original_ids, 
-     get_class_name, get_grouped_class_id, grouping_rules) = get_ucf_class_mappings(ds, group_similar=True)
+     grouped_id_to_label, grouping_rules) = get_ucf_class_mappings(ds, group_similar=True)
     
     print(f"Grouped class names: {grouped_class_names}")
-    print(f"Original to grouped ID mapping: {original_to_grouped_id}")
+    
+    # Initialize OWL-ViT and SAM models for preprocessing
+    print("\nInitializing preprocessing models...")
+    owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
+    sam_predictor = initialize_sam_model(sam_device_id)
+    text_queries_mapping = get_owlvit_text_queries()
     
     # Load the model
-    print(f"Loading model from {model_path}")
+    print(f"\nLoading DGM model from {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
     
     # Create model architecture - use grouped classes count
@@ -164,23 +189,42 @@ def run_inference(model_path, image_path, use_cuda=True):
     model.eval()
     
     # Use the same transforms as training (without augmentation)
-    transform = transforms.Compose([
-        transforms.Resize((256, 256)),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-    ])
+    transform = get_ucf_sports_transforms(image_size=256)
     
     # Process all images
     results = []
     all_predictions = []
+    skipped_images = []
     
     for i, img_file in enumerate(image_files):
-        print(f"Processing image {i+1}/{len(image_files)}: {os.path.basename(img_file)}")
+        print(f"\nProcessing image {i+1}/{len(image_files)}: {os.path.basename(img_file)}")
         
         try:
-            # Load image
-            image = Image.open(img_file).convert('RGB')
-            input_tensor = transform(image).unsqueeze(0)  # Add batch dimension
+            # Load original image
+            original_image = Image.open(img_file).convert('RGB')
+            original_image_np = np.array(original_image.resize((256, 256)))
+            
+            # Apply OWL-ViT + SAM preprocessing pipeline
+            print("  Applying OWL-ViT detection + SAM segmentation...")
+            # Use a generic class name for preprocessing
+            masked_image_np, success = detect_and_segment_image(
+                original_image_np, 
+                "human", 
+                owlvit_model, 
+                owlvit_processor, 
+                owlvit_device, 
+                sam_predictor, 
+                text_queries_mapping
+            )
+            
+            if not success or masked_image_np is None:
+                print(f"  ⚠️ No detections found in image: {os.path.basename(img_file)}")
+                skipped_images.append(img_file)
+                continue
+            
+            # Convert preprocessed image to tensor
+            preprocessed_image = Image.fromarray(masked_image_np)
+            input_tensor = transform(preprocessed_image).unsqueeze(0)  # Add batch dimension
             
             if use_cuda and torch.cuda.is_available():
                 input_tensor = input_tensor.cuda()
@@ -203,35 +247,36 @@ def run_inference(model_path, image_path, use_cuda=True):
                     'predicted_class': predicted_class,
                     'confidence': confidence,
                     'class_name': class_name,
-                    'probabilities': probabilities[0].cpu().numpy()
+                    'probabilities': probabilities[0].cpu().numpy(),
+                    'original_image': original_image_np,
+                    'preprocessed_image': masked_image_np
                 }
                 results.append(result)
                 all_predictions.append(predicted_class)
                 
                 # Create visualization for this image
-                plt.figure(figsize=(15, 5))
+                plt.figure(figsize=(20, 5))
                 
-                # Plot 1: Original image (denormalized)
-                plt.subplot(1, 3, 1)
-                # Denormalize the input tensor for display
-                mean_norm = np.array([0.485, 0.456, 0.406])
-                std_norm = np.array([0.229, 0.224, 0.225])
-                denorm_img = input_tensor[0].cpu().numpy()
-                denorm_img = (denorm_img * std_norm[:, None, None]) + mean_norm[:, None, None]
-                denorm_img = np.clip(denorm_img, 0, 1)
-                denorm_img = np.transpose(denorm_img, (1, 2, 0))  # C,H,W to H,W,C
-                plt.imshow(denorm_img)
+                # Plot 1: Original image
+                plt.subplot(1, 4, 1)
+                plt.imshow(original_image_np)
                 plt.title(f'Original Image\n{os.path.basename(img_file)}')
                 plt.axis('off')
                 
-                # Plot 2: IMRG visualization
-                plt.subplot(1, 3, 2)
+                # Plot 2: Preprocessed image (after OWL-ViT + SAM)
+                plt.subplot(1, 4, 2)
+                plt.imshow(masked_image_np)
+                plt.title('Preprocessed Image\n(OWL-ViT + SAM)')
+                plt.axis('off')
+                
+                # Plot 3: IMRG visualization
+                plt.subplot(1, 4, 3)
                 plt.imshow(imgr4[0, 0].cpu().numpy(), cmap='viridis')
                 plt.title(f'IMRG Visualization\nPredicted: {class_name}')
                 plt.axis('off')
                 
-                # Plot 3: Class probabilities bar chart (already grouped)
-                plt.subplot(1, 3, 3)
+                # Plot 4: Class probabilities bar chart (already grouped)
+                plt.subplot(1, 4, 4)
                 probs = probabilities[0].cpu().numpy()
                 
                 # Model now outputs grouped class probabilities directly
@@ -245,20 +290,32 @@ def run_inference(model_path, image_path, use_cuda=True):
                 plt.tight_layout()
                 
                 # Save individual result
+                os.makedirs('./data/debug', exist_ok=True)
                 safe_filename = os.path.splitext(os.path.basename(img_file))[0]
                 plt.savefig(f'./data/debug/inference_{safe_filename}_{class_name}.png', dpi=150, bbox_inches='tight')
                 
-                # Log individual image to wandb
-                wandb.log({
-                    f'inference_{safe_filename}': wandb.Image(plt.gcf())
-                })
+                # Log individual image to wandb if wandb is initialized
+                try:
+                    wandb.log({
+                        f'inference_{safe_filename}': wandb.Image(plt.gcf())
+                    })
+                except:
+                    pass  # Skip wandb logging if not initialized
+                
                 plt.close()
                 
-                print(f"  -> Predicted: {class_name} (confidence: {confidence:.4f})")
+                print(f"  ✓ Predicted: {class_name} (confidence: {confidence:.4f})")
                 
         except Exception as e:
-            print(f"Error processing {img_file}: {str(e)}")
+            print(f"  ⚠️ Error processing {img_file}: {str(e)}")
             continue
+    
+    # Print summary of skipped images
+    if skipped_images:
+        print(f"\n{'='*80}")
+        print(f"⚠️ Skipped {len(skipped_images)} images due to no detections:")
+        for img in skipped_images:
+            print(f"  - {os.path.basename(img)}")
     
     # Create summary visualization if processing multiple images
     if is_batch_processing and results:
@@ -574,7 +631,7 @@ def main():
     if args.evaluate: 
         print('\nEvaluation only')
         if args.dataset == 'ucf_sports':
-            test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, start_epoch, use_cuda)
+            test_loss, test_acc, _ = test_ucf_sports(val_loader, model, criterion, start_epoch, use_cuda)
         elif args.dataset == 'olympic_action':
             test_loss, test_acc = test_olympic_action(val_loader, model, criterion, start_epoch, use_cuda)
         else:
@@ -589,8 +646,8 @@ def main():
             train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
         elif args.dataset == 'ucf_sports':
-            train_loss, train_acc = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda)
+            train_loss, train_acc, global_step = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            test_loss, test_acc, global_step = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step)
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)

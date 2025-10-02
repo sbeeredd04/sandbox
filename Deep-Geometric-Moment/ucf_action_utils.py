@@ -134,7 +134,7 @@ def get_ucf_class_mappings(deeplake_ds, group_similar=True):
         return original_class_names, label_name_to_id, label_id_to_name
 
 
-def get_ucf_sports_transforms(image_size=224):
+def get_ucf_sports_transforms(image_size=256):
     """
     Get transforms for UCF Sports dataset (applied AFTER preprocessing).
     
@@ -329,8 +329,8 @@ def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processo
 
 
 def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings, 
-                                use_grouped_classes=True, owlvit_device_id=8, 
-                                sam_device_id=7, image_size=256):
+                                use_grouped_classes=True, owlvit_device_id=4, 
+                                sam_device_id=5, image_size=256):
     """
     Preprocess entire dataset: OWL-ViT detection + SAM segmentation + save to disk.
     
