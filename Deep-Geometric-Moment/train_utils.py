@@ -284,7 +284,8 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
 
     # Use provided global_step or create a fallback
     if global_step is None:
-        global_step = epoch * len(train_loader)
+        # Ensure global_step is always increasing by using a large multiplier
+        global_step = epoch * 10000
 
     bar = Bar('Processing', max=len(train_loader))
     for batch_idx, (inputs, targets) in enumerate(train_loader):
@@ -397,14 +398,15 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
                     )
         bar.next()
         
-        # Log epoch metrics 
+        # Log epoch metrics with global step to ensure monotonically increasing steps
+        current_global_step = global_step + batch_idx
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
             'train_loss': losses.avg,
             'train_top1': top1.avg,
             'train_top5': top5.avg,
-        })
+        }, step=current_global_step)
     
     bar.finish()
     final_global_step = global_step + len(train_loader) * train_loader.batch_size
@@ -424,7 +426,8 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
 
     # Use provided global_step or create a fallback
     if global_step is None:
-        global_step = epoch * 10000  # Large offset to avoid conflicts
+        # Ensure global_step is always increasing by using a large multiplier
+        global_step = (epoch * 10000) + 5000  # Add offset to avoid conflicts with training steps
 
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
@@ -533,14 +536,15 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
         
         bar.next()
         
-        # Log epoch metrics
+        # Log epoch metrics with global step to ensure monotonically increasing steps
+        current_global_step = global_step + batch_idx
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
             'test_loss': losses.avg,
             'test_top1': top1.avg,
             'test_top5': top5.avg,
-        })
+        }, step=current_global_step)
         
     bar.finish()
     final_global_step = global_step + len(val_loader) * val_loader.batch_size

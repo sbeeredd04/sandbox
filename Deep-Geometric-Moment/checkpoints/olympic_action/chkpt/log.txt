@@ -1,1 +1,3 @@
 Learning Rate	Train Loss	Valid Loss	Train Acc.	Valid Acc.	
+0.099999	2.965724	3.001934	8.183306	15.432099	
+0.099980	2.747866	3.144176	15.384615	7.407407	

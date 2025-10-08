@@ -75,6 +75,7 @@ parser.add_argument('--ucf-data-dir', default='./data/ucf_preprocessed', type=st
 parser.add_argument('--ucf-force-preprocess', action='store_true', help='force reprocessing of UCF Sports data even if it exists')
 parser.add_argument('--ucf-owlvit-device', default=8, type=int, help='GPU device for OWL-ViT during preprocessing')
 parser.add_argument('--ucf-sam-device', default=9, type=int, help='GPU device for SAM during preprocessing')
+parser.add_argument('--ucf-exclude-categories', nargs='+', default=None, help='list of category names to exclude from the dataset')
 
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
@@ -535,34 +536,31 @@ def main():
         # Get transforms for the preprocessed data
         transform = get_ucf_sports_transforms()
         
-        # Create UCF Sports datasets with grouped classes and preprocessing
-        trainset = UCFSportsDataset(
-            ds, 
-            split='train', 
-            transform=transform, 
-            use_grouped_classes=True,
+        # Create UCF Sports datasets with grouped classes, preprocessing, and optional category exclusion
+        from ucf_action_utils import create_ucf_sports_datasets
+        
+        # Print category exclusion info if provided
+        if args.ucf_exclude_categories:
+            print(f"⚠️ Excluding categories: {args.ucf_exclude_categories}")
+        
+        # Create datasets with consistent settings for train and test
+        trainset, testset = create_ucf_sports_datasets(
+            ds,
             data_dir=args.ucf_data_dir,
+            transform=transform,
+            use_grouped_classes=True,
             force_preprocess=args.ucf_force_preprocess,
             owlvit_device_id=args.ucf_owlvit_device,
-            sam_device_id=args.ucf_sam_device
+            sam_device_id=args.ucf_sam_device,
+            exclude_categories=args.ucf_exclude_categories
         )
+        
+        # Create train loader
         train_loader = create_dataloader(
             trainset, 
             batch_size=args.train_batch, 
             shuffle=True, 
             num_workers=args.workers
-        )
-        
-        # Test loader (uses same preprocessed data)
-        testset = UCFSportsDataset(
-            ds, 
-            split='test', 
-            transform=transform, 
-            use_grouped_classes=True,
-            data_dir=args.ucf_data_dir,
-            force_preprocess=False,  # Don't reprocess for test set
-            owlvit_device_id=args.ucf_owlvit_device,
-            sam_device_id=args.ucf_sam_device
         )
         val_loader = create_dataloader(
             testset, 
@@ -646,7 +644,10 @@ def main():
             train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
         elif args.dataset == 'ucf_sports':
-            train_loss, train_acc, global_step = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
+            # Initialize global_step for the first epoch, then use the returned value
+            if epoch == 0:
+                global_step = 0
+            train_loss, train_acc, global_step = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step)
             test_loss, test_acc, global_step = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step)
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)

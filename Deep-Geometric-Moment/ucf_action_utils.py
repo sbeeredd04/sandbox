@@ -466,17 +466,23 @@ def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings,
 # Dataset Class
 # ============================================================================
 
+
 class UCFSportsDataset(data.Dataset):
     """
     UCF Sports Action Dataset that uses preprocessed images.
     
     Images are preprocessed once with OWL-ViT + SAM and saved to disk.
     __getitem__ simply loads preprocessed images from disk.
+    
+    Features:
+    - Support for category exclusion via exclude_categories parameter
+    - Grouped or original class labels
+    - Stratified train/test split
     """
     
     def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True,
                  data_dir='./data/ucf_preprocessed', force_preprocess=False,
-                 owlvit_device_id=8, sam_device_id=7):
+                 owlvit_device_id=8, sam_device_id=7, exclude_categories=None):
         """
         Initialize UCF Sports dataset with preprocessing.
         
@@ -489,16 +495,21 @@ class UCFSportsDataset(data.Dataset):
             force_preprocess: Force reprocessing even if preprocessed data exists
             owlvit_device_id: GPU device for OWL-ViT during preprocessing
             sam_device_id: GPU device for SAM during preprocessing
+            exclude_categories: List of category names to exclude from the dataset
         """
         self.deeplake_ds = deeplake_ds
         self.split = split
         self.transform = transform or get_ucf_sports_transforms()
         self.use_grouped_classes = use_grouped_classes
         self.data_dir = data_dir
+        self.exclude_categories = exclude_categories or []
         
         print(f"\n{'='*80}")
         print(f"Initializing UCF Sports Dataset - {split.upper()} split")
         print(f"{'='*80}")
+        
+        if self.exclude_categories:
+            print(f"⚠️ Excluding categories: {self.exclude_categories}")
         
         # Get class mappings
         self.class_mappings = get_ucf_class_mappings(deeplake_ds, group_similar=use_grouped_classes)
@@ -508,8 +519,21 @@ class UCFSportsDataset(data.Dataset):
         else:
             self.class_names, _, self.label_id_to_name = self.class_mappings
         
+        # Create mapping from class name to ID for exclusion
+        self.class_name_to_id = {name: idx for idx, name in self.label_id_to_name.items()}
+        
+        # Get IDs of categories to exclude
+        self.exclude_category_ids = []
+        for category in self.exclude_categories:
+            if category in self.class_name_to_id:
+                self.exclude_category_ids.append(self.class_name_to_id[category])
+            else:
+                print(f"⚠️ Warning: Category '{category}' not found in dataset, ignoring.")
+        
         print(f"✓ Number of classes: {len(self.class_names)}")
         print(f"✓ Class names: {self.class_names}")
+        if self.exclude_category_ids:
+            print(f"✓ Excluding class IDs: {self.exclude_category_ids}")
         
         # Check if preprocessing needed
         metadata_path = os.path.join(data_dir, 'metadata.pkl')
@@ -536,6 +560,16 @@ class UCFSportsDataset(data.Dataset):
             self.label_id_to_name = metadata['label_id_to_name']
             
             print(f"✓ Loaded {len(self.processed_indices)} preprocessed images")
+        
+        # Filter out excluded categories
+        if self.exclude_category_ids:
+            original_count = len(self.processed_indices)
+            self.processed_indices = [
+                item for item in self.processed_indices 
+                if item['label'] not in self.exclude_category_ids
+            ]
+            filtered_count = original_count - len(self.processed_indices)
+            print(f"✓ Filtered out {filtered_count} images from excluded categories")
         
         # Create stratified train/test split (90/10)
         self._create_train_test_split()
@@ -669,3 +703,58 @@ def create_dataloader(dataset, batch_size=32, shuffle=True, num_workers=4, **kwa
         pin_memory=True,
         **kwargs
     )
+
+
+def create_ucf_sports_datasets(deeplake_ds, data_dir='./data/ucf_preprocessed', 
+                              transform=None, use_grouped_classes=True,
+                              force_preprocess=False, owlvit_device_id=8, 
+                              sam_device_id=7, exclude_categories=None):
+    """
+    Create train and test UCFSportsDataset instances with optional category exclusion.
+    
+    Args:
+        deeplake_ds: Deep Lake dataset
+        data_dir: Directory to save/load preprocessed data
+        transform: Transforms to apply when loading images
+        use_grouped_classes: Whether to group similar action classes
+        force_preprocess: Force reprocessing even if preprocessed data exists
+        owlvit_device_id: GPU device for OWL-ViT during preprocessing
+        sam_device_id: GPU device for SAM during preprocessing
+        exclude_categories: List of category names to exclude from the dataset
+        
+    Returns:
+        Tuple of (train_dataset, test_dataset)
+    """
+    # Create transform if not provided
+    if transform is None:
+        transform = get_ucf_sports_transforms()
+    
+    # Create train dataset
+    train_dataset = UCFSportsDataset(
+        deeplake_ds, 
+        split='train', 
+        transform=transform, 
+        use_grouped_classes=use_grouped_classes,
+        data_dir=data_dir,
+        force_preprocess=force_preprocess,
+        owlvit_device_id=owlvit_device_id,
+        sam_device_id=sam_device_id,
+        exclude_categories=exclude_categories
+    )
+    
+    # Create test dataset (using same preprocessing)
+    test_dataset = UCFSportsDataset(
+        deeplake_ds, 
+        split='test', 
+        transform=transform, 
+        use_grouped_classes=use_grouped_classes,
+        data_dir=data_dir,
+        force_preprocess=False,  # Don't reprocess for test set
+        owlvit_device_id=owlvit_device_id,
+        sam_device_id=sam_device_id,
+        exclude_categories=exclude_categories
+    )
+    
+    return train_dataset, test_dataset
+
+## Do not transform while preprocssing the dataset... 
