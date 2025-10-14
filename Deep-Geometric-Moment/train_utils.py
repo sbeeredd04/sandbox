@@ -147,7 +147,8 @@ def test(val_loader, model, criterion, epoch, use_cuda):
     return (losses.avg, top1.avg)
 
 
-def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler):
+def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):
+    """Training function for Olympic Action dataset with wandb logging"""
     model.train()
 
     batch_time = AverageMeter()
@@ -155,6 +156,10 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
+    
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = epoch * 10000
     
     end = time.time()
     bar = Bar('Processing', max=len(train_loader))
@@ -167,14 +172,19 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
             inputs, targets = inputs.cuda(), targets.cuda()
         inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
         
-        # Handle video data: inputs shape is (batch_size, num_frames, C, H, W)
-        # Take a random frame from each video sequence for training
-        batch_size, num_frames, C, H, W = inputs.shape
-        frame_indices = torch.randint(0, num_frames, (batch_size,))
-        inputs = inputs[torch.arange(batch_size), frame_indices]  # Shape: (batch_size, C, H, W)
+        # Handle preprocessed data: inputs shape is (batch_size, C, H, W)
+        # No need to select frames since preprocessed frames are already individual images
+        
+        # Log class names for first batch
+        if batch_idx == 0:
+            print(f"Input shape: {inputs.shape}")
+            if hasattr(train_loader.dataset, 'get_class_name'):
+                class_name = train_loader.dataset.get_class_name(targets[0].item())
+                print(f"Sample class: {class_name}")
         
         # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
         outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
+        targets = targets.long()
         loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
@@ -182,6 +192,65 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
         losses.update(loss.item(), inputs.size(0))
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
+        
+        # Log images with wandb for first few batches
+        if batch_idx < 2:
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
+                current_step = global_step + batch_idx * inputs.shape[0] + i
+                
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
+                
+                # Get class names
+                if hasattr(train_loader.dataset, 'get_class_name'):
+                    true_class_name = train_loader.dataset.get_class_name(true_class)
+                    pred_class_name = train_loader.dataset.get_class_name(predicted_class)
+                else:
+                    true_class_name = f"class_{true_class}"
+                    pred_class_name = f"class_{predicted_class}"
+                
+                # Denormalize and prepare input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Input | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
+                
+                # IMGR visualizations with viridis colormap
+                img1 = imgr1[i, 0].detach().cpu().numpy()
+                img_colored1 = plt.cm.viridis(img1)
+                img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
+                
+                img2 = imgr2[i, 0].detach().cpu().numpy()
+                img_colored2 = plt.cm.viridis(img2)
+                img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
+                
+                img3 = imgr3[i, 0].detach().cpu().numpy()
+                img_colored3 = plt.cm.viridis(img3)
+                img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
+                
+                img4 = imgr4[i, 0].detach().cpu().numpy()
+                img_colored4 = plt.cm.viridis(img4)
+                img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
+                
+                # Log all images with step-based logging
+                wandb.log({
+                    "olympic_train_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "olympic_train_true_class": true_class_name,
+                    "olympic_train_predicted_class": pred_class_name,
+                    "olympic_train_confidence": prediction_confidence,
+                    "olympic_train_epoch": epoch,
+                    "olympic_train_batch": batch_idx
+                }, step=current_step)
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -207,16 +276,33 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
                     top5=top5.avg,
                     )
         bar.next()
+        
+        # Log epoch metrics with global step
+        current_global_step = global_step + batch_idx
+        wandb.log({
+            'olympic_epoch': epoch,
+            'olympic_batch_number': batch_idx,
+            'olympic_train_loss': losses.avg,
+            'olympic_train_top1': top1.avg,
+            'olympic_train_top5': top5.avg,
+        }, step=current_global_step)
+    
     bar.finish()
-    return (losses.avg, top1.avg)
+    final_global_step = global_step + len(train_loader) * train_loader.batch_size
+    return (losses.avg, top1.avg, final_global_step)
 
 
-def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
+def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_step=None):
+    """Testing function for Olympic Action dataset with wandb logging"""
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
+    
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = (epoch * 10000) + 5000  # Add offset to avoid conflicts with training steps
     
     model.eval()
     
@@ -227,20 +313,24 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
         # measure data loading time
         data_time.update(time.time() - end)
         
+        # Convert targets to long immediately
+        targets = targets.long()
+        
         if use_cuda:
             inputs, targets = inputs.cuda(), targets.cuda()
         
         with torch.no_grad():
             inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
         
-        # Handle video data: inputs shape is (batch_size, num_frames, C, H, W)
-        # For testing, take the middle frame from each video sequence
-        batch_size, num_frames, C, H, W = inputs.shape
-        middle_frame = num_frames // 2
-        inputs = inputs[:, middle_frame]  # Shape: (batch_size, C, H, W)
+        # Handle preprocessed data: inputs shape is (batch_size, C, H, W)
+        # No need to select frames since preprocessed frames are already individual images
         
         # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
         outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
+        
+        # Ensure targets are in valid range
+        num_classes = outputs.shape[1]
+        targets = torch.clamp(targets, 0, num_classes - 1)
         loss = criterion(outputs, targets)
         
         # measure accuracy and record loss
@@ -248,6 +338,65 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
         losses.update(loss.item(), inputs.size(0))
         top1.update(prec1.item(), inputs.size(0))
         top5.update(prec5.item(), inputs.size(0))
+        
+        # Log images with wandb for first few batches
+        if batch_idx < 2:
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
+                current_step = global_step + batch_idx * inputs.shape[0] + i
+                
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
+                
+                # Get class names
+                if hasattr(val_loader.dataset, 'get_class_name'):
+                    true_class_name = val_loader.dataset.get_class_name(true_class)
+                    pred_class_name = val_loader.dataset.get_class_name(predicted_class)
+                else:
+                    true_class_name = f"class_{true_class}"
+                    pred_class_name = f"class_{predicted_class}"
+                
+                # Denormalize and prepare input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Input | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
+                
+                # IMGR visualizations with viridis colormap
+                img1 = imgr1[i, 0].detach().cpu().numpy()
+                img_colored1 = plt.cm.viridis(img1)
+                img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
+                
+                img2 = imgr2[i, 0].detach().cpu().numpy()
+                img_colored2 = plt.cm.viridis(img2)
+                img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
+                
+                img3 = imgr3[i, 0].detach().cpu().numpy()
+                img_colored3 = plt.cm.viridis(img3)
+                img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
+                
+                img4 = imgr4[i, 0].detach().cpu().numpy()
+                img_colored4 = plt.cm.viridis(img4)
+                img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
+                
+                # Log all images with step-based logging
+                wandb.log({
+                    "olympic_test_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "olympic_test_true_class": true_class_name,
+                    "olympic_test_predicted_class": pred_class_name,
+                    "olympic_test_confidence": prediction_confidence,
+                    "olympic_test_epoch": epoch,
+                    "olympic_test_batch": batch_idx
+                }, step=current_step)
         
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -266,8 +415,20 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda):
                     top5=top5.avg,
                     )
         bar.next()
+        
+        # Log epoch metrics with global step
+        current_global_step = global_step + batch_idx
+        wandb.log({
+            'olympic_epoch': epoch,
+            'olympic_batch_number': batch_idx,
+            'olympic_test_loss': losses.avg,
+            'olympic_test_top1': top1.avg,
+            'olympic_test_top5': top5.avg,
+        }, step=current_global_step)
+        
     bar.finish()
-    return (losses.avg, top1.avg)
+    final_global_step = global_step + len(val_loader) * val_loader.batch_size
+    return (losses.avg, top1.avg, final_global_step)
 
 
 def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):

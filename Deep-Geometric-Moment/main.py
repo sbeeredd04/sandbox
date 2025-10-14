@@ -32,7 +32,9 @@ from train_utils import (
     train_ucf_sports, test_ucf_sports
 )
 from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms, create_dataloader
+from ucf_action_utils import (get_ucf_class_mappings, initialize_owlvit_model, initialize_sam_model, get_owlvit_text_queries, detect_and_segment_image, get_ucf_sports_transforms, create_ucf_sports_datasets)
 import deeplake
+
 ds = deeplake.load('hub://activeloop/ucf-sports-action')
 
 wandb.login()
@@ -76,6 +78,15 @@ parser.add_argument('--ucf-force-preprocess', action='store_true', help='force r
 parser.add_argument('--ucf-owlvit-device', default=8, type=int, help='GPU device for OWL-ViT during preprocessing')
 parser.add_argument('--ucf-sam-device', default=9, type=int, help='GPU device for SAM during preprocessing')
 parser.add_argument('--ucf-exclude-categories', nargs='+', default=None, help='list of category names to exclude from the dataset')
+parser.add_argument('--ucf-use-csv', action='store_true', help='use CSV file as data source for UCF Sports')
+
+# Olympic Action preprocessing options
+parser.add_argument('--olympic-data-dir', default='./data/olympic_preprocessed', type=str, help='directory for preprocessed Olympic Action data')
+parser.add_argument('--olympic-force-preprocess', action='store_true', help='force reprocessing of Olympic Action data even if it exists')
+parser.add_argument('--olympic-owlvit-device', default=0, type=int, help='GPU device for OWL-ViT during preprocessing')
+parser.add_argument('--olympic-sam-device', default=1, type=int, help='GPU device for SAM during preprocessing')
+parser.add_argument('--olympic-frames-per-video', default=20, type=int, help='number of frames to extract per video')
+parser.add_argument('--olympic-use-csv', action='store_true', help='use CSV file as data source for Olympic Action')
 
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
@@ -95,7 +106,7 @@ if use_cuda:
 best_acc = 0  # best test accuracy
 
 
-def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0):
+def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0, process=False):
     """
     Run inference on images using the same preprocessing pipeline as training.
     
@@ -132,28 +143,20 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
         image_files = [image_path]
         is_batch_processing = False
     
-    # Import necessary functions from ucf_action_utils
-    from ucf_action_utils import (
-        get_ucf_class_mappings, 
-        initialize_owlvit_model, 
-        initialize_sam_model,
-        get_owlvit_text_queries,
-        detect_and_segment_image,
-        get_ucf_sports_transforms
-    )
-    
     # Get UCF Sports class names using utility functions with grouping
     (grouped_class_names, original_to_grouped_id, grouped_to_original_ids, 
      grouped_id_to_label, grouping_rules) = get_ucf_class_mappings(ds, group_similar=True)
     
     print(f"Grouped class names: {grouped_class_names}")
     
-    # Initialize OWL-ViT and SAM models for preprocessing
-    print("\nInitializing preprocessing models...")
-    owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
-    sam_predictor = initialize_sam_model(sam_device_id)
-    text_queries_mapping = get_owlvit_text_queries()
-    
+    #if process is True, then initialize the models and text queries mapping
+    if process:
+        # Initialize OWL-ViT and SAM models for preprocessing
+        print("\nInitializing preprocessing models...")
+        owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
+        sam_predictor = initialize_sam_model(sam_device_id)
+        text_queries_mapping = get_owlvit_text_queries()
+        
     # Load the model
     print(f"\nLoading DGM model from {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
@@ -201,27 +204,31 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
         print(f"\nProcessing image {i+1}/{len(image_files)}: {os.path.basename(img_file)}")
         
         try:
-            # Load original image
-            original_image = Image.open(img_file).convert('RGB')
-            original_image_np = np.array(original_image.resize((256, 256)))
-            
-            # Apply OWL-ViT + SAM preprocessing pipeline
-            print("  Applying OWL-ViT detection + SAM segmentation...")
-            # Use a generic class name for preprocessing
-            masked_image_np, success = detect_and_segment_image(
-                original_image_np, 
-                "human", 
-                owlvit_model, 
-                owlvit_processor, 
-                owlvit_device, 
-                sam_predictor, 
-                text_queries_mapping
-            )
-            
-            if not success or masked_image_np is None:
-                print(f"  ⚠️ No detections found in image: {os.path.basename(img_file)}")
-                skipped_images.append(img_file)
-                continue
+            if process:
+                # Load original image
+                original_image = Image.open(img_file).convert('RGB')
+                original_image_np = np.array(original_image.resize((256, 256)))
+                
+                # Apply OWL-ViT + SAM preprocessing pipeline
+                print("  Applying OWL-ViT detection + SAM segmentation...")
+                # Use a generic class name for preprocessing
+                masked_image_np, success = detect_and_segment_image(
+                    original_image_np, 
+                    "human", 
+                    owlvit_model, 
+                    owlvit_processor, 
+                    owlvit_device, 
+                    sam_predictor, 
+                    text_queries_mapping
+                )
+                
+                if not success or masked_image_np is None:
+                    print(f"  ⚠️ No detections found in image: {os.path.basename(img_file)}")
+                    skipped_images.append(img_file)
+                    continue
+                
+            else:
+                masked_image_np = Image.open(img_file).convert('RGB')
             
             # Convert preprocessed image to tensor
             preprocessed_image = Image.fromarray(masked_image_np)
@@ -510,18 +517,33 @@ def main():
         
     # Olympic Action dataset
     if args.dataset == 'olympic_action':
-        print("Loading Olympic Action dataset...")
-        # Import Olympic Action dataset utilities
-        from utils.olympic_action import create_olympic_action_dataloaders
+        print(f"\n{'='*80}")
+        print(f"Setting up Olympic Action Dataset with Preprocessing")
+        print(f"{'='*80}")
+        print(f"Root directory: ./data/olympic_sports")
+        print(f"Data directory: {args.olympic_data_dir}")
+        print(f"Force preprocess: {args.olympic_force_preprocess}")
+        print(f"OWL-ViT device: cuda:{args.olympic_owlvit_device}")
+        print(f"SAM device: cuda:{args.olympic_sam_device}")
+        print(f"Frames per video: {args.olympic_frames_per_video}")
+        print(f"Use CSV: {args.olympic_use_csv}")
         
-        # Create Olympic Action datasets and dataloaders
-        train_loader, val_loader, num_classes = create_olympic_action_dataloaders(
+        # Import Olympic Action dataset utilities
+        from utils.olympic_action import create_preprocessed_dataloaders
+        
+        # Create Olympic Action datasets and dataloaders with preprocessing
+        train_loader, val_loader, num_classes = create_preprocessed_dataloaders(
             root_dir='./data/olympic_sports',
+            data_dir=args.olympic_data_dir,
             batch_size=args.train_batch,
             num_workers=args.workers,
-            num_frames_per_video=16
+            frames_per_video=args.olympic_frames_per_video,
+            force_preprocess=args.olympic_force_preprocess,
+            owlvit_device_id=args.olympic_owlvit_device,
+            sam_device_id=args.olympic_sam_device,
+            use_csv=args.olympic_use_csv
         )
-        print(f"Olympic Action dataset loaded successfully with {num_classes} classes")
+        print(f"\n✓ Olympic Action dataset loaded successfully with {num_classes} classes")
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset with preprocessing
@@ -536,9 +558,7 @@ def main():
         # Get transforms for the preprocessed data
         transform = get_ucf_sports_transforms()
         
-        # Create UCF Sports datasets with grouped classes, preprocessing, and optional category exclusion
-        from ucf_action_utils import create_ucf_sports_datasets
-        
+         
         # Print category exclusion info if provided
         if args.ucf_exclude_categories:
             print(f"⚠️ Excluding categories: {args.ucf_exclude_categories}")
@@ -584,12 +604,12 @@ def main():
 
     # Create model with appropriate image dimensions
     if args.dataset == 'ucf_sports':
-        # UCF Sports uses 224x224 images
+        # UCF Sports uses 256x256 images
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
         print(f"Created model with {num_classes} output classes")
     elif args.dataset == 'olympic_action':
-        # Olympic Action uses 224x224 images (resized from 480x360)
+        # Olympic Action uses 256x256 images (resized from 480x360)
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
     else:
@@ -608,10 +628,13 @@ def main():
     # Resume
     if args.dataset == 'olympic_action':
         title = 'olympic_action-DGM-ResNet18'
+        
     elif args.dataset == 'ucf_sports':
         title = 'ucf-sports-DGM-ResNet18'
+        
     else:
         title = 'cifar-DGM-ResNet18'
+        
     if args.resume:
         # Load checkpoint.
         print('==> Resuming from checkpoint..')
@@ -631,7 +654,7 @@ def main():
         if args.dataset == 'ucf_sports':
             test_loss, test_acc, _ = test_ucf_sports(val_loader, model, criterion, start_epoch, use_cuda)
         elif args.dataset == 'olympic_action':
-            test_loss, test_acc = test_olympic_action(val_loader, model, criterion, start_epoch, use_cuda)
+            test_loss, test_acc, _ = test_olympic_action(val_loader, model, criterion, start_epoch, use_cuda)
         else:
             test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda)
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
@@ -641,8 +664,11 @@ def main():
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, scheduler.get_last_lr()[0]))
         
         if args.dataset == 'olympic_action':
-            train_loss, train_acc = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
-            test_loss, test_acc = test_olympic_action(val_loader, model, criterion, epoch, use_cuda)
+            # Initialize global_step for the first epoch, then use the returned value
+            if epoch == 0:
+                global_step = 0
+            train_loss, train_acc, global_step = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step)
+            test_loss, test_acc, global_step = test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_step)
         elif args.dataset == 'ucf_sports':
             # Initialize global_step for the first epoch, then use the returned value
             if epoch == 0:

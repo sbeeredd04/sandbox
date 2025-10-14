@@ -33,6 +33,8 @@ import os
 import pickle
 from tqdm import tqdm
 import json
+import pandas as pd
+import csv
 
 # Import OWL-ViT and SAM
 from transformers import OwlViTProcessor, OwlViTForObjectDetection
@@ -42,24 +44,6 @@ from segment_anything import SamPredictor, sam_model_registry
 # ============================================================================
 # Class Mapping Helper Functions (Module-level for pickle compatibility)
 # ============================================================================
-
-def get_class_name_mapping(original_label_id, original_to_grouped_id, grouped_id_to_label):
-    """Convert original label ID to grouped class name."""
-    if original_label_id in original_to_grouped_id:
-        grouped_id = original_to_grouped_id[original_label_id]
-        return grouped_id_to_label.get(grouped_id, "Unknown")
-    return "Unknown"
-
-
-def get_grouped_class_id_mapping(original_label_id, original_to_grouped_id):
-    """Convert original label ID to grouped class ID."""
-    return original_to_grouped_id.get(original_label_id, -1)
-
-
-def get_class_name_simple(label_id, label_id_to_name):
-    """Convert label ID to class name."""
-    return label_id_to_name.get(label_id, "Unknown")
-
 
 def get_ucf_class_mappings(deeplake_ds, group_similar=True):
     """
@@ -209,7 +193,7 @@ def initialize_owlvit_model(device_id=8):
     return model, processor, device
 
 
-def initialize_sam_model(device_id=7, model_type="vit_b"):
+def initialize_sam_model(device_id=1, model_type="vit_h"):
     """
     Initialize SAM model on specific GPU device.
     
@@ -253,27 +237,8 @@ def initialize_sam_model(device_id=7, model_type="vit_b"):
 # Preprocessing Functions
 # ============================================================================
 
-def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processor, 
-                             owlvit_device, sam_predictor, text_queries_mapping, 
-                             confidence_threshold=0.1):
-    """
-    Run OWL-ViT detection and SAM segmentation on a single image.
-    
-    Args:
-        image_np: Image as numpy array (H, W, 3)
-        class_name: Action class name for text queries
-        owlvit_model: OWL-ViT model
-        owlvit_processor: OWL-ViT processor
-        owlvit_device: Device for OWL-ViT
-        sam_predictor: SAM predictor
-        text_queries_mapping: Dictionary of class names to text queries
-        confidence_threshold: Minimum confidence for detections
-        
-    Returns:
-        Tuple of (masked_image_np, success_flag)
-        - masked_image_np: Image with background removed (or None if detection failed)
-        - success_flag: True if detection and segmentation succeeded
-    """
+def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processor, owlvit_device, sam_predictor, text_queries_mapping, confidence_threshold=0.1):
+
     # Convert to PIL for OWL-ViT
     pil_image = Image.fromarray(image_np, mode='RGB')
     
@@ -328,30 +293,16 @@ def detect_and_segment_image(image_np, class_name, owlvit_model, owlvit_processo
     return None, False
 
 
-def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings, 
-                                use_grouped_classes=True, owlvit_device_id=4, 
-                                sam_device_id=5, image_size=256):
-    """
-    Preprocess entire dataset: OWL-ViT detection + SAM segmentation + save to disk.
-    
-    Args:
-        deeplake_ds: Deep Lake dataset
-        save_dir: Directory to save preprocessed images
-        class_mappings: Tuple of class mapping dictionaries
-        use_grouped_classes: Whether to use grouped classes
-        owlvit_device_id: GPU device for OWL-ViT
-        sam_device_id: GPU device for SAM
-        image_size: Resize images to this size before processing
-        
-    Returns:
-        Tuple of (processed_indices, dropped_count, label_to_name_mapping)
-    """
+def preprocess_and_save_dataset(deeplake_ds, save_dir, csv_save_path, class_mappings, use_grouped_classes=True, owlvit_device_id=0, sam_device_id=1, image_size=256):
+
     print(f"\n{'='*80}")
     print(f"PREPROCESSING UCF SPORTS DATASET")
     print(f"{'='*80}")
     
     # Create save directory
     os.makedirs(save_dir, exist_ok=True)
+    
+    print(f"Saving preprocessed images to {save_dir}")
     
     # Initialize models on specific GPUs
     owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
@@ -376,49 +327,52 @@ def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings,
     print(f"Processing {total_samples} images...")
     print(f"{'='*80}\n")
     
-    for idx in tqdm(range(total_samples), desc="Preprocessing images"):
-        sample = deeplake_ds[idx]
-        image = sample.images.numpy()
-        original_label = int(sample.labels.numpy()[0])
+    # Create data directory if it doesn't exist and open CSV file for writing
+    os.makedirs(os.path.dirname(csv_save_path), exist_ok=True)
+    with open(csv_save_path, 'w', newline='') as f:
+        writer = csv.writer(f)
+        writer.writerow(['original_idx', 'save_path', 'label', 'original_label'])
         
-        # Convert to grouped label if needed
-        if use_grouped_classes:
-            label = original_to_grouped_id.get(original_label, -1)
-            if label == -1:
-                print(f"⚠️  Warning: Could not map original label {original_label}")
+        for idx in tqdm(range(total_samples), desc="Preprocessing images"):
+            sample = deeplake_ds[idx]
+            image = sample.images.numpy()
+            original_label = int(sample.labels.numpy()[0])
+                        
+            # Convert to grouped label if needed
+            if use_grouped_classes:
+                label = original_to_grouped_id.get(original_label, -1)
+                if label == -1:
+                    print(f" Warning: Could not map original label {original_label}")
+                    continue
+            else:
+                label = original_label
+            
+            # Get class name
+            class_name = label_id_to_name.get(label, "Unknown")
+            
+            # Run detection and segmentation
+            masked_image_np, success = detect_and_segment_image(image, class_name, owlvit_model, owlvit_processor, owlvit_device, sam_predictor, text_queries_mapping)
+            
+            if not success or masked_image_np is None:
+                dropped_count += 1
                 continue
-        else:
-            label = original_label
-        
-        # Resize image
-        pil_image = Image.fromarray(image, mode='RGB')
-        resized_image = pil_image.resize((image_size, image_size))
-        image_np = np.array(resized_image)
-        
-        # Get class name
-        class_name = label_id_to_name.get(label, "Unknown")
-        
-        # Run detection and segmentation
-        masked_image_np, success = detect_and_segment_image(
-            image_np, class_name, owlvit_model, owlvit_processor, 
-            owlvit_device, sam_predictor, text_queries_mapping
-        )
-        
-        if not success or masked_image_np is None:
-            dropped_count += 1
-            continue
-        
-        # Save preprocessed image
-        save_path = os.path.join(save_dir, f"img_{idx:05d}_label_{label}.png")
-        Image.fromarray(masked_image_np).save(save_path)
-        
-        # Record this index as successfully processed
-        processed_indices.append({
-            'original_idx': idx,
-            'save_path': save_path,
-            'label': label,
-            'original_label': original_label
-        })
+            
+            # Save preprocessed image
+            save_path = os.path.join(save_dir, f"img_{idx:05d}_label_{label}.png")
+            Image.fromarray(masked_image_np).save(save_path)
+            
+            # Record this index as successfully processed
+            processed_indices.append({
+                'original_idx': idx,
+                'save_path': save_path,
+                'label': label,
+                'original_label': original_label,
+                'class_name': class_name
+            })
+            
+            # Write to csv (now within the same with block)
+            writer.writerow([idx, save_path, label, original_label, class_name])
+
     
     # Save metadata
     metadata = {
@@ -461,7 +415,6 @@ def preprocess_and_save_dataset(deeplake_ds, save_dir, class_mappings,
     
     return processed_indices, dropped_count, label_id_to_name
 
-
 # ============================================================================
 # Dataset Class
 # ============================================================================
@@ -480,9 +433,7 @@ class UCFSportsDataset(data.Dataset):
     - Stratified train/test split
     """
     
-    def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True,
-                 data_dir='./data/ucf_preprocessed', force_preprocess=False,
-                 owlvit_device_id=8, sam_device_id=7, exclude_categories=None):
+    def __init__(self, deeplake_ds, split='train', transform=None, use_grouped_classes=True, data_dir='./data/ucf_preprocessed', force_preprocess=False, owlvit_device_id=0, sam_device_id=1, exclude_categories=None, use_csv=True):
         """
         Initialize UCF Sports dataset with preprocessing.
         
@@ -503,13 +454,15 @@ class UCFSportsDataset(data.Dataset):
         self.use_grouped_classes = use_grouped_classes
         self.data_dir = data_dir
         self.exclude_categories = exclude_categories or []
+        self.use_csv = use_csv
+        self.csv_save_path = './data/dataset.csv'
         
         print(f"\n{'='*80}")
         print(f"Initializing UCF Sports Dataset - {split.upper()} split")
         print(f"{'='*80}")
         
         if self.exclude_categories:
-            print(f"⚠️ Excluding categories: {self.exclude_categories}")
+            print(f"Excluding categories: {self.exclude_categories}")
         
         # Get class mappings
         self.class_mappings = get_ucf_class_mappings(deeplake_ds, group_similar=use_grouped_classes)
@@ -528,7 +481,7 @@ class UCFSportsDataset(data.Dataset):
             if category in self.class_name_to_id:
                 self.exclude_category_ids.append(self.class_name_to_id[category])
             else:
-                print(f"⚠️ Warning: Category '{category}' not found in dataset, ignoring.")
+                print(f"Warning: Category '{category}' not found in dataset, ignoring.")
         
         print(f"✓ Number of classes: {len(self.class_names)}")
         print(f"✓ Class names: {self.class_names}")
@@ -537,29 +490,49 @@ class UCFSportsDataset(data.Dataset):
         
         # Check if preprocessing needed
         metadata_path = os.path.join(data_dir, 'metadata.pkl')
-        
-        if force_preprocess or not os.path.exists(metadata_path):
-            print(f"\n⚠️  Preprocessed data not found or force_preprocess=True")
+        csv_path = os.path.join(data_dir, 'dataset.csv')
+
+        # Check if preprocessing is needed
+        need_preprocessing = force_preprocess or not os.path.exists(metadata_path)
+
+        if need_preprocessing:
+            print(f"\nPreprocessed data not found or force_preprocess=True")
             print(f"Starting preprocessing pipeline...")
             
             # Run preprocessing
-            processed_indices, dropped_count, label_id_to_name = preprocess_and_save_dataset(
-                deeplake_ds, data_dir, self.class_mappings, use_grouped_classes,
-                owlvit_device_id, sam_device_id
-            )
+            processed_indices, dropped_count, label_id_to_name = preprocess_and_save_dataset( deeplake_ds, data_dir, self.csv_save_path, self.class_mappings, use_grouped_classes, owlvit_device_id, sam_device_id)
             
             self.processed_indices = processed_indices
             self.label_id_to_name = label_id_to_name
+            
+            # After preprocessing, both PKL and CSV should exist
+            print(f"Preprocessing complete. Created both PKL and CSV files.")
         else:
-            # Load preprocessed metadata
-            print(f"✓ Loading preprocessed data from {data_dir}")
-            with open(metadata_path, 'rb') as f:
-                metadata = pickle.load(f)
+            # No preprocessing needed, load from existing files based on preference
+            if self.use_csv and os.path.exists(csv_path):
+                # Load from CSV file
+                print(f"Loading preprocessed data from CSV: {csv_path}")
+                self.processed_indices = []
+                
+                with open(csv_path, 'r') as f:
+                    reader = csv.DictReader(f)
+                    for row in reader:
+                        self.processed_indices.append({
+                            'original_idx': int(row['original_idx']),
+                            'save_path': row['save_path'],
+                            'label': int(row['label']),
+                            'original_label': int(row['original_label'])
+                        })
+            else:
+                # Load from PKL file
+                print(f"Loading preprocessed data from PKL: {metadata_path}")
+                with open(metadata_path, 'rb') as f:
+                    metadata = pickle.load(f)
+                
+                self.processed_indices = metadata['processed_indices']
+                self.label_id_to_name = metadata['label_id_to_name']
             
-            self.processed_indices = metadata['processed_indices']
-            self.label_id_to_name = metadata['label_id_to_name']
-            
-            print(f"✓ Loaded {len(self.processed_indices)} preprocessed images")
+            print(f"Loaded {len(self.processed_indices)} preprocessed images")
         
         # Filter out excluded categories
         if self.exclude_category_ids:
@@ -569,7 +542,7 @@ class UCFSportsDataset(data.Dataset):
                 if item['label'] not in self.exclude_category_ids
             ]
             filtered_count = original_count - len(self.processed_indices)
-            print(f"✓ Filtered out {filtered_count} images from excluded categories")
+            print(f"Filtered out {filtered_count} images from excluded categories")
         
         # Create stratified train/test split (90/10)
         self._create_train_test_split()
@@ -618,7 +591,7 @@ class UCFSportsDataset(data.Dataset):
         else:
             self.indices = test_indices
         
-        print(f"\n✓ {self.split.capitalize()} split: {len(self.indices)} samples")
+        print(f"\n{self.split.capitalize()} split: {len(self.indices)} samples")
         self._print_class_distribution()
     
     def _print_class_distribution(self):
@@ -707,8 +680,8 @@ def create_dataloader(dataset, batch_size=32, shuffle=True, num_workers=4, **kwa
 
 def create_ucf_sports_datasets(deeplake_ds, data_dir='./data/ucf_preprocessed', 
                               transform=None, use_grouped_classes=True,
-                              force_preprocess=False, owlvit_device_id=8, 
-                              sam_device_id=7, exclude_categories=None):
+                              force_preprocess=False, owlvit_device_id=0, 
+                              sam_device_id=1, exclude_categories=None, use_csv=True):
     """
     Create train and test UCFSportsDataset instances with optional category exclusion.
     
@@ -736,6 +709,7 @@ def create_ucf_sports_datasets(deeplake_ds, data_dir='./data/ucf_preprocessed',
         transform=transform, 
         use_grouped_classes=use_grouped_classes,
         data_dir=data_dir,
+        use_csv=use_csv,
         force_preprocess=force_preprocess,
         owlvit_device_id=owlvit_device_id,
         sam_device_id=sam_device_id,
@@ -749,6 +723,7 @@ def create_ucf_sports_datasets(deeplake_ds, data_dir='./data/ucf_preprocessed',
         transform=transform, 
         use_grouped_classes=use_grouped_classes,
         data_dir=data_dir,
+        use_csv=use_csv,
         force_preprocess=False,  # Don't reprocess for test set
         owlvit_device_id=owlvit_device_id,
         sam_device_id=sam_device_id,
