@@ -106,8 +106,21 @@ if use_cuda:
 best_acc = 0  # best test accuracy
 
 
-def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0, process=False):
+
+def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0, process=True):
+    """
+    Run inference on images using the same preprocessing pipeline as training.
     
+    Args:
+        model_path: Path to the trained model checkpoint
+        image_path: Path to image file or directory of images
+        use_cuda: Whether to use CUDA for model inference
+        owlvit_device_id: GPU device ID for OWL-ViT
+        sam_device_id: GPU device ID for SAM
+    
+    Returns:
+        Results of inference (format depends on batch vs single image)
+    """
     # Determine if we're processing a single image or multiple images
     if os.path.isdir(image_path):
         # Get all image files from the directory
@@ -137,6 +150,14 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
     
     print(f"Grouped class names: {grouped_class_names}")
     
+    #if process is True, then initialize the models and text queries mapping
+    if process:
+        # Initialize OWL-ViT and SAM models for preprocessing
+        print("\nInitializing preprocessing models...")
+        owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
+        sam_predictor = initialize_sam_model(sam_device_id)
+        text_queries_mapping = get_owlvit_text_queries()
+        
     # Load the model
     print(f"\nLoading DGM model from {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
@@ -184,18 +205,35 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
         print(f"\nProcessing image {i+1}/{len(image_files)}: {os.path.basename(img_file)}")
         
         try:
+            if process:
+                # Load original image
+                original_image = Image.open(img_file).convert('RGB')
+                original_image_np = np.array(original_image.resize((256, 256)))
+                
+                # Apply OWL-ViT + SAM preprocessing pipeline
+                print("  Applying OWL-ViT detection + SAM segmentation...")
+                # Use a generic class name for preprocessing
+                masked_image_np, success = detect_and_segment_image(
+                    original_image_np, 
+                    "human", 
+                    owlvit_model, 
+                    owlvit_processor, 
+                    owlvit_device, 
+                    sam_predictor, 
+                    text_queries_mapping
+                )
+                
+                if not success or masked_image_np is None:
+                    print(f"  ⚠️ No detections found in image: {os.path.basename(img_file)}")
+                    skipped_images.append(img_file)
+                    continue
+                
+            else:
+                masked_image_np = Image.open(img_file).convert('RGB')
             
-            
-
-            #load the image
-            original_image_np = Image.open(img_file).convert('RGB')
-            original_image_np = np.array(original_image_np.resize((256, 256)))
-            
-            # Line 193
-            masked_image_np = Image.open(img_file).convert('RGB')
-
-            preprocessed_image = masked_image_np 
-            input_tensor = transform(preprocessed_image).unsqueeze(0)
+            # Convert preprocessed image to tensor
+            preprocessed_image = Image.open(img_file).convert('RGB')
+            input_tensor = transform(preprocessed_image).unsqueeze(0)  # Add batch dimension
             
             if use_cuda and torch.cuda.is_available():
                 input_tensor = input_tensor.cuda()
