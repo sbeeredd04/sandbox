@@ -378,11 +378,12 @@ def preprocess_and_save_dataset(root_dir, save_dir, owlvit_device_id=0,
                     'frame_idx': frame_idx,
                     'save_path': save_path,
                     'label': label,
-                    'video_name': video_name
+                    'video_name': video_name,
+                    'class_name': class_name
                 })
                 
                 # Write to CSV
-                writer.writerow([video_idx, frame_idx, save_path, label, video_name])
+                writer.writerow([video_idx, frame_idx, save_path, label, video_name, class_name])
                 total_frames_extracted += 1
     
     # Save metadata as pickle
@@ -495,6 +496,8 @@ class OlympicAction(Dataset):
         
         # Check if preprocessing needed
         metadata_path = os.path.join(data_dir, 'metadata.pkl')
+        print(f"Preprocess is needed: {force_preprocess or not os.path.exists(metadata_path)}")
+        
         
         if not self.use_csv:
             if force_preprocess or not os.path.exists(metadata_path):
@@ -519,6 +522,19 @@ class OlympicAction(Dataset):
                 
                 print(f"Loaded {len(self.processed_indices)} preprocessed frames")
         else:
+            
+            if force_preprocess or not os.path.exists(self.csv_path):
+                print(f"\nPreprocessed data not found or force_preprocess=True")
+                print(f"Starting preprocessing pipeline...")
+                
+                # Run preprocessing
+                processed_indices, dropped_count, label_id_to_name = preprocess_and_save_dataset(
+                    root_dir, data_dir, owlvit_device_id, sam_device_id, frames_per_video
+                )
+                
+                self.processed_indices = processed_indices
+                self.label_id_to_name = label_id_to_name
+
             # Load from CSV
             if not self.csv_path:
                 self.csv_path = os.path.join(data_dir, 'dataset.csv')
@@ -687,6 +703,9 @@ def create_preprocessed_dataloaders(root_dir, data_dir='./data/olympic_preproces
     Returns:
         train_loader, test_loader, num_classes
     """
+    
+    # create data_dir if it doesn't exist
+    os.makedirs(data_dir, exist_ok=True)
     
     transform = get_olympic_transforms()
     
