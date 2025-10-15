@@ -23,16 +23,12 @@ import glob
 from PIL import Image
 import matplotlib.pyplot as plt
 from collections import Counter
+from combined_utils import *
 
 from model import ResNet18
 from utils import Logger, mkdir_p, savefig
-from train_utils import (
-    WarmupCosineSchedule, save_checkpoint, train, test, 
-    train_olympic_action, test_olympic_action, 
-    train_ucf_sports, test_ucf_sports
-)
-from ucf_action_utils import UCFSportsDataset, get_ucf_sports_transforms, create_dataloader
-from ucf_action_utils import (get_ucf_class_mappings, initialize_owlvit_model, initialize_sam_model, get_owlvit_text_queries, detect_and_segment_image, get_ucf_sports_transforms, create_ucf_sports_datasets)
+from train_utils import *
+from ucf_action_utils import *
 import deeplake
 
 ds = deeplake.load('hub://activeloop/ucf-sports-action')
@@ -88,6 +84,10 @@ parser.add_argument('--olympic-sam-device', default=1, type=int, help='GPU devic
 parser.add_argument('--olympic-frames-per-video', default=20, type=int, help='number of frames to extract per video')
 parser.add_argument('--olympic-use-csv', action='store_true', help='use CSV file as data source for Olympic Action')
 
+parser.add_argument('--combined-csv-path', default='./data/combined_dataset.csv', type=str, help='path to combined CSV file')
+parser.add_argument('--combined-train-ratio', default=0.9, type=float, help='ratio of data for training')
+parser.add_argument('--combined-random-seed', default=42, type=int, help='random seed for reproducible splits')
+
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
 
@@ -107,19 +107,7 @@ best_acc = 0  # best test accuracy
 
 
 def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0, process=False):
-    """
-    Run inference on images using the same preprocessing pipeline as training.
     
-    Args:
-        model_path: Path to the trained model checkpoint
-        image_path: Path to image file or directory of images
-        use_cuda: Whether to use CUDA for model inference
-        owlvit_device_id: GPU device ID for OWL-ViT
-        sam_device_id: GPU device ID for SAM
-    
-    Returns:
-        Results of inference (format depends on batch vs single image)
-    """
     # Determine if we're processing a single image or multiple images
     if os.path.isdir(image_path):
         # Get all image files from the directory
@@ -149,14 +137,6 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
     
     print(f"Grouped class names: {grouped_class_names}")
     
-    #if process is True, then initialize the models and text queries mapping
-    if process:
-        # Initialize OWL-ViT and SAM models for preprocessing
-        print("\nInitializing preprocessing models...")
-        owlvit_model, owlvit_processor, owlvit_device = initialize_owlvit_model(owlvit_device_id)
-        sam_predictor = initialize_sam_model(sam_device_id)
-        text_queries_mapping = get_owlvit_text_queries()
-        
     # Load the model
     print(f"\nLoading DGM model from {model_path}")
     checkpoint = torch.load(model_path, map_location='cpu')
@@ -204,35 +184,18 @@ def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam
         print(f"\nProcessing image {i+1}/{len(image_files)}: {os.path.basename(img_file)}")
         
         try:
-            if process:
-                # Load original image
-                original_image = Image.open(img_file).convert('RGB')
-                original_image_np = np.array(original_image.resize((256, 256)))
-                
-                # Apply OWL-ViT + SAM preprocessing pipeline
-                print("  Applying OWL-ViT detection + SAM segmentation...")
-                # Use a generic class name for preprocessing
-                masked_image_np, success = detect_and_segment_image(
-                    original_image_np, 
-                    "human", 
-                    owlvit_model, 
-                    owlvit_processor, 
-                    owlvit_device, 
-                    sam_predictor, 
-                    text_queries_mapping
-                )
-                
-                if not success or masked_image_np is None:
-                    print(f"  ⚠️ No detections found in image: {os.path.basename(img_file)}")
-                    skipped_images.append(img_file)
-                    continue
-                
-            else:
-                masked_image_np = Image.open(img_file).convert('RGB')
             
-            # Convert preprocessed image to tensor
-            preprocessed_image = Image.fromarray(masked_image_np)
-            input_tensor = transform(preprocessed_image).unsqueeze(0)  # Add batch dimension
+            
+
+            #load the image
+            original_image_np = Image.open(img_file).convert('RGB')
+            original_image_np = np.array(original_image_np.resize((256, 256)))
+            
+            # Line 193
+            masked_image_np = Image.open(img_file).convert('RGB')
+
+            preprocessed_image = masked_image_np 
+            input_tensor = transform(preprocessed_image).unsqueeze(0)
             
             if use_cuda and torch.cuda.is_available():
                 input_tensor = input_tensor.cuda()
@@ -510,7 +473,11 @@ def main():
         
     elif args.dataset == 'ucf_sports':
         # UCF Sports Action dataset
-        num_classes = 10
+        num_classes = 10 - len(args.ucf_exclude_categories)
+        
+    elif args.dataset == 'combined':
+        num_classes = 26
+        
     else:
         dataloader = datasets.CIFAR100
         num_classes = 100
@@ -593,7 +560,31 @@ def main():
         num_classes = trainset.get_num_classes()
         print(f"\n✓ Using {num_classes} grouped classes for training")
         print(f"✓ Class names: {trainset.get_all_class_names()}")
+    
+    elif args.dataset == 'combined':
+        trainset, testset = create_combined_datasets(
+            csv_path=args.combined_csv_path,
+            train_ratio=args.combined_train_ratio,
+        )
+        num_classes = trainset.get_num_classes()
         
+        train_loader = create_combined_dataloader(
+            trainset,
+            batch_size=args.train_batch,
+            shuffle=True,
+            num_workers=args.workers
+        )
+        
+        val_loader = create_combined_dataloader(
+            testset,
+            batch_size=args.test_batch,
+            shuffle=False,
+            num_workers=args.workers
+        )
+        
+        print(f"\n✓ Using {num_classes} grouped classes for training")
+        print(f"✓ Class names: {trainset.get_all_class_names()}")
+    
     else:
         trainset = dataloader(root='./data', train=True, download=True, transform=transform_train)
         train_loader = data.DataLoader(trainset, batch_size=args.train_batch, shuffle=True, num_workers=args.workers)
@@ -602,16 +593,24 @@ def main():
         testset = dataloader(root='./data', train=False, download=False, transform=transform_test)
         val_loader = data.DataLoader(testset, batch_size=args.test_batch, shuffle=False, num_workers=args.workers)
 
+
+    
     # Create model with appropriate image dimensions
     if args.dataset == 'ucf_sports':
         # UCF Sports uses 256x256 images
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
         print(f"Created model with {num_classes} output classes")
+        
     elif args.dataset == 'olympic_action':
         # Olympic Action uses 256x256 images (resized from 480x360)
         from model import DGMResNet, BasicBlock
         model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
+        
+    elif args.dataset == 'combined':
+        from model import DGMResNet, BasicBlock
+        model = DGMResNet(BasicBlock, num_classes=num_classes, hw=256)
+    
     else:
         # CIFAR uses 32x32 images
         model = ResNet18(num_classes=num_classes)
@@ -631,6 +630,9 @@ def main():
         
     elif args.dataset == 'ucf_sports':
         title = 'ucf-sports-DGM-ResNet18'
+        
+    elif args.dataset == 'combined':
+        title = 'combined-DGM-ResNet18'
         
     else:
         title = 'cifar-DGM-ResNet18'
@@ -669,12 +671,23 @@ def main():
                 global_step = 0
             train_loss, train_acc, global_step = train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step)
             test_loss, test_acc, global_step = test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_step)
+        
+        
         elif args.dataset == 'ucf_sports':
             # Initialize global_step for the first epoch, then use the returned value
             if epoch == 0:
                 global_step = 0
             train_loss, train_acc, global_step = train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step)
             test_loss, test_acc, global_step = test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step)
+        
+        elif args.dataset == 'combined':
+            # Initialize global_step for the first epoch, then use the returned value
+            if epoch == 0:
+                global_step = 0
+                
+            train_loss, train_acc, global_step = train_combined(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step)
+            test_loss, test_acc, global_step = test_combined(val_loader, model, criterion, epoch, use_cuda, global_step)
+        
         else:
             train_loss, train_acc = train(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler)
             test_loss, test_acc = test(val_loader, model, criterion, epoch, use_cuda)
@@ -718,6 +731,9 @@ if __name__ == '__main__':
         project_name = "ucf-sports-dgm-resnet18"
     elif dataset_arg == 'olympic_action':
         project_name = "olympic-action-dgm-resnet18"
+        
+    elif dataset_arg == 'combined':
+        project_name = "combined-dgm-resnet18"
     else:
         project_name = "cifar-dgm-resnet18"
 

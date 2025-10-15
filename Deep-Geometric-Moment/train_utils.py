@@ -161,6 +161,7 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
     if global_step is None:
         global_step = epoch * 10000
     
+    step_counter = global_step
     end = time.time()
     bar = Bar('Processing', max=len(train_loader))
     
@@ -196,8 +197,6 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
         # Log images with wandb for first few batches
         if batch_idx < 2:
             for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
-                current_step = global_step + batch_idx * inputs.shape[0] + i
-                
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
@@ -250,7 +249,8 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
                     "olympic_train_confidence": prediction_confidence,
                     "olympic_train_epoch": epoch,
                     "olympic_train_batch": batch_idx
-                }, step=current_step)
+                }, step=step_counter)
+                step_counter += 1
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -278,18 +278,17 @@ def train_olympic_action(train_loader, model, criterion, optimizer, epoch, use_c
         bar.next()
         
         # Log epoch metrics with global step
-        current_global_step = global_step + batch_idx
         wandb.log({
             'olympic_epoch': epoch,
             'olympic_batch_number': batch_idx,
             'olympic_train_loss': losses.avg,
             'olympic_train_top1': top1.avg,
             'olympic_train_top5': top5.avg,
-        }, step=current_global_step)
+        }, step=step_counter)
+        step_counter += 1
     
     bar.finish()
-    final_global_step = global_step + len(train_loader) * train_loader.batch_size
-    return (losses.avg, top1.avg, final_global_step)
+    return (losses.avg, top1.avg, step_counter)
 
 
 def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_step=None):
@@ -304,6 +303,7 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_st
     if global_step is None:
         global_step = (epoch * 10000) + 5000  # Add offset to avoid conflicts with training steps
     
+    step_counter = global_step
     model.eval()
     
     end = time.time()
@@ -342,8 +342,6 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_st
         # Log images with wandb for first few batches
         if batch_idx < 2:
             for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
-                current_step = global_step + batch_idx * inputs.shape[0] + i
-                
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
@@ -396,7 +394,8 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_st
                     "olympic_test_confidence": prediction_confidence,
                     "olympic_test_epoch": epoch,
                     "olympic_test_batch": batch_idx
-                }, step=current_step)
+                }, step=step_counter)
+                step_counter += 1
         
         # measure elapsed time
         batch_time.update(time.time() - end)
@@ -417,18 +416,17 @@ def test_olympic_action(val_loader, model, criterion, epoch, use_cuda, global_st
         bar.next()
         
         # Log epoch metrics with global step
-        current_global_step = global_step + batch_idx
         wandb.log({
             'olympic_epoch': epoch,
             'olympic_batch_number': batch_idx,
             'olympic_test_loss': losses.avg,
             'olympic_test_top1': top1.avg,
             'olympic_test_top5': top5.avg,
-        }, step=current_global_step)
+        }, step=step_counter)
+        step_counter += 1
         
     bar.finish()
-    final_global_step = global_step + len(val_loader) * val_loader.batch_size
-    return (losses.avg, top1.avg, final_global_step)
+    return (losses.avg, top1.avg, step_counter)
 
 
 def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):
@@ -448,6 +446,7 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         # Ensure global_step is always increasing by using a large multiplier
         global_step = epoch * 10000
 
+    step_counter = global_step
     bar = Bar('Processing', max=len(train_loader))
     for batch_idx, (inputs, targets) in enumerate(train_loader):
         
@@ -482,8 +481,6 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         if batch_idx < 2: 
             # Process each image in the batch
             for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
-                current_step = global_step + batch_idx * inputs.shape[0] + i
-                
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
@@ -533,7 +530,8 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
                     "train_confidence": prediction_confidence,
                     "train_epoch": epoch,
                     "train_batch": batch_idx
-                }, step=current_step)
+                }, step=step_counter)
+                step_counter += 1
         
         # compute gradient and do SGD step
         optimizer.zero_grad()
@@ -560,18 +558,17 @@ def train_ucf_sports(train_loader, model, criterion, optimizer, epoch, use_cuda,
         bar.next()
         
         # Log epoch metrics with global step to ensure monotonically increasing steps
-        current_global_step = global_step + batch_idx
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
             'train_loss': losses.avg,
             'train_top1': top1.avg,
             'train_top5': top5.avg,
-        }, step=current_global_step)
+        }, step=step_counter)
+        step_counter += 1
     
     bar.finish()
-    final_global_step = global_step + len(train_loader) * train_loader.batch_size
-    return (losses.avg, top1.avg, final_global_step)
+    return (losses.avg, top1.avg, step_counter)
 
 
 def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=None):
@@ -590,6 +587,7 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
         # Ensure global_step is always increasing by using a large multiplier
         global_step = (epoch * 10000) + 5000  # Add offset to avoid conflicts with training steps
 
+    step_counter = global_step
     end = time.time()
     bar = Bar('Processing', max=len(val_loader))
     for batch_idx, (inputs, targets) in enumerate(val_loader):
@@ -625,8 +623,6 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
         if batch_idx < 2: 
             # Process each image in the batch
             for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
-                current_step = global_step + batch_idx * inputs.shape[0] + i
-                
                 # Get predicted class and confidence
                 predicted_class = torch.argmax(outputs[i]).item()
                 prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
@@ -676,7 +672,8 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
                     "test_confidence": prediction_confidence,
                     "test_epoch": epoch,
                     "test_batch": batch_idx
-                }, step=current_step)
+                }, step=step_counter)
+                step_counter += 1
 
 
         # measure elapsed time
@@ -698,15 +695,290 @@ def test_ucf_sports(val_loader, model, criterion, epoch, use_cuda, global_step=N
         bar.next()
         
         # Log epoch metrics with global step to ensure monotonically increasing steps
-        current_global_step = global_step + batch_idx
         wandb.log({
             'epoch': epoch,
             'batch_number': batch_idx,
             'test_loss': losses.avg,
             'test_top1': top1.avg,
             'test_top5': top5.avg,
-        }, step=current_global_step)
+        }, step=step_counter)
+        step_counter += 1
         
     bar.finish()
-    final_global_step = global_step + len(val_loader) * val_loader.batch_size
-    return (losses.avg, top1.avg, final_global_step)
+    return (losses.avg, top1.avg, step_counter)
+
+
+def train_combined(train_loader, model, criterion, optimizer, epoch, use_cuda, scheduler, global_step=None):
+    """Training function for Combined Dataset (UCF + Olympic) with wandb logging"""
+    model.train()
+
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = epoch * 10000
+    
+    step_counter = global_step
+    end = time.time()
+    bar = Bar('Processing', max=len(train_loader))
+    
+    for batch_idx, (inputs, targets) in enumerate(train_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+        
+        # Log input shape for first batch
+        if batch_idx == 0:
+            print(f"Input shape: {inputs.shape}")
+            if hasattr(train_loader.dataset, 'get_class_name'):
+                class_name = train_loader.dataset.get_class_name(targets[0].item())
+                print(f"Sample class: {class_name}")
+        
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
+        targets = targets.long()
+        loss = criterion(outputs, targets)
+        
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+        
+        # Log images with wandb for first few batches
+        if batch_idx < 2:
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
+                
+                # Get class names
+                if hasattr(train_loader.dataset, 'get_class_name'):
+                    true_class_name = train_loader.dataset.get_class_name(true_class)
+                    pred_class_name = train_loader.dataset.get_class_name(predicted_class)
+                else:
+                    true_class_name = f"class_{true_class}"
+                    pred_class_name = f"class_{predicted_class}"
+                
+                # Denormalize and prepare input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Input | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
+                
+                # IMGR visualizations with viridis colormap
+                img1 = imgr1[i, 0].detach().cpu().numpy()
+                img_colored1 = plt.cm.viridis(img1)
+                img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
+                
+                img2 = imgr2[i, 0].detach().cpu().numpy()
+                img_colored2 = plt.cm.viridis(img2)
+                img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
+                
+                img3 = imgr3[i, 0].detach().cpu().numpy()
+                img_colored3 = plt.cm.viridis(img3)
+                img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
+                
+                img4 = imgr4[i, 0].detach().cpu().numpy()
+                img_colored4 = plt.cm.viridis(img4)
+                img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
+                
+                # Log all images with step-based logging
+                wandb.log({
+                    "combined_train_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "combined_train_true_class": true_class_name,
+                    "combined_train_predicted_class": pred_class_name,
+                    "combined_train_confidence": prediction_confidence,
+                    "combined_train_epoch": epoch,
+                    "combined_train_batch": batch_idx
+                }, step=step_counter)
+                step_counter += 1
+        
+        # compute gradient and do SGD step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+        if scheduler is not None:
+            scheduler.step()
+        
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(train_loader),
+                    data=data_time.val,
+                    bt=batch_time.val,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+        
+        # Log epoch metrics with global step
+        wandb.log({
+            'combined_epoch': epoch,
+            'combined_batch_number': batch_idx,
+            'combined_train_loss': losses.avg,
+            'combined_train_top1': top1.avg,
+            'combined_train_top5': top5.avg,
+        }, step=step_counter)
+        step_counter += 1
+    
+    bar.finish()
+    return (losses.avg, top1.avg, step_counter)
+
+
+def test_combined(val_loader, model, criterion, epoch, use_cuda, global_step=None):
+    """Testing function for Combined Dataset (UCF + Olympic) with wandb logging"""
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    losses = AverageMeter()
+    top1 = AverageMeter()
+    top5 = AverageMeter()
+    
+    # Use provided global_step or create a fallback
+    if global_step is None:
+        global_step = (epoch * 10000) + 5000  # Add offset to avoid conflicts with training steps
+    
+    step_counter = global_step
+    model.eval()
+    
+    end = time.time()
+    bar = Bar('Processing', max=len(val_loader))
+    
+    for batch_idx, (inputs, targets) in enumerate(val_loader):
+        # measure data loading time
+        data_time.update(time.time() - end)
+        
+        # Convert targets to long immediately
+        targets = targets.long()
+        
+        if use_cuda:
+            inputs, targets = inputs.cuda(), targets.cuda()
+        
+        with torch.no_grad():
+            inputs, targets = torch.autograd.Variable(inputs), torch.autograd.Variable(targets)
+        
+        # compute output - model returns 5 values: cl, imgr1, imgr2, imgr3, imgr4
+        outputs, imgr1, imgr2, imgr3, imgr4 = model(inputs)
+        
+        # Ensure targets are in valid range
+        num_classes = outputs.shape[1]
+        targets = torch.clamp(targets, 0, num_classes - 1)
+        loss = criterion(outputs, targets)
+        
+        # measure accuracy and record loss
+        prec1, prec5 = accuracy(outputs.data, targets.data, topk=(1, 5))
+        losses.update(loss.item(), inputs.size(0))
+        top1.update(prec1.item(), inputs.size(0))
+        top5.update(prec5.item(), inputs.size(0))
+        
+        # Log images with wandb for first few batches
+        if batch_idx < 2:
+            for i in range(min(inputs.shape[0], 4)):  # Log max 4 images per batch
+                # Get predicted class and confidence
+                predicted_class = torch.argmax(outputs[i]).item()
+                prediction_confidence = torch.max(torch.softmax(outputs[i], dim=0)).item()
+                true_class = targets[i].item()
+                
+                # Get class names
+                if hasattr(val_loader.dataset, 'get_class_name'):
+                    true_class_name = val_loader.dataset.get_class_name(true_class)
+                    pred_class_name = val_loader.dataset.get_class_name(predicted_class)
+                else:
+                    true_class_name = f"class_{true_class}"
+                    pred_class_name = f"class_{predicted_class}"
+                
+                # Denormalize and prepare input image
+                mean = np.array([0.485, 0.456, 0.406])
+                std = np.array([0.229, 0.224, 0.225])
+                inp = inputs[i].detach().cpu().numpy()
+                inp = (inp * std[:, None, None]) + mean[:, None, None]
+                inp = np.clip(inp, 0, 1)
+                inp = np.transpose(inp, (1, 2, 0))
+                preprocessed_img = wandb.Image((inp * 255).astype(np.uint8), 
+                                    caption=f"Input | True: {true_class_name} | Pred: {pred_class_name} | Conf: {prediction_confidence:.3f}")
+                
+                # IMGR visualizations with viridis colormap
+                img1 = imgr1[i, 0].detach().cpu().numpy()
+                img_colored1 = plt.cm.viridis(img1)
+                img_colored1 = (img_colored1[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis1 = wandb.Image(img_colored1, caption=f"IMGR1 | {true_class_name}")
+                
+                img2 = imgr2[i, 0].detach().cpu().numpy()
+                img_colored2 = plt.cm.viridis(img2)
+                img_colored2 = (img_colored2[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis2 = wandb.Image(img_colored2, caption=f"IMGR2 | {true_class_name}")
+                
+                img3 = imgr3[i, 0].detach().cpu().numpy()
+                img_colored3 = plt.cm.viridis(img3)
+                img_colored3 = (img_colored3[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis3 = wandb.Image(img_colored3, caption=f"IMGR3 | {true_class_name}")
+                
+                img4 = imgr4[i, 0].detach().cpu().numpy()
+                img_colored4 = plt.cm.viridis(img4)
+                img_colored4 = (img_colored4[:, :, :3] * 255).astype(np.uint8)
+                imgr_vis4 = wandb.Image(img_colored4, caption=f"IMGR4 | {true_class_name}")
+                
+                # Log all images with step-based logging
+                wandb.log({
+                    "combined_test_images": [preprocessed_img, imgr_vis1, imgr_vis2, imgr_vis3, imgr_vis4],
+                    "combined_test_true_class": true_class_name,
+                    "combined_test_predicted_class": pred_class_name,
+                    "combined_test_confidence": prediction_confidence,
+                    "combined_test_epoch": epoch,
+                    "combined_test_batch": batch_idx
+                }, step=step_counter)
+                step_counter += 1
+        
+        # measure elapsed time
+        batch_time.update(time.time() - end)
+        end = time.time()
+        
+        # plot progress
+        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                    batch=batch_idx + 1,
+                    size=len(val_loader),
+                    data=data_time.avg,
+                    bt=batch_time.avg,
+                    total=bar.elapsed_td,
+                    eta=bar.eta_td,
+                    loss=losses.avg,
+                    top1=top1.avg,
+                    top5=top5.avg,
+                    )
+        bar.next()
+        
+        # Log epoch metrics with global step
+        wandb.log({
+            'combined_epoch': epoch,
+            'combined_batch_number': batch_idx,
+            'combined_test_loss': losses.avg,
+            'combined_test_top1': top1.avg,
+            'combined_test_top5': top5.avg,
+        }, step=step_counter)
+        step_counter += 1
+        
+    bar.finish()
+    return (losses.avg, top1.avg, step_counter)
