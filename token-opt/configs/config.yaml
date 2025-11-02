@@ -1,0 +1,63 @@
+# Test-Time Optimization Configuration
+
+# Task configuration
+task: 'generate_image'  # Options: 'image_editing', 'generate_image', 'image_inpainting'
+
+# Input/Output paths
+input_path: './assets/sample.jpeg'
+output_path: './assets/output_image.png'
+
+# Text prompts
+prompt: 'A photo of a blue jay in a forest'
+neg_prompt: ''
+
+# GPU configuration
+gpu: '0,1'  
+
+# Test-time optimization configuration
+optimization:
+  
+  titok_checkpoint: 'yucornetto/tokenizer_titok_l32_imagenet'
+
+  optimize_post_quantization_tokens: False
+  vae_deterministic_sampling: True
+
+  # Optimizer parameters 
+  lr: 0.01                  
+  num_iter: 150            
+  
+  # EMA smoothing 
+  ema_decay: 0.99 
+
+  # Regularization 
+  reg_weight: 0.01 
+  reg_type: 'seed' 
+
+  # Token noise for exploration 
+  token_noise: 0.1         
+
+  # Performance optimization
+  enable_amp: true         
+
+# CLIP objective configuration
+clip:
+  cfg_scale: 7.5
+  num_augmentations: 8
+  pretrained_model: 'ViT-B-32'
+  pretrained_checkpoint: 'laion2b_s34b_b79k'
+
+# Image preprocessing
+image:
+  size: 256
+  normalize_mean: [0.5, 0.5, 0.5]
+  normalize_std: [0.5, 0.5, 0.5]
+
+# Random seed for reproducibility
+seed: 42
+
+# Progress logging
+log_interval: 50     
+
+
+random_init_sigma: 0.3
+

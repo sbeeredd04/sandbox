@@ -1,0 +1,45 @@
+# Example configuration for image generation task
+
+task: 'generate_image'
+
+# Output path only (no input needed for generation)
+output_path: 'assets/output_generated.png'
+
+# Text prompts
+prompt: 'A majestic mountain landscape at sunset with a lake reflection'
+neg_prompt: 'people, buildings, cars, urban, text, watermark'
+
+# GPU configuration
+gpu: '0'
+
+# Test-time optimization configuration
+optimization:
+  titok_checkpoint: 'yucornetto/tokenizer_titok_l32_imagenet'
+  optimize_post_quantization_tokens: true
+  vae_deterministic_sampling: true
+  lr: 0.15  # Slightly higher LR for generation from scratch
+  num_iter: 800  # More iterations for generation
+  ema_decay: 0.0
+  reg_weight: null  # No regularization for generation from scratch
+  reg_type: null
+  token_noise: 0.05  # Add some noise for exploration
+  enable_amp: false
+
+# CLIP objective configuration
+clip:
+  cfg_scale: 9.0  # Higher guidance for generation
+  num_augmentations: 8  # More augmentations for robustness
+  pretrained_model: 'ViT-B-32'
+  pretrained_checkpoint: 'laion2b_s34b_b79k'
+
+# Image preprocessing
+image:
+  size: 256
+  normalize_mean: [0.5, 0.5, 0.5]
+  normalize_std: [0.5, 0.5, 0.5]
+
+# Random seed
+seed: 42
+
+# Progress logging
+log_interval: 50

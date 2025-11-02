@@ -1,0 +1,46 @@
+# Example configuration for image editing task
+
+task: 'image_editing'
+
+# Input/Output paths
+input_path: 'assets/input.png'
+output_path: 'assets/output_edited.png'
+
+# Text prompts
+prompt: 'A photograph in Van Gogh style, starry night, vibrant colors'
+neg_prompt: 'blurry, low quality, distorted, watermark'
+
+# GPU configuration
+gpu: '0'
+
+# Test-time optimization configuration
+optimization:
+  titok_checkpoint: 'yucornetto/tokenizer_titok_l32_imagenet'
+  optimize_post_quantization_tokens: true
+  vae_deterministic_sampling: true
+  lr: 0.1
+  num_iter: 600
+  ema_decay: 0.0
+  reg_weight: 0.1
+  reg_type: 'seed'
+  token_noise: null
+  enable_amp: false
+
+# CLIP objective configuration
+clip:
+  cfg_scale: 7.5
+  num_augmentations: 4
+  pretrained_model: 'ViT-B-32'
+  pretrained_checkpoint: 'laion2b_s34b_b79k'
+
+# Image preprocessing
+image:
+  size: 256
+  normalize_mean: [0.5, 0.5, 0.5]
+  normalize_std: [0.5, 0.5, 0.5]
+
+# Random seed
+seed: 42
+
+# Progress logging
+log_interval: 50
