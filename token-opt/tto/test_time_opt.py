@@ -15,6 +15,10 @@ import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler
+import torchvision
+
+# PIL for image saving
+from PIL import Image
 
 # Torchvision v2 transforms for data augmentation
 import torchvision.transforms.v2 as v2
@@ -212,6 +216,11 @@ class TestTimeOpt(nn.Module):
                 # Decode tokens to image
                 dec = self.decode(opt_tokens)
                 
+                # Save the image for debugging
+                if i % 50 == 0:
+                    img_array = (dec[0].detach().cpu().clamp(0, 1) * 255).to(torch.uint8).permute(1, 2, 0).numpy()
+                    Image.fromarray(img_array).save(f"debug_iter_{i:04d}.png")
+                    
                 # Compute objective loss (e.g., negative CLIP similarity)
                 loss = self.objective(dec)
                 
@@ -231,6 +240,8 @@ class TestTimeOpt(nn.Module):
                 
                 # Combine loss and regularization
                 sum_loss = torch.sum(loss + reg, dim=0)
+                
+            #
             
             # Backward pass and optimizer step
             scaler.scale(sum_loss).backward()  # Compute gradients (scaled for AMP)

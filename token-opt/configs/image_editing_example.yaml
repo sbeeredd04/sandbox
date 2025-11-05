@@ -16,28 +16,56 @@ gpu: '0'
 # Test-time optimization configuration
 optimization:
   titok_checkpoint: 'yucornetto/tokenizer_titok_l32_imagenet'
-  optimize_post_quantization_tokens: true
+  
+  # CRITICAL: Must be False for image editing (optimize continuous pre-quantization tokens)
+  # Paper Section 4.1: "It is essential to include the vector quantization step within 
+  # the optimization, as optimizing z(k) directly leads to poor results"
+  optimize_post_quantization_tokens: false
+  
   vae_deterministic_sampling: true
+  
+  # Paper Section 4.1 & Algorithm A1: "we use the Adam optimizer with a learning rate of 0.1"
   lr: 0.1
-  num_iter: 600
-  ema_decay: 0.0
-  reg_weight: 0.1
+  
+  # Paper Section 4.1: Uses 300 iterations for basic text-guided editing
+  # For more dramatic style transfer, can increase to 400-600
+  num_iter: 300
+  
+  # Paper Section 5.4 & Algorithm A2: EMA decay factor of 0.98
+  ema_decay: 0.98
+  
+  # Paper Algorithm A2: L2 regularization with ϖ = 0.02
+  # Controls how much the result deviates from seed image
+  reg_weight: 0.02
+  
   reg_type: 'seed'
-  token_noise: null
-  enable_amp: false
+  
+  # Paper Section 5.4 & Algorithm A2: Token noise injection
+  # Helps escape local minima, uses cosine schedule
+  token_noise: 0.1
+  
+  # Use automatic mixed precision for efficiency
+  enable_amp: true
 
 # CLIP objective configuration
 clip:
-  cfg_scale: 7.5
-  num_augmentations: 4
+  # Paper uses moderate CFG scale (1.5-3.0 range)
+  # Lower = more diversity, Higher = stronger prompt adherence
+  cfg_scale: 1.5
+  
+  # Paper Section 5.4 & Table 4: "8 crops encompassing 75% of the image area"
+  # Critical for smoothing CLIP gradients and avoiding adversarial artifacts
+  num_augmentations: 8
+  
   pretrained_model: 'ViT-B-32'
   pretrained_checkpoint: 'laion2b_s34b_b79k'
 
 # Image preprocessing
 image:
   size: 256
-  normalize_mean: [0.5, 0.5, 0.5]
-  normalize_std: [0.5, 0.5, 0.5]
+  # TiTok expects images in [0, 1] range without normalization
+  normalize_mean: [0.0, 0.0, 0.0]
+  normalize_std: [1.0, 1.0, 1.0]
 
 # Random seed
 seed: 42

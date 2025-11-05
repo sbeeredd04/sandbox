@@ -31,22 +31,28 @@ def setup_device(gpu: str) -> torch.device:
 def load_and_preprocess_image(image_path: str, image_size: int, mean: list, std: list, device: torch.device) -> torch.Tensor:
     """Load and preprocess input image."""
     image = Image.open(image_path).convert("RGB")
+    
+    #save the original image for debugging
+    image.save("debug_original_image.png")
+    
+    # TiTok expects images in [0, 1] range, NOT normalized to [-1, 1]
     transform = T.Compose([
         T.Resize((image_size, image_size)),
-        T.ToTensor(),
-        T.Normalize(mean=mean, std=std),
+        T.ToTensor(),  # Converts to [0, 1] - this is what TiTok expects
     ])
     image = transform(image).unsqueeze(0).to(device)
     print(f"Input image loaded and preprocessed: {image_path} --> tensor shape {image.shape}")
+    
+    # No need for denormalization debugging since we're not normalizing
+    T.ToPILImage()(image.squeeze(0).cpu()).save("debug_preprocessed_image.png")
+    
     return image
 
 
 def save_image(tensor: torch.Tensor, output_path: str, mean: list, std: list):
-    """Save tensor as image, denormalizing if needed."""
-    # Denormalize
+    """Save tensor as image."""
+    # No denormalization needed since we're not normalizing
     tensor = tensor.squeeze(0).cpu()
-    for t, m, s in zip(tensor, mean, std):
-        t.mul_(s).add_(m)
     tensor = torch.clamp(tensor, 0, 1)
     
     result_image = T.ToPILImage()(tensor)
@@ -76,7 +82,7 @@ def image_editing(config: Dict[str, Any]):
         device
     )
     
-    # Initialize test-time optimization config
+    # Initialize test-time optimization config - PASS ALL PARAMETERS
     opt_config = TestTimeOptConfig(
         titok_checkpoint=config['optimization']['titok_checkpoint'],
         optimize_post_quantization_tokens=config['optimization']['optimize_post_quantization_tokens'],
@@ -89,6 +95,7 @@ def image_editing(config: Dict[str, Any]):
         reg_type=config['optimization']['reg_type'],
         enable_amp=config['optimization']['enable_amp'],
     )
+    print(f"\nOptimization Config Initialized: {opt_config}\n")
     
     # Initialize CLIP objective
     clip_objective = CLIPObjective(
@@ -98,6 +105,7 @@ def image_editing(config: Dict[str, Any]):
         num_augmentations=config['clip']['num_augmentations'],
         pretrained=(config['clip']['pretrained_model'], config['clip']['pretrained_checkpoint'])
     ).to(device)
+    print(f"\nCLIP Objective Initialized with prompt: {config['prompt']}\n")
     
     # Initialize optimizer
     optimizer = TestTimeOpt(config=opt_config, objective=clip_objective).to(device)
@@ -111,7 +119,7 @@ def image_editing(config: Dict[str, Any]):
         return False  # Don't stop early
     
     # Run optimization
-    print("Starting test-time optimization...")
+    print("\n\nStarting test-time optimization...")
     optimized_image = optimizer(
         seed=image,
         callback=progress_callback,

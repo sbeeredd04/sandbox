@@ -1,63 +1,56 @@
-# Test-Time Optimization Configuration
+task: 'image_editing'
 
-# Task configuration
-task: 'generate_image'  # Options: 'image_editing', 'generate_image', 'image_inpainting'
-
-# Input/Output paths
 input_path: './assets/sample.jpeg'
 output_path: './assets/output_image.png'
 
-# Text prompts
-prompt: 'A photo of a blue jay in a forest'
-neg_prompt: ''
+prompt: 'A photo of an eagle'
+neg_prompt: 'blurry, low quality, distorted'
 
-# GPU configuration
-gpu: '0,1'  
+gpu: '1,2'  
 
-# Test-time optimization configuration
 optimization:
-  
   titok_checkpoint: 'yucornetto/tokenizer_titok_l32_imagenet'
 
-  optimize_post_quantization_tokens: False
+  # CRITICAL: Must be False for image editing (optimize continuous pre-quantization tokens)
+  # Paper Section 4.1: "optimize the continuous feature vectors ẑ(k) as output by the 
+  # tokenizer's encoder just prior to the vector quantization step"
+  optimize_post_quantization_tokens: False  
   vae_deterministic_sampling: True
 
-  # Optimizer parameters 
-  lr: 0.01                  
-  num_iter: 150            
+  # Paper Section 4.1: "we use the Adam optimizer with a learning rate of 0.1"
+  lr: 0.1  
   
-  # EMA smoothing 
-  ema_decay: 0.99 
-
-  # Regularization 
-  reg_weight: 0.01 
+  # Paper Section 4.1 & Table 4: Uses 300 iterations for text-guided editing
+  # Section 4.2: Uses 400 iterations for "from-scratch" generation
+  num_iter: 300  
+  
+  # Paper Section 5.4 & Algorithm A2: EMA decay of 0.98
+  ema_decay: 0.98 
+  
+  # Paper Algorithm A2: L2 regularization weight (ϖ = 0.02)
+  reg_weight: 0.02
   reg_type: 'seed' 
-
-  # Token noise for exploration 
-  token_noise: 0.1         
-
-  # Performance optimization
-  enable_amp: true         
-
-# CLIP objective configuration
+  
+  # Paper Section 5.4 & Algorithm A2: Token noise with cosine schedule
+  # Ramps from ε²₁ = 0.3 to ε²₂₀₀ = 0
+  token_noise: 0.1  
+  
+  enable_amp: True 
 clip:
-  cfg_scale: 7.5
-  num_augmentations: 8
+  # Moderate CFG scale for balanced quality/diversity
+  cfg_scale: 1.5  
+  
+  # Paper Section 5.4 & Table 4: "8 crops encompassing 75% of the image area"
+  # for smoothing CLIP gradients
+  num_augmentations: 8  
   pretrained_model: 'ViT-B-32'
   pretrained_checkpoint: 'laion2b_s34b_b79k'
 
-# Image preprocessing
 image:
   size: 256
-  normalize_mean: [0.5, 0.5, 0.5]
-  normalize_std: [0.5, 0.5, 0.5]
+  # TiTok expects images in [0, 1] range without normalization
+  normalize_mean: [0.0, 0.0, 0.0] 
+  normalize_std: [1.0, 1.0, 1.0]
 
-# Random seed for reproducibility
 seed: 42
-
-# Progress logging
-log_interval: 50     
-
-
-random_init_sigma: 0.3
-
+log_interval: 50
