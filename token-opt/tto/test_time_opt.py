@@ -1,4 +1,4 @@
-# Import custom modules for EMA (Exponential Moving Average) during optimization
+
 from tto.ema import EMAModel
 from tto.siglip import SigLIP
 from tto.vqgan_wrapper import PretrainedVQGAN
@@ -6,32 +6,22 @@ from tto.continuous_tokenizer_wrapper import ContinuousTokenizerWrapper
 
 from typing import cast, Callable, Literal
 from dataclasses import dataclass
-
-# Standard numerical and deep learning libraries
 import numpy as np
 import torch
 from torch import nn, Tensor
 import torch.nn.functional as F
 from torch.cuda.amp import GradScaler
 import torchvision
-
-# PIL for image saving
 from PIL import Image
-
-# Torchvision v2 transforms for data augmentation
 import torchvision.transforms.v2 as v2
-# Einops for tensor reshaping and einstein summation
-from einops import rearrange, einsum
-# Jaxtyping for tensor shape annotations
-from jaxtyping import Float
-# OpenCLIP for loading pretrained CLIP models
-import open_clip
 
-# TiTok specific modules for VAE quantization and main tokenizer
+from einops import rearrange, einsum
+
+from jaxtyping import Float
+
+import open_clip
 from titok.modeling.quantizer import DiagonalGaussianDistribution
 from titok.modeling.titok import TiTok
-
-# Progress bar for optimization iterations
 import tqdm
 
 @dataclass
@@ -46,19 +36,13 @@ class TestTimeOptConfig:
     reg_type: None | Literal["seed", "zero"] = None
     num_iter: int = 600
     enable_amp: bool = False
-
-
 @dataclass
 class TestTimeOptInfo:
     i: int
     tokens: Float[Tensor, "b d 1 n"]
     img: Float[Tensor, "b c h w"]
     loss: Float[Tensor, "b"]
-
-
 ObjectiveT = Callable[[Float[Tensor, "b c h w"]], Float[Tensor, "b"]]
-
-
 class TestTimeOpt(nn.Module):
     
     def __init__(self, config: TestTimeOptConfig, objective: ObjectiveT):
@@ -232,8 +216,6 @@ class TestTimeOpt(nn.Module):
         
         with ema.average_parameters(), torch.no_grad():
             return torch.clamp(self.decode(opt_tokens), 0.0, 1.0)
-
-
 class AugmentationHelper:
     
     def __init__(self, num_augmentations: int, img_size):
@@ -253,8 +235,6 @@ class AugmentationHelper:
             return x.unsqueeze(0)
         else:
             return torch.stack([self.augmentations(x) for _ in range(self.num_augmentations)])
-
-
 class CLIPObjective(nn.Module):
     
     device_indicator: Tensor
@@ -380,8 +360,6 @@ class CLIPObjective(nn.Module):
         else:
             # Simple case: just maximize similarity with prompt
             return -similarity  # Negative because optimizer minimizes
-
-
 class SigLIPObjective(nn.Module):
     # Alternative objective using SigLIP instead of CLIP
     # SigLIP uses a different contrastive loss (sigmoid instead of softmax)
@@ -450,8 +428,6 @@ class SigLIPObjective(nn.Module):
         # Compute SigLIP similarity and average over augmentations
         # Return negative because we minimize loss
         return -torch.mean(self.siglip.similarity(image_embeds=image_feats, text_embeds=self.prompt_feat.unsqueeze(0)), dim=0)
-
-
 class MultiObjective(nn.Module):
     # Combine multiple objective functions with weighted sum
     # Enables optimizing for multiple goals simultaneously (e.g., aesthetics + content)
