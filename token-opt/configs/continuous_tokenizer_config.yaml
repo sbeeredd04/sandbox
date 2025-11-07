@@ -1,0 +1,37 @@
+task: 'image_editing'
+
+input_path: './assets/sample.jpeg'
+output_path: './assets/output_continuous.png'
+
+prompt: 'A photo of an eagle'
+neg_prompt: ''
+
+gpu: '3,4'
+
+optimization:
+  titok_checkpoint: 'continuous_tokenizer:SoftVQ:SoftVQVAE/softvq-l-64'
+  
+  optimize_post_quantization_tokens: false
+  vae_deterministic_sampling: true
+  
+  lr: 0.1
+  num_iter: 400
+  ema_decay: 0.98
+  reg_weight: 0.02
+  reg_type: 'seed'
+  token_noise: 0.1
+  enable_amp: true
+
+clip:
+  cfg_scale: 1.5
+  num_augmentations: 8
+  pretrained_model: 'ViT-B-32'
+  pretrained_checkpoint: 'laion2b_s34b_b79k'
+
+image:
+  size: 256
+  normalize_mean: [0.0, 0.0, 0.0]
+  normalize_std: [1.0, 1.0, 1.0]
+
+seed: 42
+log_interval: 50
