@@ -17,7 +17,7 @@ class ContinuousTokenizerWrapper(nn.Module):
         
         default_config = {
             'image_size': 256,
-            'codebook_size': 16384,
+            'codebook_size': 8192,
             'num_codebooks': 4,
             'tau': 0.07,
             'enc_type': 'vit',
