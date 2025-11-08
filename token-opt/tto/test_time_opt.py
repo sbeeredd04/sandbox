@@ -172,7 +172,9 @@ class TestTimeOpt(nn.Module):
             
             if self.config.optimize_post_quantization_tokens:
                 if self.titok.quantize_mode in ['softvq', 'vq']:
-                    tok, _, _ = self.titok.quantize(tok)
+                    tok, _, info = self.titok.quantize(tok)
+                    
+                    print(f"Quantized: shape = {tok.shape}, info = {info}")
             
             tok = tok.transpose(1, 2).unsqueeze(2)
             return tok
