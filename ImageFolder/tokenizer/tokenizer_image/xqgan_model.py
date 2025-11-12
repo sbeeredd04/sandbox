@@ -16,7 +16,8 @@ from math import sqrt
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, '../..'))
 
-sys.path.append(project_root)
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from tokenizer.tokenizer_image.quant import VectorQuantizer2
 from tokenizer.tokenizer_image.lookup_free_quantize import LFQ
