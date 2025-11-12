@@ -82,7 +82,7 @@ class ImageFolderWrapper(nn.Module):
             raise ValueError(f"Model name {model_name} not recognized. Available models: {list(self.CONFIGS.keys())}")
          
         config_dict = self.CONFIGS[model_name]
-        hf_url = config_dict.get('hf_url')
+        hf_url = 'https://huggingface.co/qiuk6/XQ-GAN/resolve/main/MSVR10P2-4096/best_ckpt.pt'
         
         # Filter out hf_url from config_dict before passing to ModelArgs
         model_config = {k: v for k, v in config_dict.items() if k != 'hf_url'}
