@@ -22,7 +22,7 @@ from tokenizer.tokenizer_image.quant import VectorQuantizer2
 from tokenizer.tokenizer_image.lookup_free_quantize import LFQ
 from tokenizer.tokenizer_image.dino_enc.dinov2 import DINOv2Encoder, DINOv2Decoder
 from tokenizer.tokenizer_image.latent_perturbation import add_perturbation
-from ...datasets.normalize import Denormalize
+from datasets.normalize import Denormalize
 from datasets import Normalize as ImgNormalize
 
 import torch.distributed as tdist
