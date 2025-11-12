@@ -28,7 +28,7 @@ import torch.distributed as tdist
 
 class ImgNormalize(nn.Module):
     def __init__(self, mean, std, device=None):
-        super(Normalize, self).__init__()
+        super(ImgNormalize, self).__init__()
         if device is None:
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.mean = torch.tensor(mean).view(1, -1, 1, 1).to(device)
