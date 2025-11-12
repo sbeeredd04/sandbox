@@ -80,22 +80,23 @@ class ImageFolderWrapper(nn.Module):
         
         if model_name not in self.CONFIGS:
             raise ValueError(f"Model name {model_name} not recognized. Available models: {list(self.CONFIGS.keys())}")
-        
-        print(f"configs: {self.CONFIGS}")
-        
+         
         config_dict = self.CONFIGS[model_name]
         hf_url = config_dict.get('hf_url')
+        
+        # Filter out hf_url from config_dict before passing to ModelArgs
+        model_config = {k: v for k, v in config_dict.items() if k != 'hf_url'}
+        
         print(f"Using config for {model_name}: {config_dict}")
         #create ModelArgs with inference
         config = ModelArgs(
-            **config_dict, 
+            **model_config, 
             semantic_guide='none', 
             detail_guide='none', 
             test_model=True, 
             commit_loss_beta=0.25, 
             entropy_loss_ratio=0.0, 
         )
-        
         #create model 
         self.model = VQModel(config)
         
@@ -137,16 +138,37 @@ class ImageFolderWrapper(nn.Module):
         cache_dir.mkdir(parents=True, exist_ok=True)
         checkpoint_path = cache_dir / f"{model_name}.pt"
         
+        # If file exists but might be corrupted, try to load it first
         if checkpoint_path.exists():
-            print(f"✓ Using cached checkpoint: {checkpoint_path}")
-            return str(checkpoint_path)
+            try:
+                # Quick validation - try to open as zip
+                import zipfile
+                with zipfile.ZipFile(checkpoint_path, 'r') as z:
+                    pass  # If this succeeds, file is valid
+                print(f"✓ Using cached checkpoint: {checkpoint_path}")
+                return str(checkpoint_path)
+            except (zipfile.BadZipFile, RuntimeError):
+                print(f"⚠ Cached checkpoint appears corrupted, re-downloading...")
+                checkpoint_path.unlink()  # Delete corrupted file
         
-        # Download using wget (simpler than huggingface_hub for direct URLs)
+        # Download using urllib
         import urllib.request
         print(f"Downloading to {checkpoint_path}...")
-        urllib.request.urlretrieve(hf_url, checkpoint_path)
-        print(f"✓ Downloaded successfully")
-        return str(checkpoint_path)
+        try:
+            urllib.request.urlretrieve(hf_url, checkpoint_path)
+            print(f"✓ Downloaded successfully")
+            
+            # Validate the download
+            import zipfile
+            with zipfile.ZipFile(checkpoint_path, 'r') as z:
+                pass  # Verify it's a valid zip
+                
+            return str(checkpoint_path)
+        except Exception as e:
+            # Clean up partial download
+            if checkpoint_path.exists():
+                checkpoint_path.unlink()
+            raise RuntimeError(f"Failed to download checkpoint: {e}")
     
 
     def encoder(self, x: Float[Tensor, "b c h w"], latent_tokens=None) -> Float[Tensor, "b t d"]:
