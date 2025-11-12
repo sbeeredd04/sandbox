@@ -34,6 +34,7 @@ class ImageFolderWrapper(nn.Module):
             'codebook_drop': 0.1,
             'half_sem': True,
             'start_drop': 3,
+            'hf_url': 'https://huggingface.co/qiuk6/XQ-GAN/resolve/main/MSVR10P2-4096/best_ckpt.pt',
         },
         'MSVR10P2-8192': {
             'codebook_size': 8192,
@@ -51,6 +52,7 @@ class ImageFolderWrapper(nn.Module):
             'codebook_drop': 0.1,
             'half_sem': True,
             'start_drop': 3,
+            'hf_url': 'https://huggingface.co/qiuk6/XQ-GAN/resolve/main/MSVR10P2-8192/best_ckpt.pt',
         },
         'MSVR10P2-16384': {
             'codebook_size': 16384,
@@ -68,8 +70,10 @@ class ImageFolderWrapper(nn.Module):
             'codebook_drop': 0.1,
             'half_sem': True,
             'start_drop': 3,
+            'hf_url': 'https://huggingface.co/qiuk6/XQ-GAN/resolve/main/MSVR10P2-16384/best_ckpt.pt',
         },
     }
+    
     
     def __init__(self, model_name: str = 'MSVR10P2-4096', checkpoint_path: str = None) : 
         
