@@ -81,13 +81,10 @@ class ImageFolderWrapper(nn.Module):
         config_dict = self.CONFIGS[model_name]
         hf_url = 'https://huggingface.co/qiuk6/XQ-GAN/resolve/main/MSVR10P2-4096/best_ckpt.pt'
         
-        # Filter out hf_url from config_dict before passing to ModelArgs
-        model_config = {k: v for k, v in config_dict.items() if k != 'hf_url'}
-        
         print(f"Using config for {model_name}: {config_dict}")
         #create ModelArgs with inference
         config = ModelArgs(
-            **model_config, 
+            **config_dict, 
             semantic_guide='none', 
             detail_guide='none', 
             test_model=True, 
