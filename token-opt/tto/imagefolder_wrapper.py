@@ -142,7 +142,7 @@ class ImageFolderWrapper(nn.Module):
         # Download using wget (simpler than huggingface_hub for direct URLs)
         import urllib.request
         print(f"Downloading to {checkpoint_path}...")
-        urllib.request.urlretrieve(url, checkpoint_path)
+        urllib.request.urlretrieve(hf_url, checkpoint_path)
         print(f"✓ Downloaded successfully")
         return str(checkpoint_path)
     

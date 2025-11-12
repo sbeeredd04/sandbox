@@ -5,6 +5,7 @@ from tto.siglip import SigLIP
 # Import pretrained VQGAN wrapper for maskgit-vqgan tokenizer option
 from tto.vqgan_wrapper import PretrainedVQGAN
 from tto.continuous_tokenizer_wrapper import ContinuousTokenizerWrapper
+from tto.imagefolder_wrapper import ImageFolderWrapper
 
 # Type hints for better code clarity
 from typing import cast, Callable, Literal
@@ -103,24 +104,33 @@ class TestTimeOpt(nn.Module):
         self.config = config
         self.objective = objective  # Objective function to minimize (e.g., -CLIP_similarity)
         
-        # Load the appropriate tokenizer model
+                # Load the appropriate tokenizer model
         if config.titok_checkpoint == "maskgit-vqgan":
-            print("Using pretrained MaskGIT-VQGAN!")
-            self.titok = PretrainedVQGAN()
+            self.titok = PretrainedVQGAN().eval()
         elif config.titok_checkpoint.startswith("continuous_tokenizer:"):
+            # Format: "continuous_tokenizer:MODEL_TYPE:CHECKPOINT_PATH"
             parts = config.titok_checkpoint.split(":")
-            model_type = parts[1]
+            model_type = parts[1] if len(parts) > 1 else 'SoftVQ'
             checkpoint_path = parts[2] if len(parts) > 2 else None
-            print(f"Using Continuous Tokenizer ({model_type})!")
+            
             self.titok = ContinuousTokenizerWrapper(
                 checkpoint_path=checkpoint_path,
                 model_type=model_type,
-                num_latent_tokens=64,
-                codebook_embed_dim=32,
-            )
+            ).eval()
+        elif config.titok_checkpoint.startswith("imagefolder:"):
+            # Format: "imagefolder:MODEL_NAME" or "imagefolder:MODEL_NAME:CHECKPOINT_PATH"
+            # e.g., "imagefolder:MSVR10P2-4096" or "imagefolder:MSVR10P2-4096:/path/to/checkpoint.pt"
+            parts = config.titok_checkpoint.split(":")
+            model_name = parts[1] if len(parts) > 1 else 'MSVR10P2-4096'
+            checkpoint_path = parts[2] if len(parts) > 2 else None
+            
+            self.titok = ImageFolderWrapper(
+                model_name=model_name,
+                checkpoint_path=checkpoint_path,
+            ).eval()
         else:
-            # Load TiTok model from HuggingFace or local checkpoint
-            self.titok = TiTok.from_pretrained(config.titok_checkpoint)
+            self.titok = TiTok.from_pretrained(config.titok_checkpoint).eval()
+            self.titok.requires_grad_(False)
         
         # Set to evaluation mode (disable dropout, batch norm training, etc.)
         self.eval()
@@ -139,6 +149,19 @@ class TestTimeOpt(nn.Module):
                     tokens, _, _ = self.titok.quantize(tokens)
             
             dec = self.titok.decode(tokens)
+            return dec
+        elif isinstance(self.titok, ImageFolderWrapper):
+            # ImageFolder uses shape (b, d, h, w)
+            # tokens shape: (b, d, 1, n) -> need to reshape to (b, d, h, w)
+            b, d, _, n = tokens.shape
+            h = w = int(n ** 0.5)  # Assume square spatial layout
+            tokens_reshape = tokens.squeeze(2).view(b, d, h, w)
+            
+            if not self.config.optimize_post_quantization_tokens:
+                # Quantize before decoding if optimizing continuous tokens
+                tokens_reshape, _ = self.titok.quantize(tokens_reshape)
+            
+            dec = self.titok.decode(tokens_reshape)
             return dec
         else:
             def _maybe_quantize(tokens):
@@ -174,6 +197,18 @@ class TestTimeOpt(nn.Module):
                 if self.titok.quantize_mode in ['softvq', 'vq']:
                     tok, _, info = self.titok.quantize(tok)            
             tok = tok.transpose(1, 2).unsqueeze(2)
+            return tok
+        elif isinstance(self.titok, ImageFolderWrapper):
+            # ImageFolder encoder outputs (b, d, h, w)
+            tok = self.titok.encoder(img)
+            
+            if self.config.optimize_post_quantization_tokens:
+                # Quantize first if optimizing post-quantization tokens
+                tok, _ = self.titok.quantize(tok)
+            
+            # Reshape to (b, d, 1, n) format
+            b, d, h, w = tok.shape
+            tok = tok.view(b, d, 1, h * w)
             return tok
         else:
             # Use TiTok encoder with learnable latent tokens as query vectors
