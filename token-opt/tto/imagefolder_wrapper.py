@@ -81,9 +81,11 @@ class ImageFolderWrapper(nn.Module):
         if model_name not in self.CONFIGS:
             raise ValueError(f"Model name {model_name} not recognized. Available models: {list(self.CONFIGS.keys())}")
         
+        print(f"configs: {self.CONFIGS}")
+        
         config_dict = self.CONFIGS[model_name]
         hf_url = config_dict.get('hf_url')
-        
+        print(f"Using config for {model_name}: {config_dict}")
         #create ModelArgs with inference
         config = ModelArgs(
             **config_dict, 
