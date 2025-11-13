@@ -261,24 +261,59 @@ class VQModel(nn.Module):
         self.decoder.finetine(dec_tuning_method)
 
     def encode(self, x):
+        # INPUT: x is image tensor (b, 3, 256, 256)
+        # Step 1: Extract features using DINOv2 encoder
+        # DINOv2 encoder outputs learnable tokens (not just patch embeddings)
         h = self.encoder(x)
+        
         if self.enc_type == 'dinov2':
             b, l, c = h.shape
+            # h shape: (batch, num_tokens, embed_dim)
+            # For product_quant=2: l=242 (121 spatial tokens × 2), c=768 (DINOv2 ViT-Base dim)
+            
             if self.product_quant > 1:
+                # Reshape for product quantization (PQ):
+                # PQ splits the token sequence to create multiple quantizers
+                # Each quantizer will handle l/product_quant tokens (e.g., 121 tokens each)
                 assert int(sqrt(l//self.product_quant)) ** 2 * self.product_quant == l
-                h = h.view(b, l, 1, c)
-                h = h.permute(0, 3, 1, 2)
+                # Reshape: (b, 242, 768) -> (b, 242, 1, 768) -> (b, 768, 242, 1)
+                # The 242 dimension will be split later: first 121 for detail (z_d), last 121 for semantic (z_s)
+                h = h.view(b, l, 1, c)  # Add spatial dimension: (b, l, 1, c)
+                h = h.permute(0, 3, 1, 2)  # Rearrange to conv format: (b, c, l, 1)
             else:
+                # Single quantizer case (no product quantization)
+                # Reshape to 2D spatial grid: (b, 121, 768) -> (b, 11, 11, 768) -> (b, 768, 11, 11)
                 assert int(sqrt(l)) ** 2 == l
                 h = h.view(b, int(sqrt(l)), int(sqrt(l)), c)
                 h = h.permute(0, 3, 1, 2)
+        
+        # Step 2: Project to latent space using 1x1 convolution
+        # quant_conv reduces embedding dimension: 768 -> codebook_embed_dim (typically 32)
+        # Output: (b, 32, 242, 1) - continuous latent features BEFORE quantization
+        # These are the z_d and z_s (detail and semantic latents) BEFORE quantization
         h = self.quant_conv(h)
         return h
 
     def decode(self, quant, return_quant=False):
+        # INPUT: quant is the quantized tokens (b, 64, 11, 11) after concatenation
+        # For product_quant=2: 64 = 32 (detail quantizer z_d') + 32 (semantic quantizer z_s')
+        
+        # Step 1: Project quantized tokens back to decoder's embedding dimension
+        # post_quant_conv: (b, 64, 11, 11) -> (b, 768, 11, 11) for DINOv2 decoder
+        # This expands the quantized representation to match decoder's input dimension
         quant = self.post_quant_conv(quant)
+        
         if self.dec_type == 'dinov2':
-            quant = quant.flatten(2).permute(0, 2, 1)
+            # Step 2: Reshape for DINOv2 decoder (expects sequence of tokens)
+            # Flatten spatial dimensions: (b, 768, 11, 11) -> (b, 768, 121)
+            quant = quant.flatten(2)
+            # Permute to token sequence: (b, 768, 121) -> (b, 121, 768)
+            # Now we have 121 tokens with 768-dim embeddings, combining info from both quantizers
+            quant = quant.permute(0, 2, 1)
+        
+        # Step 3: Decode tokens to image using DINOv2 decoder
+        # DINOv2 decoder takes learnable tokens and reconstructs the image
+        # Output: (b, 3, 256, 256) - reconstructed RGB image
         dec = self.decoder(quant)
         return dec
 
@@ -288,31 +323,63 @@ class VQModel(nn.Module):
         return dec
 
     def forward(self, input, epoch, alpha, beta, delta):
+        # ========== ENCODING PHASE ==========
+        # Step 1: Encode input image to continuous latent features
+        # input: (b, 3, 256, 256) -> h: (b, 32, 242, 1)
         h = self.encode(input)
         b, c, l, _ = h.shape
+        # h is now the continuous latent space BEFORE quantization
+        # For product_quant=2: shape is (b, 32, 242, 1)
+        
+        # Multi-scale dropout setup for progressive training
         if len(self.v_patch_nums) == 1:
             dropout_rand = None
         else:
             dropout_rand = torch.randint(self.start_drop, len(self.v_patch_nums) + 1, (b,))  # to fix dropout across quantizers, skip first start_drop-1 quantizers
 
+        # ========== QUANTIZATION PHASE (Product Quantization) ==========
         if self.product_quant > 1:
+            # Product Quantization: Split latent space into multiple parts
+            # Split along dim=2 (the token sequence dimension): (b, 32, 242, 1) -> 2 × (b, 32, 121, 1)
+            # First chunk: Detail tokens (z_d), Second chunk: Semantic tokens (z_s)
             h_list = h.chunk(chunks=self.product_quant, dim=2)
             quant_list, usages_list, mean_vq_loss_list, commit_loss_list, entropy_list = [], [], [], [], []
+            
+            # Process each chunk through its own quantizer
             for i, h in enumerate(h_list):
+                # Reshape each chunk to spatial grid: (b, 32, 121, 1) -> (b, 32, 11, 11)
+                # sqrt(121) = 11, creating an 11×11 spatial grid of tokens
                 h = h.view(b, -1, int(sqrt(l // self.product_quant)), int(sqrt(l // self.product_quant)))
+                
+                # Apply quantization using separate codebook for this chunk
+                # quantizes[0]: Detail quantizer (z_d -> z_d') - captures fine-grained details
+                # quantizes[1]: Semantic quantizer (z_s -> z_s') - captures semantic content
+                # Input: (b, 32, 11, 11) -> Output: (b, 32, 11, 11) quantized
                 quant, usages, vq_loss, commit_loss, entropy_loss = self.quantizes[i].forward(h, ret_usages=True, dropout=dropout_rand)
-                quant_list.append(quant)
+                
+                quant_list.append(quant)  # Store quantized tokens (z_d' or z_s')
                 usages_list.append(usages)
                 mean_vq_loss_list.append(vq_loss)
                 commit_loss_list.append(commit_loss)
                 entropy_list.append(entropy_loss)
+            
+            # Orthogonality loss: Encourage detail and semantic quantizers to encode different information
+            # Computes cosine similarity between averaged features from both quantizers
             dependency_loss = self.dependency_loss_weight * orthogonal_cosine_loss(torch.mean(quant_list[0], dim=(2, 3)).contiguous(), torch.mean(quant_list[-1], dim=(2, 3)).contiguous())
+            
+            # Average statistics across quantizers
             usages = [sum(us) / self.product_quant for us in zip(*usages_list)]
             mean_vq_loss = sum(mean_vq_loss_list) / self.product_quant
             mean_commit_loss = sum(commit_loss_list) / self.product_quant
             mean_entropy = sum(entropy_list) / self.product_quant
+            
+            # Concatenate quantized tokens from both quantizers along channel dimension
+            # quant_list[0]: (b, 32, 11, 11) detail tokens z_d'
+            # quant_list[1]: (b, 32, 11, 11) semantic tokens z_s'
+            # Result: (b, 64, 11, 11) - combined quantized representation
             quant = torch.cat(quant_list, dim=1)
         else:
+            # Single quantizer case (no product quantization)
             dependency_loss = 0.0
             quant, usages, mean_vq_loss, mean_commit_loss, mean_entropy = self.quantize.forward(h, ret_usages=True, dropout=dropout_rand)
             print(alpha, beta, delta)
@@ -320,6 +387,9 @@ class VQModel(nn.Module):
             quant_list = [quant]
 
 
+        # ========== DECODING PHASE ==========
+        # Step 3: Decode concatenated quantized tokens (z_d' + z_s') back to image
+        # Input: (b, 64, 11, 11) -> Output: (b, 3, 256, 256)
         dec = self.decode(quant)
 
         # normalize the inputs to dino's transform
@@ -387,41 +457,64 @@ class VQModel(nn.Module):
         return dec, (mean_vq_loss, mean_commit_loss, mean_entropy, usages), sem_loss, detail_loss, dependency_loss
 
     def img_to_reconstructed_img(self, x, last_one=True,) -> List[torch.Tensor]:
+        # Multi-scale reconstruction: generates images at different resolutions
+        # Used for progressive training with v_patch_nums (e.g., [1, 2, 3, ..., 11] for 1×1 to 11×11 grids)
+        
+        # Step 1: Encode image to learnable tokens
         h = self.encoder(x)
         if self.enc_type == 'dinov2':
             b, l, c = h.shape
             if self.product_quant > 1:
                 assert int(sqrt(l // self.product_quant)) ** 2 * self.product_quant == l
+                # Reshape for product quantization: (b, 242, 768) -> (b, 768, 242, 1)
                 h = h.view(b, l, 1, c)
                 h = h.permute(0, 3, 1, 2)
             else:
                 assert int(sqrt(l)) ** 2 == l
+                # Reshape to 2D spatial grid for single quantizer
                 h = h.view(b, int(sqrt(l)), int(sqrt(l)), c)
                 h = h.permute(0, 3, 1, 2)
+        
+        # Step 2: Project to latent space: (b, 768, 242, 1) -> (b, 32, 242, 1)
         f = self.quant_conv(h)
 
         if self.product_quant > 1:
+            # Product quantization path
             b, c, l, _ = f.shape
+            # Split into chunks: (b, 32, 242, 1) -> 2 × (b, 32, 121, 1)
             f_list = f.chunk(chunks=self.product_quant, dim=2)
+            # Reshape each chunk to spatial grid: (b, 32, 121, 1) -> (b, 32, 11, 11)
             f_list = [f.view(b, -1, int(sqrt(l // self.product_quant)), int(sqrt(l // self.product_quant))) for f in f_list]
+            
             if len(self.v_patch_nums) == 1:
-                f_hats_list = [self.quantizes[i].f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=None) for i, f in enumerate(f_list)]
-            else:
+                # Single-scale: quantize at full 11×11 resolution only
                 f_hats_list = [self.quantizes[i].f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=self.v_patch_nums) for i, f in enumerate(f_list)]
+            else:
+                # Multi-scale: quantize progressively at different resolutions (1×1, 2×2, ..., 11×11)
+                # Each scale in v_patch_nums generates a reconstruction
+                f_hats_list = [self.quantizes[i].f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=self.v_patch_nums) for i, f in enumerate(f_list)]
+            
+            # Concatenate quantized features from both quantizers at each scale
+            # zip(*f_hats_list) groups results by scale: [(z_d'_scale1, z_s'_scale1), (z_d'_scale2, z_s'_scale2), ...]
+            # For each scale, concatenate: (b, 32, h, w) + (b, 32, h, w) -> (b, 64, h, w)
+            # Then project to decoder dimension: (b, 64, h, w) -> (b, 768, h, w)
             f_hats = [self.post_quant_conv(torch.cat(f_hats, dim=1)) for f_hats in zip(*f_hats_list)]
         else:
+            # Single quantizer path (no product quantization)
             if len(self.v_patch_nums) == 1:
-                ls_f_hat_BChw = self.quantize.f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=None)
+                f_hats = self.quantize.f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=self.v_patch_nums)
             else:
-                ls_f_hat_BChw = self.quantize.f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=self.v_patch_nums)
-            f_hats = [self.post_quant_conv(f_hat) for f_hat in ls_f_hat_BChw]
+                f_hats = self.quantize.f_to_idxBl_or_fhat(f, to_fhat=True, v_patch_nums=self.v_patch_nums)
 
         if self.dec_type == 'dinov2':
+            # Reshape for DINOv2 decoder: (b, 768, h, w) -> (b, h*w, 768) for each scale
             f_hats = [f_hat.flatten(2).permute(0, 2, 1) for f_hat in f_hats]
 
         if last_one:
-            return self.decoder(f_hats[-1]).clamp_(-1, 1)
+            # Return only the finest resolution (11×11 tokens -> 256×256 image)
+            return [self.decoder(f_hats[-1]).clamp_(-1, 1),]
         else:
+            # Return all scales for multi-scale supervision
             return [self.decoder(f_hat).clamp_(-1, 1) for f_hat in f_hats]
 
     def img_to_sem_feat(self, x,) -> List[torch.Tensor]:
@@ -561,8 +654,6 @@ class Encoder(nn.Module):
         h = self.conv_out(h)
         return h
 
-
-
 class Decoder(nn.Module):
     def __init__(self, z_channels=256, ch=128, ch_mult=(1,1,2,2,4), num_res_blocks=2, norm_type="group",
                  dropout=0.0, resamp_with_conv=True, out_channels=3):
@@ -630,7 +721,6 @@ class Decoder(nn.Module):
         h = nonlinearity(h)
         h = self.conv_out(h)
         return h
-
 
 class ResnetBlock(nn.Module):
     def __init__(self, in_channels, out_channels=None, conv_shortcut=False, dropout=0.0, norm_type='group'):

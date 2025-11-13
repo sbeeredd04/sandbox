@@ -151,11 +151,11 @@ class TestTimeOpt(nn.Module):
             dec = self.titok.decode(tokens)
             return dec
         elif isinstance(self.titok, ImageFolderWrapper):
-            # ImageFolder uses shape (b, d, h, w)
-            # tokens shape: (b, d, 1, n) -> need to reshape to (b, d, h, w)
+            # ImageFolder uses shape (b, c, l, 1) for product_quant > 1
+            # tokens shape: (b, d, 1, n) -> need to reshape to (b, d, l, 1)
             b, d, _, n = tokens.shape
-            h = w = int(n ** 0.5)  # Assume square spatial layout
-            tokens_reshape = tokens.squeeze(2).view(b, d, h, w)
+            # For ImageFolder with product_quant, the shape is (b, d, l, 1) not (b, d, h, w)
+            tokens_reshape = tokens.view(b, d, n, 1)
             
             if not self.config.optimize_post_quantization_tokens:
                 # Quantize before decoding if optimizing continuous tokens

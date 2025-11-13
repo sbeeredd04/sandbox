@@ -85,7 +85,7 @@ class BaseModel(torch.nn.Module):
             raise ValueError(f"{pretrained_model_path} does not exist")
 
         # Load model state from checkpoint.
-        checkpoint = torch.load(model_file, map_location="cpu")
+        checkpoint = torch.load(model_file, map_location="cpu", weights_only=False)
         # Load state dictionary into self.
         msg = self.load_state_dict(checkpoint, strict=strict_loading)
         # Print information about loading weights.

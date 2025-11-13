@@ -108,7 +108,7 @@ class ImageFolderWrapper(nn.Module):
             print(f"Downloading checkpoint for {model_name} from {hf_url}...")
             checkpoint_path = self._download_checkpoint(model_name, hf_url)
             
-        checkpoint = torch.load(checkpoint_path, map_location='cpu')
+        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         
         if 'ema' in checkpoint:
             state_dict = checkpoint['ema']
@@ -148,10 +148,10 @@ class ImageFolderWrapper(nn.Module):
                 import zipfile
                 with zipfile.ZipFile(checkpoint_path, 'r') as z:
                     pass  # If this succeeds, file is valid
-                print(f"✓ Using cached checkpoint: {checkpoint_path}")
+                print(f"Using cached checkpoint: {checkpoint_path}")
                 return str(checkpoint_path)
             except (zipfile.BadZipFile, RuntimeError):
-                print(f"⚠ Cached checkpoint appears corrupted, re-downloading...")
+                print(f"Cached checkpoint appears corrupted, re-downloading...")
                 checkpoint_path.unlink()  # Delete corrupted file
         
         # Download using urllib

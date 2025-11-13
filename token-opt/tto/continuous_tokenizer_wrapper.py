@@ -3,7 +3,7 @@ import torch.nn as nn
 from jaxtyping import Float
 from torch import Tensor
 import sys
-sys.path.append('/home/sbeeredd/sandbox/continuous_tokenizer')
+sys.path.append('../../continuous_tokenizer')
 
 from modelling.tokenizer import SoftVQModel, VQModel, ModelArgs
 from huggingface_hub import hf_hub_download
@@ -55,7 +55,7 @@ class ContinuousTokenizerWrapper(nn.Module):
                 from safetensors.torch import load_file
                 state_dict = load_file(ckpt_path)
             else:
-                state_dict = torch.load(checkpoint_path, map_location='cpu')
+                state_dict = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
                 if 'model' in state_dict:
                     state_dict = state_dict['model']
                 elif 'state_dict' in state_dict:
