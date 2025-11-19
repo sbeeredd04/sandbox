@@ -161,16 +161,38 @@ class GigaTokWrapper(nn.Module):
         with torch.no_grad():
             # CNN spatial encoder
             h = self.model.encoder(x)  # (b, z_channels, h, w)
+            print(f"[DEBUG encode] After encoder: h.shape = {h.shape}")
             
             # ViT 2D->1D encoder: compresses spatial features to 1D sequence
-            z = self.model.s2to1encoder(h)  # (b, num_latent_tokens, z_channels)
+            z = self.model.s2to1encoder(h)  # Expected: (b, num_latent_tokens, z_channels)
+            print(f"[DEBUG encode] After s2to1encoder: z.shape = {z.shape}, z.dim() = {z.dim()}")
             
-            # Reshape for quant_conv (Conv2d expects 4D input)
-            # (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
-            z = z.permute(0, 2, 1).unsqueeze(2)  # (b, z_channels, 1, num_latent_tokens)
+            # Handle different output shapes from s2to1encoder
+            if z.dim() == 3:
+                # Expected case: (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
+                print(f"[DEBUG encode] z is 3D, reshaping for Conv2d")
+                z = z.permute(0, 2, 1).unsqueeze(2)  # (b, z_channels, 1, num_latent_tokens)
+            elif z.dim() == 4:
+                # Already 4D from s2to1encoder
+                print(f"[DEBUG encode] z is already 4D: {z.shape}")
+                # Check if it's (b, n, d, 1) and needs to be (b, d, 1, n)
+                b, dim1, dim2, dim3 = z.shape
+                if dim3 == 1 and dim1 == self.num_latent_tokens:
+                    # Shape is (b, num_latent_tokens, z_channels, 1) -> (b, z_channels, 1, num_latent_tokens)
+                    z = z.squeeze(3).permute(0, 2, 1).unsqueeze(2)
+                elif dim2 == 1:
+                    # Shape is (b, z_channels, 1, num_latent_tokens) - already correct
+                    pass
+                else:
+                    raise ValueError(f"Unexpected 4D shape from s2to1encoder: {z.shape}")
+            else:
+                raise ValueError(f"Unexpected dimension from s2to1encoder: z.dim() = {z.dim()}, shape = {z.shape}")
+            
+            print(f"[DEBUG encode] Before quant_conv: z.shape = {z.shape}")
             
             # Project to codebook dimension using 1x1 Conv2d
             z = self.model.quant_conv(z)  # (b, codebook_embed_dim, 1, num_latent_tokens)
+            print(f"[DEBUG encode] After quant_conv: z.shape = {z.shape}")
         
         return z
     
