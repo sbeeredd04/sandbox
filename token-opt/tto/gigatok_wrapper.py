@@ -81,15 +81,18 @@ def find_gigatok_dir():
         "Please ensure GigaTok is cloned and accessible."
     )
 
-# Find and add GigaTok to path
-GIGATOK_DIR = find_gigatok_dir()
-print(f"\n[GigaTokWrapper] ✓ Using GigaTok at: {GIGATOK_DIR}")
-print("="*80 + "\n")
+# Don't find GigaTok at import time - wait until class is used
+_GIGATOK_DIR = None
 
-if str(GIGATOK_DIR) not in sys.path:
-    sys.path.append(str(GIGATOK_DIR))
-
-from tokenizer.tokenizer_image.vq.vq_vit_model import VQVitModelPlus, VQVitModelPlusArgs
+def get_gigatok_dir():
+    global _GIGATOK_DIR
+    if _GIGATOK_DIR is None:
+        _GIGATOK_DIR = find_gigatok_dir()
+        print(f"\n[GigaTokWrapper] ✓ Using GigaTok at: {_GIGATOK_DIR}")
+        print("="*80 + "\n")
+        if str(_GIGATOK_DIR) not in sys.path:
+            sys.path.append(str(_GIGATOK_DIR))
+    return _GIGATOK_DIR
 
 
 class GigaTokWrapper(nn.Module):
@@ -97,13 +100,14 @@ class GigaTokWrapper(nn.Module):
     # Predefined model configurations (will be populated dynamically)
     @staticmethod
     def _get_configs():
+        gigatok_dir = get_gigatok_dir()
         return {
             'BL256': {
-                'config_path': str(GIGATOK_DIR / 'configs' / 'vq' / 'VQ_BL256.yaml'),
+                'config_path': str(gigatok_dir / 'configs' / 'vq' / 'VQ_BL256.yaml'),
                 'description': 'Base encoder, Large decoder, 256 tokens',
             },
             'XLXXL256': {
-                'config_path': str(GIGATOK_DIR / 'configs' / 'vq' / 'VQ_XLXXL256.yaml'),
+                'config_path': str(gigatok_dir / 'configs' / 'vq' / 'VQ_XLXXL256.yaml'),
                 'description': 'XL encoder, XXL decoder, 256 tokens (3B params)',
             },
         }
@@ -115,6 +119,9 @@ class GigaTokWrapper(nn.Module):
     def __init__(self, config_name: str = 'BL256', checkpoint_path: str = None):
 
         super().__init__()
+        
+        # Import GigaTok models (lazy import after path is set)
+        from tokenizer.tokenizer_image.vq.vq_vit_model import VQVitModelPlus, VQVitModelPlusArgs
         
         # Load configuration
         if config_name in self.CONFIGS:
