@@ -176,11 +176,13 @@ class TestTimeOpt(nn.Module):
             dec = self.titok.decode(tokens_reshape)
             return dec
         elif isinstance(self.titok, GigaTokWrapper):
-            # GigaTok uses 1D tokenizer with 256 tokens
-            # tokens shape: (b, codebook_embed_dim, 1, num_latent_tokens)
+            # GigaTok: 1D VQ tokenizer with 256 latent tokens
+            # Token shape: (b, codebook_embed_dim, 1, num_latent_tokens)
+            
             if not self.config.optimize_post_quantization_tokens:
-                # Quantize continuous tokens before decoding
+                # Pre-quantization mode: quantize continuous embeddings before decoding
                 tokens, _ = self.titok.quantize(tokens)
+            # Post-quantization mode: tokens are already discrete, skip quantization
             
             dec = self.titok.decode(tokens)
             return dec
@@ -232,12 +234,14 @@ class TestTimeOpt(nn.Module):
             tok = tok.view(b, d, 1, h * w)
             return tok
         elif isinstance(self.titok, GigaTokWrapper):
-            # GigaTok encoder outputs (b, codebook_embed_dim, 1, num_latent_tokens)
+            # GigaTok: encode image to 1D latent sequence
+            # Output: (b, codebook_embed_dim, 1, num_latent_tokens=256)
             tok = self.titok.encode(img)
             
             if self.config.optimize_post_quantization_tokens:
-                # Quantize first if optimizing post-quantization tokens
+                # Post-quantization mode: quantize immediately, optimize discrete indices
                 tok, _ = self.titok.quantize(tok)
+            # Pre-quantization mode: return continuous embeddings for optimization
             
             return tok
         else:
