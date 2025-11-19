@@ -7,91 +7,26 @@ import sys
 import yaml
 import os
 
-# Dynamically find GigaTok directory with detailed debugging
-def find_gigatok_dir():
-    print("\n" + "="*80)
-    print("[GigaTokWrapper] Searching for GigaTok directory...")
-    print("="*80)
-    
-    # Print current working directory
-    cwd = Path.cwd()
-    print(f"\nCurrent working directory: {cwd}")
-    
-    # Print sys.path
-    print(f"\nPython sys.path (first 5 entries):")
-    for i, path in enumerate(sys.path[:5], 1):
-        print(f"  {i}. {path}")
-        # Check if GigaTok exists in this path
-        check_path = Path(path) / 'GigaTok'
-        if check_path.exists():
-            print(f"     ✓ Found GigaTok here!")
-    
-    # Check if GigaTok is already in sys.path
-    print("\nChecking sys.path for GigaTok...")
-    for path in sys.path:
-        gigatok_path = Path(path)
-        if gigatok_path.name == 'GigaTok' and gigatok_path.exists():
-            print(f"  ✓ Found in sys.path: {gigatok_path}")
-            return gigatok_path
-        # Check if GigaTok is a subdirectory
-        potential_path = gigatok_path / 'GigaTok'
-        if potential_path.exists():
-            print(f"  ✓ Found as subdirectory: {potential_path}")
-            return potential_path
-    
-    # Try common locations relative to current working directory and absolute
-    print("\nChecking common locations...")
-    common_locations = [
-        cwd / 'sandbox' / 'GigaTok',  # Colab: /content/sandbox/GigaTok
-        cwd / 'GigaTok',
-        Path('sandbox/GigaTok'),
-        Path('GigaTok'),
-        Path('/home/sbeeredd/sandbox/GigaTok'),  # Local
-        Path('../GigaTok'),
-        Path('../../GigaTok'),
-    ]
-    
-    for loc in common_locations:
-        print(f"  Checking: {loc.absolute()}")
-        if loc.exists():
-            print(f"    ✓ EXISTS!")
-            resolved = loc.resolve()
-            print(f"    Resolved to: {resolved}")
-            return resolved
-        else:
-            print(f"    ✗ Not found")
-    
-    # Last resort: check if we're in a subdirectory of sandbox
-    print("\nLast resort: searching parent directories...")
-    current = cwd
-    for _ in range(5):  # Check up to 5 levels up
-        potential = current / 'GigaTok'
-        print(f"  Checking: {potential}")
-        if potential.exists():
-            print(f"    ✓ Found!")
-            return potential.resolve()
-        current = current.parent
-    
-    print("\n" + "="*80)
-    print("ERROR: Could not find GigaTok directory!")
-    print("="*80)
-    raise FileNotFoundError(
-        "Could not find GigaTok directory.\n"
-        f"Current directory: {cwd}\n"
-        "Please ensure GigaTok is cloned and accessible."
-    )
-
-# Don't find GigaTok at import time - wait until class is used
+# Simple: find GigaTok relative to this file's location
+# This file is at: sandbox/token-opt/tto/gigatok_wrapper.py
+# GigaTok is at:   sandbox/GigaTok/
 _GIGATOK_DIR = None
 
 def get_gigatok_dir():
     global _GIGATOK_DIR
     if _GIGATOK_DIR is None:
-        _GIGATOK_DIR = find_gigatok_dir()
-        print(f"\n[GigaTokWrapper] ✓ Using GigaTok at: {_GIGATOK_DIR}")
-        print("="*80 + "\n")
+        # Get directory of this file
+        this_file = Path(__file__).resolve()
+        # Go up to sandbox: token-opt/tto/gigatok_wrapper.py -> token-opt/tto -> token-opt -> sandbox
+        sandbox_dir = this_file.parent.parent.parent
+        _GIGATOK_DIR = sandbox_dir / 'GigaTok'
+        
+        if not _GIGATOK_DIR.exists():
+            raise FileNotFoundError(f"GigaTok not found at {_GIGATOK_DIR}")
+        
         if str(_GIGATOK_DIR) not in sys.path:
             sys.path.append(str(_GIGATOK_DIR))
+    
     return _GIGATOK_DIR
 
 
