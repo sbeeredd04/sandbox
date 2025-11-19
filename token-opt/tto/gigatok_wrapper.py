@@ -5,26 +5,62 @@ from torch import Tensor
 from pathlib import Path
 import sys
 import yaml
+import os
 
-# Add GigaTok to path
-sys.path.append('/home/sbeeredd/sandbox/GigaTok')
+# Dynamically find GigaTok directory
+def find_gigatok_dir():
+    # Check if GigaTok is already in sys.path
+    for path in sys.path:
+        gigatok_path = Path(path)
+        if gigatok_path.name == 'GigaTok' and gigatok_path.exists():
+            return gigatok_path
+        # Check if GigaTok is a subdirectory
+        potential_path = gigatok_path / 'GigaTok'
+        if potential_path.exists():
+            return potential_path
+    
+    # Try common locations
+    common_locations = [
+        Path('/home/sbeeredd/sandbox/GigaTok'),
+        Path('sandbox/GigaTok'),
+        Path('../GigaTok'),
+        Path('../../GigaTok'),
+    ]
+    
+    for loc in common_locations:
+        if loc.exists():
+            return loc.resolve()
+    
+    raise FileNotFoundError("Could not find GigaTok directory. Please ensure it's in sys.path or at a common location.")
+
+# Find and add GigaTok to path
+GIGATOK_DIR = find_gigatok_dir()
+print(f"[GigaTokWrapper] Found GigaTok at: {GIGATOK_DIR}")
+if str(GIGATOK_DIR) not in sys.path:
+    sys.path.append(str(GIGATOK_DIR))
 
 from tokenizer.tokenizer_image.vq.vq_vit_model import VQVitModelPlus, VQVitModelPlusArgs
 
 
 class GigaTokWrapper(nn.Module):
     
-    # Predefined model configurations
-    CONFIGS = {
-        'BL256': {
-            'config_path': '/home/sbeeredd/sandbox/GigaTok/configs/vq/VQ_BL256.yaml',
-            'description': 'Base encoder, Large decoder, 256 tokens',
-        },
-        'XLXXL256': {
-            'config_path': '/home/sbeeredd/sandbox/GigaTok/configs/vq/VQ_XLXXL256.yaml',
-            'description': 'XL encoder, XXL decoder, 256 tokens (3B params)',
-        },
-    }
+    # Predefined model configurations (will be populated dynamically)
+    @staticmethod
+    def _get_configs():
+        return {
+            'BL256': {
+                'config_path': str(GIGATOK_DIR / 'configs' / 'vq' / 'VQ_BL256.yaml'),
+                'description': 'Base encoder, Large decoder, 256 tokens',
+            },
+            'XLXXL256': {
+                'config_path': str(GIGATOK_DIR / 'configs' / 'vq' / 'VQ_XLXXL256.yaml'),
+                'description': 'XL encoder, XXL decoder, 256 tokens (3B params)',
+            },
+        }
+    
+    @property
+    def CONFIGS(self):
+        return self._get_configs()
     
     def __init__(self, config_name: str = 'BL256', checkpoint_path: str = None):
 

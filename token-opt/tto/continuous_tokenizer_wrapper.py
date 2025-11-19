@@ -3,7 +3,38 @@ import torch.nn as nn
 from jaxtyping import Float
 from torch import Tensor
 import sys
-sys.path.append('../../continuous_tokenizer')
+from pathlib import Path
+
+# Dynamically find continuous_tokenizer directory
+def find_continuous_tokenizer_dir():
+    # Check if continuous_tokenizer is already in sys.path
+    for path in sys.path:
+        ct_path = Path(path)
+        if ct_path.name == 'continuous_tokenizer' and ct_path.exists():
+            return ct_path
+        # Check if it's a subdirectory
+        potential_path = ct_path / 'continuous_tokenizer'
+        if potential_path.exists():
+            return potential_path
+    
+    # Try common locations
+    common_locations = [
+        Path('../../continuous_tokenizer'),
+        Path('../continuous_tokenizer'),
+        Path('sandbox/continuous_tokenizer'),
+        Path('/home/sbeeredd/sandbox/continuous_tokenizer'),
+    ]
+    
+    for loc in common_locations:
+        if loc.exists():
+            return loc.resolve()
+    
+    raise FileNotFoundError("Could not find continuous_tokenizer directory. Please ensure it's cloned and in sys.path.")
+
+# Find and add to path
+CONTINUOUS_TOKENIZER_DIR = find_continuous_tokenizer_dir()
+if str(CONTINUOUS_TOKENIZER_DIR) not in sys.path:
+    sys.path.append(str(CONTINUOUS_TOKENIZER_DIR))
 
 from modelling.tokenizer import SoftVQModel, VQModel, ModelArgs
 from huggingface_hub import hf_hub_download
