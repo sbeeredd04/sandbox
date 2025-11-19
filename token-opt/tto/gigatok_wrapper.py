@@ -220,16 +220,14 @@ class GigaTokWrapper(nn.Module):
         with torch.no_grad():
             print(f"[DEBUG decode] Input z.shape = {z.shape}")
             
-            # post_quant_conv is Conv2d, input: (b, codebook_embed_dim, 1, num_latent_tokens)
-            h = self.model.post_quant_conv(z)  # (b, z_channels, 1, num_latent_tokens)
+            # post_quant_conv is Conv2d: (b, codebook_embed_dim, 1, num_latent_tokens) -> (b, z_channels, 1, num_latent_tokens)
+            h = self.model.post_quant_conv(z)
             print(f"[DEBUG decode] After post_quant_conv: h.shape = {h.shape}")
             
-            # Reshape for 1D->2D decoder: (b, z_channels, 1, n) -> (b, n, z_channels)
-            h = h.squeeze(2).permute(0, 2, 1)  # (b, num_latent_tokens, z_channels)
-            print(f"[DEBUG decode] After reshape: h.shape = {h.shape}")
-            
-            # ViT 1D->2D decoder: expand 1D sequence back to 2D spatial features
-            h = self.model.s1to2decoder(h)  # (b, num_latent_tokens, z_channels) -> (b, z_channels, h, w)
+            # s1to2decoder expects 4D input (N, C, H, W)
+            # Our shape (b, z_channels, 1, num_latent_tokens) is already 4D
+            # Decoder interprets this as: batch, channels, height=1, width=num_tokens
+            h = self.model.s1to2decoder(h)  # (b, z_channels, 1, num_latent_tokens) -> (b, z_channels, h, w)
             print(f"[DEBUG decode] After s1to2decoder: h.shape = {h.shape}")
             
             # CNN spatial decoder: upsample to full resolution image
