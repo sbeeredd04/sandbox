@@ -6,6 +6,7 @@ from tto.siglip import SigLIP
 from tto.vqgan_wrapper import PretrainedVQGAN
 from tto.continuous_tokenizer_wrapper import ContinuousTokenizerWrapper
 from tto.imagefolder_wrapper import ImageFolderWrapper
+from tto.gigatok_wrapper import GigaTokWrapper
 
 # Type hints for better code clarity
 from typing import cast, Callable, Literal
@@ -128,6 +129,17 @@ class TestTimeOpt(nn.Module):
                 model_name=model_name,
                 checkpoint_path=checkpoint_path,
             ).eval()
+        elif config.titok_checkpoint.startswith("gigatok:"):
+            # Format: "gigatok:MODEL_CONFIG" or "gigatok:MODEL_CONFIG:CHECKPOINT_PATH"
+            # e.g., "gigatok:BL256" or "gigatok:BL256:/path/to/checkpoint.pt"
+            parts = config.titok_checkpoint.split(":")
+            config_name = parts[1] if len(parts) > 1 else 'BL256'
+            checkpoint_path = parts[2] if len(parts) > 2 else None
+            
+            self.titok = GigaTokWrapper(
+                config_name=config_name,
+                checkpoint_path=checkpoint_path,
+            ).eval()
         else:
             self.titok = TiTok.from_pretrained(config.titok_checkpoint).eval()
             self.titok.requires_grad_(False)
@@ -162,6 +174,15 @@ class TestTimeOpt(nn.Module):
                 tokens_reshape, _ = self.titok.quantize(tokens_reshape)
             
             dec = self.titok.decode(tokens_reshape)
+            return dec
+        elif isinstance(self.titok, GigaTokWrapper):
+            # GigaTok uses 1D tokenizer with 256 tokens
+            # tokens shape: (b, codebook_embed_dim, 1, num_latent_tokens)
+            if not self.config.optimize_post_quantization_tokens:
+                # Quantize continuous tokens before decoding
+                tokens, _ = self.titok.quantize(tokens)
+            
+            dec = self.titok.decode(tokens)
             return dec
         else:
             def _maybe_quantize(tokens):
@@ -209,6 +230,15 @@ class TestTimeOpt(nn.Module):
             # Reshape to (b, d, 1, n) format
             b, d, h, w = tok.shape
             tok = tok.view(b, d, 1, h * w)
+            return tok
+        elif isinstance(self.titok, GigaTokWrapper):
+            # GigaTok encoder outputs (b, codebook_embed_dim, 1, num_latent_tokens)
+            tok = self.titok.encode(img)
+            
+            if self.config.optimize_post_quantization_tokens:
+                # Quantize first if optimizing post-quantization tokens
+                tok, _ = self.titok.quantize(tok)
+            
             return tok
         else:
             # Use TiTok encoder with learnable latent tokens as query vectors
