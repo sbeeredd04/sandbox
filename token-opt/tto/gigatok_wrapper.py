@@ -201,14 +201,15 @@ class GigaTokWrapper(nn.Module):
         # Input/Output: (b, codebook_embed_dim, 1, num_latent_tokens)
         
         with torch.no_grad():
-            # Reshape for VQ module: expects (b, n, d) format
-            z_in = z.squeeze(2).permute(0, 2, 1)  # (b, d, 1, n) -> (b, n, d)
+            # VectorQuantizer expects 4D input (b, c, h, w)
+            # Our shape (b, d, 1, n) is interpreted as (b, channels, height=1, width=num_tokens)
+            # This is already in the correct format, pass directly
+            print(f"[DEBUG quantize] Input z.shape = {z.shape}")
             
             # VQ: find nearest codebook entry for each token
-            z_q, vq_loss, _ = self.model.quantize(z_in)  # (b, n, d) -> (b, n, d)
+            z_q, vq_loss, _ = self.model.quantize(z)  # (b, d, 1, n) -> (b, d, 1, n)
             
-            # Reshape back to standard format
-            z_q = z_q.permute(0, 2, 1).unsqueeze(2)  # (b, n, d) -> (b, d, 1, n)
+            print(f"[DEBUG quantize] Output z_q.shape = {z_q.shape}")
         
         return z_q, {"loss": vq_loss}
     
@@ -217,17 +218,23 @@ class GigaTokWrapper(nn.Module):
         # Input: (b, codebook_embed_dim, 1, num_latent_tokens) -> Output: (b, 3, 256, 256)
         
         with torch.no_grad():
+            print(f"[DEBUG decode] Input z.shape = {z.shape}")
+            
             # post_quant_conv is Conv2d, input: (b, codebook_embed_dim, 1, num_latent_tokens)
             h = self.model.post_quant_conv(z)  # (b, z_channels, 1, num_latent_tokens)
+            print(f"[DEBUG decode] After post_quant_conv: h.shape = {h.shape}")
             
             # Reshape for 1D->2D decoder: (b, z_channels, 1, n) -> (b, n, z_channels)
             h = h.squeeze(2).permute(0, 2, 1)  # (b, num_latent_tokens, z_channels)
+            print(f"[DEBUG decode] After reshape: h.shape = {h.shape}")
             
             # ViT 1D->2D decoder: expand 1D sequence back to 2D spatial features
             h = self.model.s1to2decoder(h)  # (b, num_latent_tokens, z_channels) -> (b, z_channels, h, w)
+            print(f"[DEBUG decode] After s1to2decoder: h.shape = {h.shape}")
             
             # CNN spatial decoder: upsample to full resolution image
             x_recon = self.model.decoder(h)  # (b, z_channels, h, w) -> (b, 3, 256, 256)
+            print(f"[DEBUG decode] After decoder: x_recon.shape = {x_recon.shape}")
         
         return x_recon
     
