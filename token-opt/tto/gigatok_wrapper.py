@@ -160,39 +160,28 @@ class GigaTokWrapper(nn.Module):
         
         with torch.no_grad():
             # CNN spatial encoder
-            h = self.model.encoder(x)  # (b, z_channels, h, w)
-            print(f"[DEBUG encode] After encoder: h.shape = {h.shape}")
+            h = self.model.encoder(x)
             
-            # ViT 2D->1D encoder: compresses spatial features to 1D sequence
-            z = self.model.s2to1encoder(h)  # Expected: (b, num_latent_tokens, z_channels)
-            print(f"[DEBUG encode] After s2to1encoder: z.shape = {z.shape}, z.dim() = {z.dim()}")
+            # ViT 2D->1D encoder
+            z = self.model.s2to1encoder(h)
             
             # Handle different output shapes from s2to1encoder
             if z.dim() == 3:
-                # Expected case: (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
-                print(f"[DEBUG encode] z is 3D, reshaping for Conv2d")
-                z = z.permute(0, 2, 1).unsqueeze(2)  # (b, z_channels, 1, num_latent_tokens)
+                # (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
+                z = z.permute(0, 2, 1).unsqueeze(2)
             elif z.dim() == 4:
-                # Already 4D from s2to1encoder
-                print(f"[DEBUG encode] z is already 4D: {z.shape}")
-                # Check if it's (b, n, d, 1) and needs to be (b, d, 1, n)
+                # Check if already in correct format
                 b, dim1, dim2, dim3 = z.shape
                 if dim3 == 1 and dim1 == self.num_latent_tokens:
-                    # Shape is (b, num_latent_tokens, z_channels, 1) -> (b, z_channels, 1, num_latent_tokens)
+                    # (b, num_latent_tokens, z_channels, 1) -> (b, z_channels, 1, num_latent_tokens)
                     z = z.squeeze(3).permute(0, 2, 1).unsqueeze(2)
-                elif dim2 == 1:
-                    # Shape is (b, z_channels, 1, num_latent_tokens) - already correct
-                    pass
-                else:
+                elif dim2 != 1:
                     raise ValueError(f"Unexpected 4D shape from s2to1encoder: {z.shape}")
             else:
                 raise ValueError(f"Unexpected dimension from s2to1encoder: z.dim() = {z.dim()}, shape = {z.shape}")
             
-            print(f"[DEBUG encode] Before quant_conv: z.shape = {z.shape}")
-            
-            # Project to codebook dimension using 1x1 Conv2d
-            z = self.model.quant_conv(z)  # (b, codebook_embed_dim, 1, num_latent_tokens)
-            print(f"[DEBUG encode] After quant_conv: z.shape = {z.shape}")
+            # Project to codebook dimension
+            z = self.model.quant_conv(z)
         
         return z
     
@@ -202,14 +191,8 @@ class GigaTokWrapper(nn.Module):
         
         with torch.no_grad():
             # VectorQuantizer expects 4D input (b, c, h, w)
-            # Our shape (b, d, 1, n) is interpreted as (b, channels, height=1, width=num_tokens)
-            # This is already in the correct format, pass directly
-            print(f"[DEBUG quantize] Input z.shape = {z.shape}")
-            
-            # VQ: find nearest codebook entry for each token
-            z_q, vq_loss, _ = self.model.quantize(z)  # (b, d, 1, n) -> (b, d, 1, n)
-            
-            print(f"[DEBUG quantize] Output z_q.shape = {z_q.shape}")
+            # Shape (b, d, 1, n) is interpreted as (b, channels, height=1, width=num_tokens)
+            z_q, vq_loss, _ = self.model.quantize(z)
         
         return z_q, {"loss": vq_loss}
     
@@ -218,21 +201,14 @@ class GigaTokWrapper(nn.Module):
         # Input: (b, codebook_embed_dim, 1, num_latent_tokens) -> Output: (b, 3, 256, 256)
         
         with torch.no_grad():
-            print(f"[DEBUG decode] Input z.shape = {z.shape}")
-            
-            # post_quant_conv is Conv2d: (b, codebook_embed_dim, 1, num_latent_tokens) -> (b, z_channels, 1, num_latent_tokens)
+            # Project back to z_channels dimension
             h = self.model.post_quant_conv(z)
-            print(f"[DEBUG decode] After post_quant_conv: h.shape = {h.shape}")
             
-            # s1to2decoder expects 4D input (N, C, H, W)
-            # Our shape (b, z_channels, 1, num_latent_tokens) is already 4D
-            # Decoder interprets this as: batch, channels, height=1, width=num_tokens
-            h = self.model.s1to2decoder(h)  # (b, z_channels, 1, num_latent_tokens) -> (b, z_channels, h, w)
-            print(f"[DEBUG decode] After s1to2decoder: h.shape = {h.shape}")
+            # ViT 1D->2D decoder (expects 4D input)
+            h = self.model.s1to2decoder(h)
             
-            # CNN spatial decoder: upsample to full resolution image
-            x_recon = self.model.decoder(h)  # (b, z_channels, h, w) -> (b, 3, 256, 256)
-            print(f"[DEBUG decode] After decoder: x_recon.shape = {x_recon.shape}")
+            # CNN spatial decoder
+            x_recon = self.model.decoder(h)
         
         return x_recon
     
