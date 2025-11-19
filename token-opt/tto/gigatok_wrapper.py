@@ -189,37 +189,35 @@ class GigaTokWrapper(nn.Module):
         
         # Download from Google Drive
         gdrive_id = config_info['gdrive_id']
-        gdrive_url = f"https://drive.google.com/uc?id={gdrive_id}&export=download&confirm=t"
         
         print(f"Downloading {model_name} checkpoint from Google Drive...")
-        print(f"  URL: {gdrive_url}")
+        print(f"  File ID: {gdrive_id}")
         print(f"  Destination: {checkpoint_path}")
-        print(f"  This may take a few minutes...")
+        print(f"  This may take a few minutes (file is large ~500MB-3GB)...")
         
         try:
-            import urllib.request
-            import urllib.error
-            
-            # Create a custom opener to handle redirects and cookies
-            opener = urllib.request.build_opener()
-            opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
-            urllib.request.install_opener(opener)
-            
-            # Download with progress
-            def _progress_hook(count, block_size, total_size):
-                if total_size > 0:
-                    percent = int(count * block_size * 100 / total_size)
-                    if count % 50 == 0:  # Print every 50 blocks
-                        print(f"  Progress: {percent}%", end='\r')
-            
-            urllib.request.urlretrieve(gdrive_url, checkpoint_path, reporthook=_progress_hook)
-            print(f"\n  Download completed successfully")
+            # Try using gdown first (handles Google Drive properly)
+            try:
+                import gdown
+                url = f"https://drive.google.com/uc?id={gdrive_id}"
+                gdown.download(url, str(checkpoint_path), quiet=False)
+                print(f"  Download completed successfully using gdown")
+            except ImportError:
+                # Fallback to manual instructions if gdown not available
+                print(f"\n  ERROR: 'gdown' library not found.")
+                print(f"  Install it with: pip install gdown")
+                print(f"  Or manually download from:")
+                print(f"    https://drive.google.com/file/d/{gdrive_id}/view")
+                print(f"  And save to: {checkpoint_path}")
+                raise RuntimeError("gdown library required for automatic download")
             
             # Validate the download
+            print(f"  Validating downloaded checkpoint...")
             checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
             if 'ema' not in checkpoint and 'model' not in checkpoint and 'state_dict' not in checkpoint:
                 raise RuntimeError("Downloaded file does not appear to be a valid checkpoint")
             
+            print(f"  Checkpoint validated successfully")
             return str(checkpoint_path)
             
         except Exception as e:
@@ -227,9 +225,13 @@ class GigaTokWrapper(nn.Module):
             if checkpoint_path.exists():
                 checkpoint_path.unlink()
             raise RuntimeError(
-                f"Failed to download checkpoint: {e}\n"
-                f"Please manually download from: https://drive.google.com/file/d/{gdrive_id}/view\n"
-                f"and save to: {checkpoint_path}"
+                f"Failed to download checkpoint: {e}\n\n"
+                f"MANUAL DOWNLOAD INSTRUCTIONS:\n"
+                f"1. Visit: https://drive.google.com/file/d/{gdrive_id}/view\n"
+                f"2. Download the file manually\n"
+                f"3. Save it to: {checkpoint_path}\n"
+                f"4. Re-run your code\n\n"
+                f"Or install gdown: pip install gdown"
             )
     
     def encode(self, x: Float[Tensor, "b c h w"]) -> Float[Tensor, "b d 1 n"]:
