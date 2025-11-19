@@ -165,13 +165,12 @@ class GigaTokWrapper(nn.Module):
             # ViT 2D->1D encoder: compresses spatial features to 1D sequence
             z = self.model.s2to1encoder(h)  # (b, num_latent_tokens, z_channels)
             
-            # quant_conv is Conv2d expecting (b, c, h, w), so reshape (b, n, d) to (b, d, 1, n)
-            if z.dim() == 3:
-                b, n, d = z.shape
-                z = z.permute(0, 2, 1).unsqueeze(2)  # (b, n, d) -> (b, d, 1, n)
+            # Reshape for quant_conv (Conv2d expects 4D input)
+            # (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
+            z = z.permute(0, 2, 1).unsqueeze(2)  # (b, z_channels, 1, num_latent_tokens)
             
-            # Project to codebook dimension using Conv2d
-            z = self.model.quant_conv(z)  # (b, d, 1, n) -> (b, codebook_dim, 1, n)
+            # Project to codebook dimension using 1x1 Conv2d
+            z = self.model.quant_conv(z)  # (b, codebook_embed_dim, 1, num_latent_tokens)
         
         return z
     
@@ -196,14 +195,14 @@ class GigaTokWrapper(nn.Module):
         # Input: (b, codebook_embed_dim, 1, num_latent_tokens) -> Output: (b, 3, 256, 256)
         
         with torch.no_grad():
-            # Reshape to (b, n, d) format expected by decoder
-            z_in = z.squeeze(2).permute(0, 2, 1)  # (b, d, 1, n) -> (b, n, d)
+            # post_quant_conv is Conv2d, input: (b, codebook_embed_dim, 1, num_latent_tokens)
+            h = self.model.post_quant_conv(z)  # (b, z_channels, 1, num_latent_tokens)
             
-            # Project back to z_channels dimension
-            h = self.model.post_quant_conv(z_in)  # (b, n, d) -> (b, n, z_channels)
+            # Reshape for 1D->2D decoder: (b, z_channels, 1, n) -> (b, n, z_channels)
+            h = h.squeeze(2).permute(0, 2, 1)  # (b, num_latent_tokens, z_channels)
             
             # ViT 1D->2D decoder: expand 1D sequence back to 2D spatial features
-            h = self.model.s1to2decoder(h)  # (b, n, z_channels) -> (b, z_channels, h, w)
+            h = self.model.s1to2decoder(h)  # (b, num_latent_tokens, z_channels) -> (b, z_channels, h, w)
             
             # CNN spatial decoder: upsample to full resolution image
             x_recon = self.model.decoder(h)  # (b, z_channels, h, w) -> (b, 3, 256, 256)
