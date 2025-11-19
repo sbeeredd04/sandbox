@@ -7,35 +7,85 @@ import sys
 import yaml
 import os
 
-# Dynamically find GigaTok directory
+# Dynamically find GigaTok directory with detailed debugging
 def find_gigatok_dir():
+    print("\n" + "="*80)
+    print("[GigaTokWrapper] Searching for GigaTok directory...")
+    print("="*80)
+    
+    # Print current working directory
+    cwd = Path.cwd()
+    print(f"\nCurrent working directory: {cwd}")
+    
+    # Print sys.path
+    print(f"\nPython sys.path (first 5 entries):")
+    for i, path in enumerate(sys.path[:5], 1):
+        print(f"  {i}. {path}")
+        # Check if GigaTok exists in this path
+        check_path = Path(path) / 'GigaTok'
+        if check_path.exists():
+            print(f"     ✓ Found GigaTok here!")
+    
     # Check if GigaTok is already in sys.path
+    print("\nChecking sys.path for GigaTok...")
     for path in sys.path:
         gigatok_path = Path(path)
         if gigatok_path.name == 'GigaTok' and gigatok_path.exists():
+            print(f"  ✓ Found in sys.path: {gigatok_path}")
             return gigatok_path
         # Check if GigaTok is a subdirectory
         potential_path = gigatok_path / 'GigaTok'
         if potential_path.exists():
+            print(f"  ✓ Found as subdirectory: {potential_path}")
             return potential_path
     
-    # Try common locations
+    # Try common locations relative to current working directory and absolute
+    print("\nChecking common locations...")
     common_locations = [
-        Path('/home/sbeeredd/sandbox/GigaTok'),
+        cwd / 'sandbox' / 'GigaTok',  # Colab: /content/sandbox/GigaTok
+        cwd / 'GigaTok',
         Path('sandbox/GigaTok'),
+        Path('GigaTok'),
+        Path('/home/sbeeredd/sandbox/GigaTok'),  # Local
         Path('../GigaTok'),
         Path('../../GigaTok'),
     ]
     
     for loc in common_locations:
+        print(f"  Checking: {loc.absolute()}")
         if loc.exists():
-            return loc.resolve()
+            print(f"    ✓ EXISTS!")
+            resolved = loc.resolve()
+            print(f"    Resolved to: {resolved}")
+            return resolved
+        else:
+            print(f"    ✗ Not found")
     
-    raise FileNotFoundError("Could not find GigaTok directory. Please ensure it's in sys.path or at a common location.")
+    # Last resort: check if we're in a subdirectory of sandbox
+    print("\nLast resort: searching parent directories...")
+    current = cwd
+    for _ in range(5):  # Check up to 5 levels up
+        potential = current / 'GigaTok'
+        print(f"  Checking: {potential}")
+        if potential.exists():
+            print(f"    ✓ Found!")
+            return potential.resolve()
+        current = current.parent
+    
+    print("\n" + "="*80)
+    print("ERROR: Could not find GigaTok directory!")
+    print("="*80)
+    raise FileNotFoundError(
+        "Could not find GigaTok directory.\n"
+        f"Current directory: {cwd}\n"
+        "Please ensure GigaTok is cloned and accessible."
+    )
 
 # Find and add GigaTok to path
 GIGATOK_DIR = find_gigatok_dir()
-print(f"[GigaTokWrapper] Found GigaTok at: {GIGATOK_DIR}")
+print(f"\n[GigaTokWrapper] ✓ Using GigaTok at: {GIGATOK_DIR}")
+print("="*80 + "\n")
+
 if str(GIGATOK_DIR) not in sys.path:
     sys.path.append(str(GIGATOK_DIR))
 
@@ -71,6 +121,7 @@ class GigaTokWrapper(nn.Module):
             config_path = self.CONFIGS[config_name]['config_path']
             print(f"Using predefined config: {config_name}")
             print(f"  {self.CONFIGS[config_name]['description']}")
+            print(f"  Config path: {config_path}")
         elif Path(config_name).exists() and config_name.endswith('.yaml'):
             config_path = config_name
             print(f"Using custom config: {config_path}")
@@ -80,9 +131,38 @@ class GigaTokWrapper(nn.Module):
                 f"Available: {list(self.CONFIGS.keys())} or provide YAML path"
             )
         
+        # Verify config file exists before trying to open it
+        config_path_obj = Path(config_path)
+        print(f"\nVerifying config file...")
+        print(f"  Path: {config_path_obj}")
+        print(f"  Absolute path: {config_path_obj.absolute()}")
+        print(f"  Exists: {config_path_obj.exists()}")
+        
+        if not config_path_obj.exists():
+            # Print directory contents to help debug
+            parent_dir = config_path_obj.parent
+            print(f"\n  Config file not found!")
+            print(f"  Parent directory: {parent_dir}")
+            print(f"  Parent exists: {parent_dir.exists()}")
+            if parent_dir.exists():
+                print(f"  Contents of parent directory:")
+                try:
+                    for item in parent_dir.iterdir():
+                        print(f"    - {item.name}")
+                except Exception as e:
+                    print(f"    Error listing directory: {e}")
+            
+            raise FileNotFoundError(
+                f"Config file not found: {config_path}\n"
+                f"GigaTok directory: {GIGATOK_DIR}\n"
+                f"Please ensure the GigaTok repository is properly cloned with all config files."
+            )
+        
         # Parse YAML config
+        print(f"  ✓ Config file exists, loading...")
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
+        print(f"  ✓ Config loaded successfully")
         
         model_init_args = config['model']['init_args']
         
