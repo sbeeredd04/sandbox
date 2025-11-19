@@ -39,11 +39,15 @@ class GigaTokWrapper(nn.Module):
         return {
             'BL256': {
                 'config_path': str(gigatok_dir / 'configs' / 'vq' / 'VQ_BL256.yaml'),
-                'description': 'Base encoder, Large decoder, 256 tokens',
+                'description': 'Base encoder, Large decoder, 256 tokens (622M params)',
+                'gdrive_id': '1VnBu4aj0N7lFa1_wKBdTgLNZmaNgFvwi',
+                'checkpoint_name': 'VQ_BL256_e200.pt',
             },
             'XLXXL256': {
                 'config_path': str(gigatok_dir / 'configs' / 'vq' / 'VQ_XLXXL256.yaml'),
                 'description': 'XL encoder, XXL decoder, 256 tokens (3B params)',
+                'gdrive_id': '1HK_bV_zklLfGmIHGE4gMwjfhLLKi6Z3G',
+                'checkpoint_name': 'VQ_XLXXL256_e300.pt',
             },
         }
     
@@ -51,7 +55,7 @@ class GigaTokWrapper(nn.Module):
     def CONFIGS(self):
         return self._get_configs()
     
-    def __init__(self, config_name: str = 'BL256', checkpoint_path: str = None):
+    def __init__(self, config_name: str = 'BL256', checkpoint_path: str = None, auto_download: bool = True):
 
         super().__init__()
         
@@ -59,10 +63,13 @@ class GigaTokWrapper(nn.Module):
         from tokenizer.tokenizer_image.vq.vq_vit_model import VQVitModelPlus, VQVitModelPlusArgs
         
         # Load configuration
+        use_predefined = False
         if config_name in self.CONFIGS:
-            config_path = self.CONFIGS[config_name]['config_path']
+            config_info = self.CONFIGS[config_name]
+            config_path = config_info['config_path']
+            use_predefined = True
             print(f"Using predefined config: {config_name}")
-            print(f"  {self.CONFIGS[config_name]['description']}")
+            print(f"  {config_info['description']}")
             print(f"  Config path: {config_path}")
         elif Path(config_name).exists() and config_name.endswith('.yaml'):
             config_path = config_name
@@ -114,6 +121,11 @@ class GigaTokWrapper(nn.Module):
         # Initialize model
         self.model = VQVitModelPlus(model_args)
         
+        # Auto-download pretrained checkpoint if requested and using predefined config
+        if checkpoint_path is None and use_predefined and auto_download:
+            print(f"\nNo checkpoint provided, auto-downloading pretrained weights...")
+            checkpoint_path = self._download_checkpoint(config_name, config_info)
+        
         # Load checkpoint if provided
         if checkpoint_path is not None:
             print(f"Loading checkpoint from {checkpoint_path}...")
@@ -154,9 +166,78 @@ class GigaTokWrapper(nn.Module):
         print(f"  Codebook dim: {self.codebook_embed_dim}")
         print(f"  Z channels: {self.z_channels}")
     
+    def _download_checkpoint(self, model_name: str, config_info: dict) -> str:
+        """Download pretrained checkpoint from Google Drive"""
+        cache_dir = Path("pretrained") / "gigatok"
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        checkpoint_path = cache_dir / config_info['checkpoint_name']
+        
+        # If file exists, validate it
+        if checkpoint_path.exists():
+            try:
+                # Quick validation - try to load checkpoint keys
+                checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+                if 'ema' in checkpoint or 'model' in checkpoint or 'state_dict' in checkpoint:
+                    print(f"Using cached checkpoint: {checkpoint_path}")
+                    return str(checkpoint_path)
+                else:
+                    print(f"Cached checkpoint appears invalid, re-downloading...")
+                    checkpoint_path.unlink()
+            except Exception as e:
+                print(f"Cached checkpoint appears corrupted ({e}), re-downloading...")
+                checkpoint_path.unlink()
+        
+        # Download from Google Drive
+        gdrive_id = config_info['gdrive_id']
+        gdrive_url = f"https://drive.google.com/uc?id={gdrive_id}&export=download&confirm=t"
+        
+        print(f"Downloading {model_name} checkpoint from Google Drive...")
+        print(f"  URL: {gdrive_url}")
+        print(f"  Destination: {checkpoint_path}")
+        print(f"  This may take a few minutes...")
+        
+        try:
+            import urllib.request
+            import urllib.error
+            
+            # Create a custom opener to handle redirects and cookies
+            opener = urllib.request.build_opener()
+            opener.addheaders = [('User-Agent', 'Mozilla/5.0')]
+            urllib.request.install_opener(opener)
+            
+            # Download with progress
+            def _progress_hook(count, block_size, total_size):
+                if total_size > 0:
+                    percent = int(count * block_size * 100 / total_size)
+                    if count % 50 == 0:  # Print every 50 blocks
+                        print(f"  Progress: {percent}%", end='\r')
+            
+            urllib.request.urlretrieve(gdrive_url, checkpoint_path, reporthook=_progress_hook)
+            print(f"\n  Download completed successfully")
+            
+            # Validate the download
+            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+            if 'ema' not in checkpoint and 'model' not in checkpoint and 'state_dict' not in checkpoint:
+                raise RuntimeError("Downloaded file does not appear to be a valid checkpoint")
+            
+            return str(checkpoint_path)
+            
+        except Exception as e:
+            # Clean up partial download
+            if checkpoint_path.exists():
+                checkpoint_path.unlink()
+            raise RuntimeError(
+                f"Failed to download checkpoint: {e}\n"
+                f"Please manually download from: https://drive.google.com/file/d/{gdrive_id}/view\n"
+                f"and save to: {checkpoint_path}"
+            )
+    
     def encode(self, x: Float[Tensor, "b c h w"]) -> Float[Tensor, "b d 1 n"]:
         # Encode image to 1D latent tokens
         # Input: (b, 3, 256, 256) -> Output: (b, codebook_embed_dim, 1, num_latent_tokens)
+        
+        # Normalize input from [0, 1] to [-1, 1]
+        x = x * 2.0 - 1.0
         
         with torch.no_grad():
             # CNN spatial encoder
@@ -209,6 +290,9 @@ class GigaTokWrapper(nn.Module):
             
             # CNN spatial decoder
             x_recon = self.model.decoder(h)
+        
+        # Denormalize output from [-1, 1] to [0, 1]
+        x_recon = (x_recon + 1.0) / 2.0
         
         return x_recon
     
