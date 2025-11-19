@@ -165,20 +165,13 @@ class GigaTokWrapper(nn.Module):
             # ViT 2D->1D encoder: compresses spatial features to 1D sequence
             z = self.model.s2to1encoder(h)  # (b, num_latent_tokens, z_channels)
             
-            # Project to codebook dimension
-            # Note: quant_conv might be Conv2d or Linear depending on config
-            z = self.model.quant_conv(z)
-            
-            # Normalize output to (b, d, 1, n) format
+            # quant_conv is Conv2d expecting (b, c, h, w), so reshape (b, n, d) to (b, d, 1, n)
             if z.dim() == 3:
-                # Linear projection case: (b, n, d) -> (b, d, 1, n)
-                z = z.permute(0, 2, 1).unsqueeze(2)
-            elif z.dim() == 4:
-                # Conv2d case: (b, d, h, w) -> (b, d, 1, h*w)
-                b, d, h, w = z.shape
-                z = z.view(b, d, 1, h * w)
-            else:
-                raise ValueError(f"Unexpected quant_conv output shape: {z.shape}")
+                b, n, d = z.shape
+                z = z.permute(0, 2, 1).unsqueeze(2)  # (b, n, d) -> (b, d, 1, n)
+            
+            # Project to codebook dimension using Conv2d
+            z = self.model.quant_conv(z)  # (b, d, 1, n) -> (b, codebook_dim, 1, n)
         
         return z
     
