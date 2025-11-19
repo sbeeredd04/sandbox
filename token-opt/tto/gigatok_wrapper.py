@@ -241,41 +241,43 @@ class GigaTokWrapper(nn.Module):
         # Normalize input from [0, 1] to [-1, 1]
         x = x * 2.0 - 1.0
         
-        with torch.no_grad():
-            # CNN spatial encoder
-            h = self.model.encoder(x)
-            
-            # ViT 2D->1D encoder
-            z = self.model.s2to1encoder(h)
-            
-            # Handle different output shapes from s2to1encoder
-            if z.dim() == 3:
-                # (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
-                z = z.permute(0, 2, 1).unsqueeze(2)
-            elif z.dim() == 4:
-                # Check if already in correct format
-                b, dim1, dim2, dim3 = z.shape
-                if dim3 == 1 and dim1 == self.num_latent_tokens:
-                    # (b, num_latent_tokens, z_channels, 1) -> (b, z_channels, 1, num_latent_tokens)
-                    z = z.squeeze(3).permute(0, 2, 1).unsqueeze(2)
-                elif dim2 != 1:
-                    raise ValueError(f"Unexpected 4D shape from s2to1encoder: {z.shape}")
-            else:
-                raise ValueError(f"Unexpected dimension from s2to1encoder: z.dim() = {z.dim()}, shape = {z.shape}")
-            
-            # Project to codebook dimension
-            z = self.model.quant_conv(z)
+        # CNN spatial encoder
+        h = self.model.encoder(x)
+        
+        # ViT 2D->1D encoder
+        z = self.model.s2to1encoder(h)
+        
+        # Handle different output shapes from s2to1encoder
+        if z.dim() == 3:
+            # (b, num_latent_tokens, z_channels) -> (b, z_channels, 1, num_latent_tokens)
+            z = z.permute(0, 2, 1).unsqueeze(2)
+        elif z.dim() == 4:
+            # Check if already in correct format
+            b, dim1, dim2, dim3 = z.shape
+            if dim3 == 1 and dim1 == self.num_latent_tokens:
+                # (b, num_latent_tokens, z_channels, 1) -> (b, z_channels, 1, num_latent_tokens)
+                z = z.squeeze(3).permute(0, 2, 1).unsqueeze(2)
+            elif dim2 != 1:
+                raise ValueError(f"Unexpected 4D shape from s2to1encoder: {z.shape}")
+        else:
+            raise ValueError(f"Unexpected dimension from s2to1encoder: z.dim() = {z.dim()}, shape = {z.shape}")
+        
+        # Project to codebook dimension
+        z = self.model.quant_conv(z)
         
         return z
     
     def quantize(self, z: Float[Tensor, "b d 1 n"]) -> tuple[Float[Tensor, "b d 1 n"], dict]:
         # Vector quantization: map continuous tokens to discrete codebook entries
         # Input/Output: (b, codebook_embed_dim, 1, num_latent_tokens)
+        # Uses straight-through estimator for gradient flow
         
-        with torch.no_grad():
-            # VectorQuantizer expects 4D input (b, c, h, w)
-            # Shape (b, d, 1, n) is interpreted as (b, channels, height=1, width=num_tokens)
-            z_q, vq_loss, _ = self.model.quantize(z)
+        # VectorQuantizer expects 4D input (b, c, h, w)
+        # Shape (b, d, 1, n) is interpreted as (b, channels, height=1, width=num_tokens)
+        z_q, vq_loss, _ = self.model.quantize(z)
+        
+        # Straight-through estimator: forward uses z_q (discrete), backward uses z (continuous)
+        z_q = z + (z_q - z).detach()
         
         return z_q, {"loss": vq_loss}
     
@@ -283,15 +285,14 @@ class GigaTokWrapper(nn.Module):
         # Decode 1D latent tokens back to image
         # Input: (b, codebook_embed_dim, 1, num_latent_tokens) -> Output: (b, 3, 256, 256)
         
-        with torch.no_grad():
-            # Project back to z_channels dimension
-            h = self.model.post_quant_conv(z)
-            
-            # ViT 1D->2D decoder (expects 4D input)
-            h = self.model.s1to2decoder(h)
-            
-            # CNN spatial decoder
-            x_recon = self.model.decoder(h)
+        # Project back to z_channels dimension
+        h = self.model.post_quant_conv(z)
+        
+        # ViT 1D->2D decoder (expects 4D input)
+        h = self.model.s1to2decoder(h)
+        
+        # CNN spatial decoder
+        x_recon = self.model.decoder(h)
         
         # Denormalize output from [-1, 1] to [0, 1]
         x_recon = (x_recon + 1.0) / 2.0
