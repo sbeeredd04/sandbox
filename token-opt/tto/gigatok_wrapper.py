@@ -167,7 +167,15 @@ class GigaTokWrapper(nn.Module):
             z = self.model.quant_conv(z)
             
             # Reshape to (b, codebook_embed_dim, 1, num_latent_tokens) for consistency
-            z = z.permute(0, 2, 1).unsqueeze(2)  # (b, d, 1, n)
+            if z.dim() == 3:
+                # Shape: (b, n, d) -> (b, d, 1, n)
+                z = z.permute(0, 2, 1).unsqueeze(2)
+            elif z.dim() == 4:
+                # Shape: (b, d, h, w) -> need to flatten spatial dims
+                b, d, h, w = z.shape
+                z = z.view(b, d, 1, h * w)
+            else:
+                raise ValueError(f"Unexpected z shape: {z.shape}")
         
         return z
     
