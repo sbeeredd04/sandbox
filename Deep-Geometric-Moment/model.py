@@ -4,9 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from torch.autograd import Variable
-from utils import *
-from utils.visualize import colorize, show_batch
-import torchvision
+
+
 
 class BasicBlock(nn.Module):
     expansion = 1
@@ -37,7 +36,8 @@ class BasicBlockG(nn.Module):
         self.conv1 = nn.Conv2d(
             in_planes, planes, kernel_size=k, padding=p, stride=stride, bias=False)
         self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=k,padding=p, stride=1, bias=False)        
+        self.conv2 = nn.Conv2d(planes, planes, kernel_size=k,padding=p, 
+                               stride=1, bias=False)        
         self.bn2 = nn.BatchNorm2d(planes)
        
     def forward(self, x):
@@ -103,7 +103,7 @@ class LevelBlockGM(nn.Module):
         xy_ = self.fc1_2(xy1_).view(-1,self.df , 2)
         xy_b1 =  self.fc1_5(xy1_).view(-1, 2, 1,1)
         xy_1 = self.fc1_4(xy1_).view(-1,2 , 2)
-                
+        
         #transform coordinate grid, first single affine, second for all channel
         gridt = torch.matmul(xy_1, gridt.view(-1, 2, self.hw*self.hw)).view(-1, 2, self.hw, self.hw) + xy_b1
         g1 = torch.matmul(xy_, gridt.view(-1, 2, self.hw*self.hw)).view(-1, self.df, self.hw, self.hw) + xy_b
@@ -113,48 +113,28 @@ class LevelBlockGM(nn.Module):
         b = F.relu(self.bn2g(self.conv2g(b)))
         
         #compute moments
-        xb = b*x  
+        xb = b*x 
         m =  torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
 
         return x, xb, m, b, gridt
 
 
 class DGMResNet(nn.Module):
-    def __init__(self, block, num_classes=1000, hw=32):
+    def __init__(self, block, num_classes=1000):
         super(DGMResNet, self).__init__()
 
-        # height and width of the image
-        self.hw = hw  # Configurable height/width (32 for CIFAR/Stanford40, 224 for UCF Sports)
-        # number of features for the C features (256)
+        self.hw = 32
         self.df=256
 
-                # grid of coordinates (224x224)
         h = (self.hw-1)
-        
-        # a is the range of the image (0-223)
         a = (torch.Tensor(range(self.hw)))/(h)
-        
-        # g is the grid of coordinates (224x224)
         g = torch.meshgrid(a, a)
-        
-        ## LEVEL 1 CNN based image feature extraction
-        # gridt is the grid of coordinates (224x224)
         self.gridt = nn.Parameter(torch.cat((g[0].view(1, 1, self.hw,self.hw), g[1].view(1, 1, self.hw,self.hw),),dim=1), requires_grad=False)
-        
-        # layer01 is the first layer of the model this is 2 fully connected layers 
+
         self.layer01 = BasicBlockG( self.df, self.df, stride=1, k=1, p=0)
-        
-        # coordinate grid layer 2 X N X N (224x224)
         self.conv11 = nn.Conv2d(2, self.df, kernel_size=1, stride=1, bias=False)
-                
-        # Resnet block for the coordinate bases computation
         self.layer02 = self._make_layer(block, self.df, 2, stride=1, k=3, p=1)
-        
-        # 3 X N X N (224x224) input to the resnet block
         self.conv02 = nn.Conv2d(3, self.df, kernel_size=5, stride=1, padding=2)
-        
-        
-        ## LEVEL 2 Coordinate Bases computation
 
         self.lvl2 = LevelBlockGM(self.df, n=2, k=3, p=1, hw=self.hw)
         self.lvl3 = LevelBlockGM(self.df, n=2, k=3, p=1, hw=self.hw)
@@ -171,57 +151,30 @@ class DGMResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        size = (x.shape[2], x.shape[3])
+        #size = (x.shape[2], x.shape[3])
         #first level
         gridt = self.gridt
         bases = self.layer01(self.conv11(gridt))
         x = self.layer02(self.conv02(x))
-
-        # FC x GC element wise multiplication of the feature map and the coordinate bases
         xb = bases*x
-
-        # compute moments
         m = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
-
         #second level onward
         x, xb, m, bases, gridt = self.lvl2(x, m, xb, gridt, bases)
-        
-        #visualizaiton
-        imgr1 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        imgr1 = imgr1.view(imgr1.size(0), -1)
-        imgr1 = imgr1 - imgr1.min(1, keepdim=True)[0]
-        imgr1 = imgr1/imgr1.max(1, keepdim=True)[0]
-        imgr1 = (imgr1.view(-1, 1, self.hw, self.hw))
-        imgr1 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr1)
-        
         x, xb, m, bases, gridt = self.lvl3(x, m, xb, gridt, bases)
-        imgr2 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        imgr2 = imgr2.view(imgr2.size(0), -1)
-        imgr2 = imgr2 - imgr2.min(1, keepdim=True)[0]
-        imgr2 = imgr2/imgr2.max(1, keepdim=True)[0]
-        imgr2 = (imgr2.view(-1, 1, self.hw, self.hw))
-        imgr2 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr2)
-        
         x, xb, m, bases, gridt = self.lvl4(x, m, xb, gridt, bases)
-        imgr3 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        imgr3 = imgr3.view(imgr3.size(0), -1)
-        imgr3 = imgr3 - imgr3.min(1, keepdim=True)[0]
-        imgr3 = imgr3/imgr3.max(1, keepdim=True)[0]
-        imgr3 = (imgr3.view(-1, 1, self.hw, self.hw))
-        imgr3 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr3)
 
         cl = self.linear(self.do(m))
 
-        # visualization
-        imgr4 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
-        imgr4 = imgr4.view(imgr4.size(0), -1)
-        imgr4 = imgr4 - imgr4.min(1, keepdim=True)[0]
-        imgr4 = imgr4/imgr4.max(1, keepdim=True)[0]
-        imgr4 = (imgr4.view(-1, 1, self.hw, self.hw))
-        imgr4 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr4)
-        
-        return cl, imgr1, imgr2, imgr3, imgr4
+        #visualization
+        # imgr = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        # imgr = imgr.view(imgr.size(0), -1)
+        # imgr = imgr - imgr.min(1, keepdim=True)[0]
+        # imgr = imgr/imgr.max(1, keepdim=True)[0]
+        # imgr = (imgr.view(-1, 1, self.hw, self.hw))
+        # imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
+
+        return cl
 
 
 def ResNet18(num_classes=100):
-    return DGMResNet(BasicBlock, num_classes=num_classes, hw=32)
+    return DGMResNet(BasicBlock, num_classes=num_classes)

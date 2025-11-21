@@ -21,13 +21,3 @@ Part of the code is taken from the pytorch implementation of resnet model by [We
 # Example command to run the code:
 
 python main.py -c checkpoints/cifar10/chkpt -d cifar10 --lr 0.1 --epoch 150 --train-batch 128 --test-batch 100 --gpu-id 0,1
-
-python main.py -c checkpoints/ucf_sports/chkpt -d ucf_sports --epochs 150 --train-batch 16 --test-batch 8 --gpu-id 0,1,2,3,4,5 --ucf-owlvit-device 0 --ucf-sam-device 1 --ucf-exclude-categories Swing-Bench Swing-SideAngle Run
-
-python main.py -c checkpoints/combined/chkpt -d combined --epochs 150 --train-batch 8 --test-batch 8 --gpu-id 0,1,2,3ined/chkpt -d combined --epochs 150 --train-
-
-
-
-
-
-
