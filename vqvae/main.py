@@ -5,6 +5,10 @@ import torch.optim as optim
 import argparse
 import utils
 from models.vqvae import VQVAE
+import sys
+
+#add Deep-Geometric-Moment to path for utils
+sys.path.append('../Deep-Geometric-Moment/')
 
 parser = argparse.ArgumentParser()
 
@@ -25,6 +29,12 @@ parser.add_argument("--learning_rate", type=float, default=3e-4)
 parser.add_argument("--log_interval", type=int, default=50)
 parser.add_argument("--dataset",  type=str, default='CIFAR10')
 
+# DGM loss parameters
+parser.add_argument("--use_dgm_loss", action="store_true", help="Use DGM auxiliary loss")
+parser.add_argument("--dgm_model_path", type=str, default="", help="Path to pretrained DGM model")
+parser.add_argument("--dgm_loss_weight", type=float, default=0.1, help="Weight for DGM loss")
+parser.add_argument("--dgm_loss_type", type=str, default='mse', choices=['mse', 'l1'], help="Type of DGM loss")
+
 # whether or not to save model
 parser.add_argument("-save", action="store_true")
 parser.add_argument("--filename",  type=str, default=timestamp)
@@ -40,14 +50,21 @@ if args.save:
 Load data and define batch data loaders
 """
 
-training_data, validation_data, training_loader, validation_loader, x_train_var = utils.load_data_and_data_loaders(
-    args.dataset, args.batch_size)
+training_data, validation_data, training_loader, validation_loader, x_train_var = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
 """
 Set up VQ-VAE model with components defined in ./models/ folder
 """
 
-model = VQVAE(args.n_hiddens, args.n_residual_hiddens,
-              args.n_residual_layers, args.n_embeddings, args.embedding_dim, args.beta).to(device)
+model = VQVAE(args.n_hiddens, args.n_residual_hiddens, args.n_residual_layers, args.n_embeddings, args.embedding_dim, args.beta).to(device)
+
+# Load DGM model if using DGM loss
+dgm_model = None
+if args.use_dgm_loss:
+    if not args.dgm_model_path:
+        raise ValueError("--dgm_model_path must be provided when using --use_dgm_loss")
+    num_classes = 100 if args.dataset == 'CIFAR100' else 1000 if args.dataset == 'IMAGENET' else 10
+    dgm_model = utils.load_dgm_model(args.dgm_model_path, num_classes=num_classes)
+    print(f"Loaded DGM model from {args.dgm_model_path}")
 
 """
 Set up optimizer and training loop
@@ -61,6 +78,7 @@ results = {
     'recon_errors': [],
     'loss_vals': [],
     'perplexities': [],
+    'dgm_losses': [],
 }
 
 
@@ -74,6 +92,12 @@ def train():
         embedding_loss, x_hat, perplexity = model(x)
         recon_loss = torch.mean((x_hat - x)**2) / x_train_var
         loss = recon_loss + embedding_loss
+        
+        # Add DGM loss if enabled
+        dgm_loss = torch.tensor(0.0).to(device)
+        if args.use_dgm_loss and dgm_model is not None:
+            dgm_loss = utils.compute_dgm_loss(x, x_hat, dgm_model, loss_type=args.dgm_loss_type)
+            loss = loss + args.dgm_loss_weight * dgm_loss
 
         loss.backward()
         optimizer.step()
@@ -81,6 +105,7 @@ def train():
         results["recon_errors"].append(recon_loss.cpu().detach().numpy())
         results["perplexities"].append(perplexity.cpu().detach().numpy())
         results["loss_vals"].append(loss.cpu().detach().numpy())
+        results["dgm_losses"].append(dgm_loss.cpu().detach().numpy())
         results["n_updates"] = i
 
         if i % args.log_interval == 0:
@@ -92,10 +117,15 @@ def train():
                 utils.save_model_and_results(
                     model, results, hyperparameters, args.filename)
 
+            dgm_loss_str = ''
+            if args.use_dgm_loss:
+                dgm_loss_str = f'DGM Loss: {np.mean(results["dgm_losses"][-args.log_interval:]):.6f}'
+            
             print('Update #', i, 'Recon Error:',
                   np.mean(results["recon_errors"][-args.log_interval:]),
                   'Loss', np.mean(results["loss_vals"][-args.log_interval:]),
-                  'Perplexity:', np.mean(results["perplexities"][-args.log_interval:]))
+                  'Perplexity:', np.mean(results["perplexities"][-args.log_interval:]),
+                  dgm_loss_str)
 
 
 if __name__ == "__main__":

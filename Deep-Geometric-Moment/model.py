@@ -150,20 +150,20 @@ class DGMResNet(nn.Module):
             #self.in_planes = planes 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, return_moments=False):
         #size = (x.shape[2], x.shape[3])
         #first level
         gridt = self.gridt
         bases = self.layer01(self.conv11(gridt))
         x = self.layer02(self.conv02(x))
         xb = bases*x
-        m = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
+        m0 = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
         #second level onward
-        x, xb, m, bases, gridt = self.lvl2(x, m, xb, gridt, bases)
-        x, xb, m, bases, gridt = self.lvl3(x, m, xb, gridt, bases)
-        x, xb, m, bases, gridt = self.lvl4(x, m, xb, gridt, bases)
+        x, xb, m1, bases, gridt = self.lvl2(x, m0, xb, gridt, bases)
+        x, xb, m2, bases, gridt = self.lvl3(x, m1, xb, gridt, bases)
+        x, xb, m3, bases, gridt = self.lvl4(x, m2, xb, gridt, bases)
 
-        cl = self.linear(self.do(m))
+        cl = self.linear(self.do(m3))
 
         #visualization
         # imgr = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
@@ -173,6 +173,8 @@ class DGMResNet(nn.Module):
         # imgr = (imgr.view(-1, 1, self.hw, self.hw))
         # imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
 
+        if return_moments:
+            return cl, [m0, m1, m2, m3]
         return cl
 
 

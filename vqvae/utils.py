@@ -6,21 +6,44 @@ import time
 import os
 from datasets.block import BlockDataset, LatentBlockDataset
 import numpy as np
+import sys
+sys.path.append('../Deep-Geometric-Moment/')
+from model import ResNet18
 
-
-def load_cifar():
-    train = datasets.CIFAR10(root="data", train=True, download=True,
+def load_cifar(cifar100=False):
+    dataset_class = datasets.CIFAR100 if cifar100 else datasets.CIFAR10
+    train = dataset_class(root="data", train=True, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor(),
                                  transforms.Normalize(
                                      (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                              ]))
 
-    val = datasets.CIFAR10(root="data", train=False, download=True,
+    val = dataset_class(root="data", train=False, download=True,
                            transform=transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize(
                                    (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                           ]))
+    return train, val
+
+def load_imagenet():
+    train = datasets.ImageNet(root="data/imagenet", split='train',
+                             transform=transforms.Compose([
+                                 transforms.Resize(256),
+                                 transforms.CenterCrop(224),
+                                 transforms.ToTensor(),
+                                 transforms.Normalize(
+                                     (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+                             ]))
+
+    val = datasets.ImageNet(root="data/imagenet", split='val',
+                           transform=transforms.Compose([
+                               transforms.Resize(256),
+                               transforms.CenterCrop(224),
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                   (0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
                            ]))
     return train, val
 
@@ -73,10 +96,22 @@ def data_loaders(train_data, val_data, batch_size):
 
 def load_data_and_data_loaders(dataset, batch_size):
     if dataset == 'CIFAR10':
-        training_data, validation_data = load_cifar()
+        training_data, validation_data = load_cifar(cifar100=False)
         training_loader, validation_loader = data_loaders(
             training_data, validation_data, batch_size)
-        x_train_var = np.var(training_data.train_data / 255.0)
+        x_train_var = np.var(training_data.data / 255.0)
+
+    elif dataset == 'CIFAR100':
+        training_data, validation_data = load_cifar(cifar100=True)
+        training_loader, validation_loader = data_loaders(
+            training_data, validation_data, batch_size)
+        x_train_var = np.var(training_data.data / 255.0)
+
+    elif dataset == 'IMAGENET':
+        training_data, validation_data = load_imagenet()
+        training_loader, validation_loader = data_loaders(
+            training_data, validation_data, batch_size)
+        x_train_var = 1.0  # ImageNet pre-normalized
 
     elif dataset == 'BLOCK':
         training_data, validation_data = load_block()
@@ -93,7 +128,7 @@ def load_data_and_data_loaders(dataset, batch_size):
 
     else:
         raise ValueError(
-            'Invalid dataset: only CIFAR10 and BLOCK datasets are supported.')
+            'Invalid dataset: CIFAR10, CIFAR100, IMAGENET, BLOCK, and LATENT_BLOCK are supported.')
 
     return training_data, validation_data, training_loader, validation_loader, x_train_var
 
@@ -113,3 +148,32 @@ def save_model_and_results(model, results, hyperparameters, timestamp):
     }
     torch.save(results_to_save,
                SAVE_MODEL_PATH + '/vqvae_data_' + timestamp + '.pth')
+
+
+#load the Deep-Geometric-Moment frozen model for computing auxiliary losses
+def load_dgm_model(model_path, num_classes=100):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dgm_model = ResNet18(num_classes=num_classes).to(device)
+    dgm_model.load_state_dict(torch.load(model_path, map_location=device))
+    dgm_model.eval()
+    for param in dgm_model.parameters():
+        param.requires_grad = False
+    return dgm_model
+
+def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse'):
+
+    with torch.no_grad():
+        _, moments_x = dgm_model(x, return_moments=True)
+    
+    _, moments_x_hat = dgm_model(x_hat, return_moments=True)
+    
+    dgm_loss = 0
+    if loss_type == 'mse':
+        # MSE between moments at each level
+        for mx, mx_hat in zip(moments_x, moments_x_hat):
+            dgm_loss += torch.mean((mx - mx_hat) ** 2)
+    elif loss_type == 'l1':
+        # L1 distance between moments
+        for mx, mx_hat in zip(moments_x, moments_x_hat):
+            dgm_loss += torch.mean(torch.abs(mx - mx_hat))
+    return dgm_loss / len(moments_x)
