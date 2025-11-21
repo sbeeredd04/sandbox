@@ -1,0 +1,52 @@
+model:
+  base_learning_rate: 4.5e-05
+  target: taming.models.vqgan.VQModel
+  params:
+    embed_dim: 256
+    n_embed: 512
+    ddconfig:
+      double_z: false
+      z_channels: 256
+      resolution: 32
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult:
+      - 1
+      - 2
+      - 4
+      num_res_blocks: 2
+      attn_resolutions:
+      - 8
+      dropout: 0.0
+    lossconfig:
+      target: taming.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        disc_start: 10000
+        disc_num_layers: 2
+        disc_in_channels: 3
+        disc_factor: 1.0
+        disc_weight: 0.75
+        codebook_weight: 1.0
+        pixelloss_weight: 1.0
+        perceptual_weight: 1.0
+        dgm_weight: 0.1
+        dgm_loss_type: mse
+        dgm_model_path: ../Deep-Geometric-Moment/cifar10/chkpt/model_best.pth.tar
+        dgm_num_classes: 10
+        dgm_hw: 32
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 16
+    num_workers: 4
+    train:
+      target: data.cifar10.CIFAR10Train
+      params:
+        size: 32
+        data_root: ./data/cifar10
+    validation:
+      target: data.cifar10.CIFAR10Validation
+      params:
+        size: 32
+        data_root: ./data/cifar10

@@ -1,0 +1,5 @@
+lightning:
+  trainer:
+    max_epochs: 100
+    distributed_backend: ddp
+    gpus: 0,1

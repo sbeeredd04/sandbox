@@ -151,3 +151,8 @@ wandb/
 **/checkpoints/
 **/checkpoints.zip
 **/checkpoint/*.pth
+
+
+#all imagenet folders
+*imagenet*
+*ImageNet*

@@ -174,7 +174,7 @@ class DGMResNet(nn.Module):
         # imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
 
         if return_moments:
-            return cl, [m0, m1, m2, m3]
+            return cl, (xb, m3)  # Return both weighted features and final moment
         return cl
 
 

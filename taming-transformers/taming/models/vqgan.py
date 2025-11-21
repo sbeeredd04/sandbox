@@ -62,6 +62,15 @@ class VQModel(pl.LightningModule):
         quant = self.post_quant_conv(quant)
         dec = self.decoder(quant)
         return dec
+    
+    def get_quantizer_info(self, info):
+        """Extract perplexity and other metrics from quantizer info"""
+        metrics = {}
+        if isinstance(info, tuple) and len(info) >= 1:
+            # VectorQuantizer returns (perplexity, min_encodings, min_encoding_indices)
+            if isinstance(info[0], torch.Tensor):
+                metrics['perplexity'] = info[0]
+        return metrics
 
     def decode_code(self, code_b):
         quant_b = self.quantize.embed_code(code_b)
@@ -88,9 +97,18 @@ class VQModel(pl.LightningModule):
             # autoencode
             aeloss, log_dict_ae = self.loss(qloss, x, xrec, optimizer_idx, self.global_step,
                                             last_layer=self.get_last_layer(), split="train")
-
+            
+            # Get quantizer metrics
+            _, _, info = self.encode(x)
+            quant_metrics = self.get_quantizer_info(info)
+            
             self.log("train/aeloss", aeloss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
             self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            
+            # Log quantizer metrics
+            for k, v in quant_metrics.items():
+                self.log(f"train/{k}", v, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            
             return aeloss
 
         if optimizer_idx == 1:
@@ -109,13 +127,21 @@ class VQModel(pl.LightningModule):
 
         discloss, log_dict_disc = self.loss(qloss, x, xrec, 1, self.global_step,
                                             last_layer=self.get_last_layer(), split="val")
-        rec_loss = log_dict_ae["val/rec_loss"]
-        self.log("val/rec_loss", rec_loss,
-                   prog_bar=True, logger=True, on_step=True, on_epoch=True, sync_dist=True)
+        
+        # Get quantizer metrics
+        _, _, info = self.encode(x)
+        quant_metrics = self.get_quantizer_info(info)
+        
+        # Log only aeloss separately, the rest is in log_dict_ae/log_dict_disc
         self.log("val/aeloss", aeloss,
                    prog_bar=True, logger=True, on_step=True, on_epoch=True, sync_dist=True)
-        self.log_dict(log_dict_ae)
-        self.log_dict(log_dict_disc)
+        self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True, sync_dist=True)
+        self.log_dict(log_dict_disc, prog_bar=False, logger=True, on_step=True, on_epoch=True, sync_dist=True)
+        
+        # Log quantizer metrics
+        for k, v in quant_metrics.items():
+            self.log(f"val/{k}", v, prog_bar=False, logger=True, on_step=True, on_epoch=True, sync_dist=True)
+        
         return self.log_dict
 
     def configure_optimizers(self):
@@ -321,7 +347,8 @@ class GumbelVQ(VQModel):
                                             last_layer=self.get_last_layer(), split="train")
 
             self.log_dict(log_dict_ae, prog_bar=False, logger=True, on_step=True, on_epoch=True)
-            self.log("temperature", self.quantize.temperature, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            self.log("train/temperature", self.quantize.temperature, prog_bar=False, logger=True, on_step=True, on_epoch=True)
+            self.log("train/aeloss", aeloss, prog_bar=True, logger=True, on_step=True, on_epoch=True)
             return aeloss
 
         if optimizer_idx == 1:
@@ -344,6 +371,7 @@ class GumbelVQ(VQModel):
                  prog_bar=True, logger=True, on_step=False, on_epoch=True, sync_dist=True)
         self.log("val/aeloss", aeloss,
                  prog_bar=True, logger=True, on_step=False, on_epoch=True, sync_dist=True)
+        self.log("val/temperature", self.quantize.temperature, prog_bar=False, logger=True, on_step=False, on_epoch=True, sync_dist=True)
         self.log_dict(log_dict_ae)
         self.log_dict(log_dict_disc)
         return self.log_dict

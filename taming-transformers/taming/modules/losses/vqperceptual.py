@@ -128,7 +128,9 @@ class VQLPIPSWithDiscriminator(nn.Module):
             if self.dgm_weight > 0 and self.dgm_model is not None:
                 try:
                     from taming.modules.losses.dgm_utils import compute_dgm_loss
-                    dgm_loss = compute_dgm_loss(inputs, reconstructions, self.dgm_model, self.dgm_loss_type)
+                    # Auto-detect input size and resize to dgm_hw for DGM loss computation
+                    dgm_loss = compute_dgm_loss(inputs, reconstructions, self.dgm_model, 
+                                               self.dgm_loss_type, dgm_size=self.dgm_hw)
                     loss = loss + self.dgm_weight * dgm_loss
                 except Exception as e:
                     print(f"Warning: DGM loss computation failed: {e}")

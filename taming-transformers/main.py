@@ -10,8 +10,19 @@ from pytorch_lightning import seed_everything
 from pytorch_lightning.trainer import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback, LearningRateMonitor
 from pytorch_lightning.utilities import rank_zero_only
+from pytorch_lightning.loggers import TensorBoardLogger
 
-from taming.data.utils import custom_collate
+from data.utils import custom_collate
+
+
+class SafeTensorBoardLogger(TensorBoardLogger):
+    """TensorBoardLogger that handles dict hyperparameters"""
+    def save(self):
+        try:
+            super().save()
+        except AttributeError:
+            # Skip saving if hparams is a dict and causes issues
+            pass
 
 
 def get_obj_from_str(string, reload=False):
@@ -186,7 +197,7 @@ class SetupCallback(Callback):
         self.config = config
         self.lightning_config = lightning_config
 
-    def on_pretrain_routine_start(self, trainer, pl_module):
+    def on_fit_start(self, trainer, pl_module):
         if trainer.global_rank == 0:
             # Create logdirs and save configs
             os.makedirs(self.logdir, exist_ok=True)
@@ -215,6 +226,25 @@ class SetupCallback(Callback):
                     pass
 
 
+class MetricsLogger(Callback):
+    """Callback to log all training metrics comprehensively to wandb/tensorboard"""
+    def __init__(self):
+        super().__init__()
+    
+    @rank_zero_only
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
+        # Log learning rate
+        if hasattr(pl_module, 'learning_rate'):
+            pl_module.log('train/learning_rate', pl_module.learning_rate, 
+                         on_step=True, on_epoch=False, logger=True)
+    
+    @rank_zero_only  
+    def on_validation_epoch_end(self, trainer, pl_module):
+        # Log epoch number
+        pl_module.log('epoch', float(trainer.current_epoch), 
+                     on_step=False, on_epoch=True, logger=True)
+
+
 class ImageLogger(Callback):
     def __init__(self, batch_frequency, max_images, clamp=True, increase_log_steps=True):
         super().__init__()
@@ -222,7 +252,7 @@ class ImageLogger(Callback):
         self.max_images = max_images
         self.logger_log_images = {
             pl.loggers.WandbLogger: self._wandb,
-            pl.loggers.TestTubeLogger: self._testtube,
+            pl.loggers.TensorBoardLogger: self._tensorboard,
         }
         self.log_steps = [2 ** n for n in range(int(np.log2(self.batch_freq)) + 1)]
         if not increase_log_steps:
@@ -231,7 +261,10 @@ class ImageLogger(Callback):
 
     @rank_zero_only
     def _wandb(self, pl_module, images, batch_idx, split):
-        raise ValueError("No way wandb")
+        try:
+            import wandb
+        except ImportError:
+            return
         grids = dict()
         for k in images:
             grid = torchvision.utils.make_grid(images[k])
@@ -239,7 +272,7 @@ class ImageLogger(Callback):
         pl_module.logger.experiment.log(grids)
 
     @rank_zero_only
-    def _testtube(self, pl_module, images, batch_idx, split):
+    def _tensorboard(self, pl_module, images, batch_idx, split):
         for k in images:
             grid = torchvision.utils.make_grid(images[k])
             grid = (grid+1.0)/2.0 # -1,1 -> 0,1; c,h,w
@@ -281,7 +314,7 @@ class ImageLogger(Callback):
                 pl_module.eval()
 
             with torch.no_grad():
-                images = pl_module.log_images(batch, split=split, pl_module=pl_module)
+                images = pl_module.log_images(batch, split=split)
 
             for k in images:
                 N = min(images[k].shape[0], self.max_images)
@@ -309,56 +342,15 @@ class ImageLogger(Callback):
             return True
         return False
 
-    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+    def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
         self.log_img(pl_module, batch, batch_idx, split="train")
 
-    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
+    def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
         self.log_img(pl_module, batch, batch_idx, split="val")
 
 
 
 if __name__ == "__main__":
-    # custom parser to specify config files, train, test and debug mode,
-    # postfix, resume.
-    # `--key value` arguments are interpreted as arguments to the trainer.
-    # `nested.key=value` arguments are interpreted as config parameters.
-    # configs are merged from left-to-right followed by command line parameters.
-
-    # model:
-    #   base_learning_rate: float
-    #   target: path to lightning module
-    #   params:
-    #       key: value
-    # data:
-    #   target: main.DataModuleFromConfig
-    #   params:
-    #      batch_size: int
-    #      wrap: bool
-    #      train:
-    #          target: path to train dataset
-    #          params:
-    #              key: value
-    #      validation:
-    #          target: path to validation dataset
-    #          params:
-    #              key: value
-    #      test:
-    #          target: path to test dataset
-    #          params:
-    #              key: value
-    # lightning: (optional, has sane defaults and can be specified on cmdline)
-    #   trainer:
-    #       additional arguments to trainer
-    #   logger:
-    #       logger to instantiate
-    #   modelcheckpoint:
-    #       modelcheckpoint to instantiate
-    #   callbacks:
-    #       callback1:
-    #           target: importpath
-    #           params:
-    #               key: value
-
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
 
     # add cwd for convenience and to make classes in this file available when
@@ -439,10 +431,6 @@ if __name__ == "__main__":
         trainer_kwargs = dict()
 
         # default logger configs
-        # NOTE wandb < 0.10.0 interferes with shutdown
-        # wandb >= 0.10.0 seems to fix it but still interferes with pudb
-        # debugging (wrongly sized pudb ui)
-        # thus prefer testtube for now
         default_logger_cfgs = {
             "wandb": {
                 "target": "pytorch_lightning.loggers.WandbLogger",
@@ -453,16 +441,23 @@ if __name__ == "__main__":
                     "id": nowname,
                 }
             },
-            "testtube": {
-                "target": "pytorch_lightning.loggers.TestTubeLogger",
+            "tensorboard": {
+                "target": "main.SafeTensorBoardLogger",
                 "params": {
-                    "name": "testtube",
+                    "name": "tensorboard",
                     "save_dir": logdir,
+                    "default_hp_metric": False,
                 }
             },
         }
-        default_logger_cfg = default_logger_cfgs["testtube"]
+        
+        # Determine which logger to use based on config
         logger_cfg = lightning_config.logger or OmegaConf.create()
+        if "target" in logger_cfg and "WandbLogger" in logger_cfg["target"]:
+            default_logger_cfg = default_logger_cfgs["wandb"]
+        else:
+            default_logger_cfg = default_logger_cfgs["tensorboard"]
+        
         logger_cfg = OmegaConf.merge(default_logger_cfg, logger_cfg)
         trainer_kwargs["logger"] = instantiate_from_config(logger_cfg)
 
@@ -484,8 +479,7 @@ if __name__ == "__main__":
 
         modelckpt_cfg = lightning_config.modelcheckpoint or OmegaConf.create()
         modelckpt_cfg = OmegaConf.merge(default_modelckpt_cfg, modelckpt_cfg)
-        trainer_kwargs["checkpoint_callback"] = instantiate_from_config(modelckpt_cfg)
-
+        
         # add callback which sets up log directory
         default_callbacks_cfg = {
             "setup_callback": {
@@ -508,13 +502,17 @@ if __name__ == "__main__":
                     "clamp": True
                 }
             },
+            "metrics_logger": {
+                "target": "main.MetricsLogger",
+                "params": {}
+            },
             "learning_rate_logger": {
                 "target": "main.LearningRateMonitor",
                 "params": {
                     "logging_interval": "step",
-                    #"log_momentum": True
                 }
             },
+            "checkpoint": modelckpt_cfg,
         }
         callbacks_cfg = lightning_config.callbacks or OmegaConf.create()
         callbacks_cfg = OmegaConf.merge(default_callbacks_cfg, callbacks_cfg)
@@ -582,4 +580,7 @@ if __name__ == "__main__":
             dst, name = os.path.split(logdir)
             dst = os.path.join(dst, "debug_runs", name)
             os.makedirs(os.path.split(dst)[0], exist_ok=True)
-            os.rename(logdir, dst)
+            try:
+                os.rename(logdir, dst)
+            except FileNotFoundError:
+                pass
