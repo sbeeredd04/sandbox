@@ -1,0 +1,51 @@
+model:
+  base_learning_rate: 4.5e-6
+  target: taming.models.vqgan.VQModel
+  params:
+    embed_dim: 256
+    n_embed: 1024
+    ddconfig:
+      double_z: False
+      z_channels: 256
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,1,2,2,4]  # num_down = len(ch_mult)-1
+      num_res_blocks: 2
+      attn_resolutions: [16]
+      dropout: 0.0
+
+    lossconfig:
+      target: taming.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        disc_start: 50000
+        disc_num_layers: 3
+        disc_in_channels: 3
+        disc_factor: 1.0
+        disc_weight: 0.8
+        codebook_weight: 1.0
+        pixelloss_weight: 1.0
+        perceptual_weight: 1.0
+        # DGM auxiliary loss parameters
+        dgm_weight: 0.1
+        dgm_loss_type: 'mse'  # options: 'mse', 'l1'
+        dgm_model_path: '../Deep-Geometric-Moment/checkpoint/imagenet_dgm.pth'
+        dgm_num_classes: 1000
+        dgm_hw: 256  # Image size for DGM model
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 8
+    num_workers: 8
+    train:
+      target: taming.data.imagenet.ImageNetTrain
+      params:
+        config:
+          size: 256
+    validation:
+      target: taming.data.imagenet.ImageNetValidation
+      params:
+        config:
+          size: 256

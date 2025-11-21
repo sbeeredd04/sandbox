@@ -120,10 +120,10 @@ class LevelBlockGM(nn.Module):
 
 
 class DGMResNet(nn.Module):
-    def __init__(self, block, num_classes=1000):
+    def __init__(self, block, num_classes=1000, hw=32):
         super(DGMResNet, self).__init__()
 
-        self.hw = 32
+        self.hw = hw
         self.df=256
 
         h = (self.hw-1)
@@ -178,5 +178,5 @@ class DGMResNet(nn.Module):
         return cl
 
 
-def ResNet18(num_classes=100):
-    return DGMResNet(BasicBlock, num_classes=num_classes)
+def ResNet18(num_classes=100, hw=32):
+    return DGMResNet(BasicBlock, num_classes=num_classes, hw=hw)

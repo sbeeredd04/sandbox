@@ -12,9 +12,7 @@ sys.path.append('../Deep-Geometric-Moment/')
 
 parser = argparse.ArgumentParser()
 
-"""
-Hyperparameters
-"""
+# Hyperparameters
 timestamp = utils.readable_timestamp()
 
 parser.add_argument("--batch_size", type=int, default=32)
@@ -46,14 +44,9 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if args.save:
     print('Results will be saved in ./results/vqvae_' + args.filename + '.pth')
 
-"""
-Load data and define batch data loaders
-"""
-
+# Load data and define batch data loaders
 training_data, validation_data, training_loader, validation_loader, x_train_var = utils.load_data_and_data_loaders(args.dataset, args.batch_size)
-"""
-Set up VQ-VAE model with components defined in ./models/ folder
-"""
+
 
 model = VQVAE(args.n_hiddens, args.n_residual_hiddens, args.n_residual_layers, args.n_embeddings, args.embedding_dim, args.beta).to(device)
 
@@ -63,12 +56,11 @@ if args.use_dgm_loss:
     if not args.dgm_model_path:
         raise ValueError("--dgm_model_path must be provided when using --use_dgm_loss")
     num_classes = 100 if args.dataset == 'CIFAR100' else 1000 if args.dataset == 'IMAGENET' else 10
-    dgm_model = utils.load_dgm_model(args.dgm_model_path, num_classes=num_classes)
-    print(f"Loaded DGM model from {args.dgm_model_path}")
+    hw = 256 if args.dataset == 'IMAGENET' else 32
+    dgm_model = utils.load_dgm_model(args.dgm_model_path, num_classes=num_classes, hw=hw)
+    print(f"Loaded DGM model from {args.dgm_model_path} with image size {hw}x{hw}")
 
-"""
-Set up optimizer and training loop
-"""
+# Set up optimizer and training loop
 optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
 
 model.train()
@@ -109,9 +101,7 @@ def train():
         results["n_updates"] = i
 
         if i % args.log_interval == 0:
-            """
-            save model and print values
-            """
+            # save model and print values
             if args.save:
                 hyperparameters = args.__dict__
                 utils.save_model_and_results(

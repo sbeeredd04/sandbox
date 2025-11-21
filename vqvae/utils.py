@@ -151,9 +151,9 @@ def save_model_and_results(model, results, hyperparameters, timestamp):
 
 
 #load the Deep-Geometric-Moment frozen model for computing auxiliary losses
-def load_dgm_model(model_path, num_classes=100):
+def load_dgm_model(model_path, num_classes=100, hw=32):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dgm_model = ResNet18(num_classes=num_classes).to(device)
+    dgm_model = ResNet18(num_classes=num_classes, hw=hw).to(device)
     dgm_model.load_state_dict(torch.load(model_path, map_location=device))
     dgm_model.eval()
     for param in dgm_model.parameters():
@@ -161,19 +161,21 @@ def load_dgm_model(model_path, num_classes=100):
     return dgm_model
 
 def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse'):
-
+    # Extract moments from original image (no gradients needed)
     with torch.no_grad():
         _, moments_x = dgm_model(x, return_moments=True)
     
+    # Extract moments from reconstructed image (gradients flow through this)
     _, moments_x_hat = dgm_model(x_hat, return_moments=True)
     
     dgm_loss = 0
     if loss_type == 'mse':
-        # MSE between moments at each level
         for mx, mx_hat in zip(moments_x, moments_x_hat):
             dgm_loss += torch.mean((mx - mx_hat) ** 2)
     elif loss_type == 'l1':
-        # L1 distance between moments
         for mx, mx_hat in zip(moments_x, moments_x_hat):
             dgm_loss += torch.mean(torch.abs(mx - mx_hat))
+    else:
+        raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse' or 'l1'.")
+    
     return dgm_loss / len(moments_x)

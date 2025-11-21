@@ -108,19 +108,7 @@ best_acc = 0  # best test accuracy
 
 
 def run_inference(model_path, image_path, use_cuda=True, owlvit_device_id=0, sam_device_id=0, process=True):
-    """
-    Run inference on images using the same preprocessing pipeline as training.
-    
-    Args:
-        model_path: Path to the trained model checkpoint
-        image_path: Path to image file or directory of images
-        use_cuda: Whether to use CUDA for model inference
-        owlvit_device_id: GPU device ID for OWL-ViT
-        sam_device_id: GPU device ID for SAM
-    
-    Returns:
-        Results of inference (format depends on batch vs single image)
-    """
+
     # Determine if we're processing a single image or multiple images
     if os.path.isdir(image_path):
         # Get all image files from the directory

@@ -35,7 +35,8 @@ class VQLPIPSWithDiscriminator(nn.Module):
     def __init__(self, disc_start, codebook_weight=1.0, pixelloss_weight=1.0,
                  disc_num_layers=3, disc_in_channels=3, disc_factor=1.0, disc_weight=1.0,
                  perceptual_weight=1.0, use_actnorm=False, disc_conditional=False,
-                 disc_ndf=64, disc_loss="hinge"):
+                 disc_ndf=64, disc_loss="hinge",
+                 dgm_weight=0.0, dgm_loss_type='mse', dgm_model_path=None, dgm_num_classes=1000, dgm_hw=32):
         super().__init__()
         assert disc_loss in ["hinge", "vanilla"]
         self.codebook_weight = codebook_weight
@@ -59,6 +60,22 @@ class VQLPIPSWithDiscriminator(nn.Module):
         self.disc_factor = disc_factor
         self.discriminator_weight = disc_weight
         self.disc_conditional = disc_conditional
+        
+        # DGM loss parameters
+        self.dgm_weight = dgm_weight
+        self.dgm_loss_type = dgm_loss_type
+        self.dgm_model = None
+        self.dgm_hw = dgm_hw
+        
+        if dgm_weight > 0 and dgm_model_path is not None:
+            try:
+                from taming.modules.losses.dgm_utils import load_dgm_model
+                self.dgm_model = load_dgm_model(dgm_model_path, num_classes=dgm_num_classes, hw=dgm_hw)
+                print(f"DGM auxiliary loss enabled with weight {dgm_weight}, type {dgm_loss_type}, hw {dgm_hw}")
+            except Exception as e:
+                print(f"Warning: Failed to load DGM model: {e}")
+                print("DGM loss will be disabled.")
+                self.dgm_weight = 0.0
 
     def calculate_adaptive_weight(self, nll_loss, g_loss, last_layer=None):
         if last_layer is not None:
@@ -105,6 +122,16 @@ class VQLPIPSWithDiscriminator(nn.Module):
 
             disc_factor = adopt_weight(self.disc_factor, global_step, threshold=self.discriminator_iter_start)
             loss = nll_loss + d_weight * disc_factor * g_loss + self.codebook_weight * codebook_loss.mean()
+            
+            # Add DGM auxiliary loss if enabled
+            dgm_loss = torch.tensor(0.0, device=loss.device)
+            if self.dgm_weight > 0 and self.dgm_model is not None:
+                try:
+                    from taming.modules.losses.dgm_utils import compute_dgm_loss
+                    dgm_loss = compute_dgm_loss(inputs, reconstructions, self.dgm_model, self.dgm_loss_type)
+                    loss = loss + self.dgm_weight * dgm_loss
+                except Exception as e:
+                    print(f"Warning: DGM loss computation failed: {e}")
 
             log = {"{}/total_loss".format(split): loss.clone().detach().mean(),
                    "{}/quant_loss".format(split): codebook_loss.detach().mean(),
@@ -114,6 +141,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
                    "{}/d_weight".format(split): d_weight.detach(),
                    "{}/disc_factor".format(split): torch.tensor(disc_factor),
                    "{}/g_loss".format(split): g_loss.detach().mean(),
+                   "{}/dgm_loss".format(split): dgm_loss.detach().mean() if isinstance(dgm_loss, torch.Tensor) else torch.tensor(0.0),
                    }
             return loss, log
 

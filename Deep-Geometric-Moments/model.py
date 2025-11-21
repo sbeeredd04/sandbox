@@ -170,7 +170,7 @@ class DGMResNet(nn.Module):
             #self.in_planes = planes 
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, return_moments=False):
         size = (x.shape[2], x.shape[3])
         #first level
         gridt = self.gridt
@@ -181,47 +181,49 @@ class DGMResNet(nn.Module):
         xb = bases*x
 
         # compute moments
-        m = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
+        m0 = torch.flatten(F.avg_pool2d(xb, x.shape[2]), 1)
 
         #second level onward
-        x, xb, m, bases, gridt = self.lvl2(x, m, xb, gridt, bases)
+        x, xb, m1, bases, gridt = self.lvl2(x, m0, xb, gridt, bases)
         
         #visualizaiton
-        imgr1 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr1 = torch.sum(xb*(m1.view(-1, m1.shape[1], 1, 1)), dim=1, keepdim=True)
         imgr1 = imgr1.view(imgr1.size(0), -1)
         imgr1 = imgr1 - imgr1.min(1, keepdim=True)[0]
         imgr1 = imgr1/imgr1.max(1, keepdim=True)[0]
         imgr1 = (imgr1.view(-1, 1, self.hw, self.hw))
         imgr1 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr1)
         
-        x, xb, m, bases, gridt = self.lvl3(x, m, xb, gridt, bases)
-        imgr2 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        x, xb, m2, bases, gridt = self.lvl3(x, m1, xb, gridt, bases)
+        imgr2 = torch.sum(xb*(m2.view(-1, m2.shape[1], 1, 1)), dim=1, keepdim=True)
         imgr2 = imgr2.view(imgr2.size(0), -1)
         imgr2 = imgr2 - imgr2.min(1, keepdim=True)[0]
         imgr2 = imgr2/imgr2.max(1, keepdim=True)[0]
         imgr2 = (imgr2.view(-1, 1, self.hw, self.hw))
         imgr2 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr2)
         
-        x, xb, m, bases, gridt = self.lvl4(x, m, xb, gridt, bases)
-        imgr3 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        x, xb, m3, bases, gridt = self.lvl4(x, m2, xb, gridt, bases)
+        imgr3 = torch.sum(xb*(m3.view(-1, m3.shape[1], 1, 1)), dim=1, keepdim=True)
         imgr3 = imgr3.view(imgr3.size(0), -1)
         imgr3 = imgr3 - imgr3.min(1, keepdim=True)[0]
         imgr3 = imgr3/imgr3.max(1, keepdim=True)[0]
         imgr3 = (imgr3.view(-1, 1, self.hw, self.hw))
         imgr3 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr3)
 
-        cl = self.linear(self.do(m))
+        cl = self.linear(self.do(m3))
 
         # visualization
-        imgr4 = torch.sum(xb*(m.view(-1, m.shape[1], 1, 1)), dim=1, keepdim=True)
+        imgr4 = torch.sum(xb*(m3.view(-1, m3.shape[1], 1, 1)), dim=1, keepdim=True)
         imgr4 = imgr4.view(imgr4.size(0), -1)
         imgr4 = imgr4 - imgr4.min(1, keepdim=True)[0]
         imgr4 = imgr4/imgr4.max(1, keepdim=True)[0]
         imgr4 = (imgr4.view(-1, 1, self.hw, self.hw))
         imgr4 = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr4)
         
+        if return_moments:
+            return cl, [m0, m1, m2, m3]
         return cl, imgr1, imgr2, imgr3, imgr4
 
 
-def ResNet18(num_classes=100):
-    return DGMResNet(BasicBlock, num_classes=num_classes, hw=32)
+def ResNet18(num_classes=100, hw=32):
+    return DGMResNet(BasicBlock, num_classes=num_classes, hw=hw)
