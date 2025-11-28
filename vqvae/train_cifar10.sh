@@ -15,10 +15,14 @@ CUDA_VISIBLE_DEVICES=0 python main.py \
     --log_interval 100 \
     --use_dgm_loss \
     --dgm_model_path ../Deep-Geometric-Moment/cifar10/chkpt/model_best.pth.tar \
-    --dgm_loss_weight 0.01 \
+    --dgm_loss_weight 0.1 \
     --dgm_loss_type mse \
+    --dgm_model_type cifar \
+    --dgm_arch resnet18 \
+    --dgm_image_size 32 \
     --use_wandb \
     --wandb_project vqvae-dgm \
     --wandb_run_name cifar10_dgm_w0.01 \
     -save \
     --filename cifar10_dgm
+1

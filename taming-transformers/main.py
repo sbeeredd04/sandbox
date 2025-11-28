@@ -269,7 +269,7 @@ class ImageLogger(Callback):
         for k in images:
             grid = torchvision.utils.make_grid(images[k])
             grids[f"{split}/{k}"] = wandb.Image(grid)
-        pl_module.logger.experiment.log(grids)
+        pl_module.logger.experiment.log(grids, step=pl_module.global_step)
 
     @rank_zero_only
     def _tensorboard(self, pl_module, images, batch_idx, split):

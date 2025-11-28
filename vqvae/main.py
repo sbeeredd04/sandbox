@@ -40,9 +40,12 @@ parser.add_argument("--image_size", type=int, default=None, help="Image size for
 
 # DGM loss parameters
 parser.add_argument("--use_dgm_loss", action="store_true", help="Use DGM auxiliary loss")
-parser.add_argument("--dgm_model_path", type=str, default="", help="Path to pretrained DGM model")
-parser.add_argument("--dgm_loss_weight", type=float, default=0.1, help="Weight for DGM loss")
+parser.add_argument("--dgm_model_path", type=str, default="/scratch/sbeeredd/sandbox/Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar", help="Path to pretrained DGM model")
+parser.add_argument("--dgm_loss_weight", type=float, default=0.01, help="Weight for DGM loss")
 parser.add_argument("--dgm_loss_type", type=str, default='mse', choices=['mse', 'l1'], help="Type of DGM loss")
+parser.add_argument("--dgm_model_type", type=str, default='imagenet', choices=['cifar', 'imagenet'], help="DGM model type (cifar or imagenet)")
+parser.add_argument("--dgm_arch", type=str, default='resnet34', choices=['resnet18', 'resnet34'], help="DGM architecture (for imagenet)")
+parser.add_argument("--dgm_image_size", type=int, default=256, help="DGM model image size (32 for CIFAR, 256 for ImageNet, auto if None)")
 
 # Wandb logging
 parser.add_argument("--use_wandb", action="store_true", help="Use Weights & Biases for logging")
@@ -78,22 +81,39 @@ model = VQVAE(args.n_hiddens, args.n_residual_hiddens, args.n_residual_layers, a
 
 # Load DGM model if using DGM loss
 dgm_model = None
+dgm_model_type = 'cifar'
+dgm_size = 32
+
 if args.use_dgm_loss:
     if not args.dgm_model_path:
         raise ValueError("--dgm_model_path must be provided when using --use_dgm_loss")
-    # DGM model expects 32x32 images (CIFAR resolution)
-    # For ImageNet, we resize to 32x32 and use CIFAR10 model (10 classes)
-    if args.dataset in ['IMAGENET', 'IMAGENET_VAL']:
-        num_classes = 10  # Use CIFAR10-trained model for ImageNet (resized to 32x32)
-        hw = 32
+    
+    # Determine model type and configuration based on dataset
+    if args.dataset in ['IMAGENET', 'IMAGENET_VAL', 'IMAGENET_FULL']:
+        dgm_model_type = args.dgm_model_type if args.dgm_model_type == 'imagenet' else 'imagenet'
+        num_classes = 1000
+        dgm_size = args.dgm_image_size if args.dgm_image_size else 256
+        dgm_arch = args.dgm_arch
     elif args.dataset == 'CIFAR100':
+        dgm_model_type = 'cifar'
         num_classes = 100
-        hw = 32
+        dgm_size = args.dgm_image_size if args.dgm_image_size else 32
+        dgm_arch = 'resnet18'
     else:  # CIFAR10 and others
+        dgm_model_type = 'cifar'
         num_classes = 10
-        hw = 32
-    dgm_model = utils.load_dgm_model(args.dgm_model_path, num_classes=num_classes, hw=hw)
-    print(f"Loaded DGM model from {args.dgm_model_path} with num_classes={num_classes}, image size {hw}x{hw}")
+        dgm_size = args.dgm_image_size if args.dgm_image_size else 32
+        dgm_arch = 'resnet18'
+    
+    dgm_model = utils.load_dgm_model(
+        args.dgm_model_path, 
+        num_classes=num_classes, 
+        hw=dgm_size,
+        model_type=dgm_model_type,
+        arch=dgm_arch
+    )
+    print(f"DGM Configuration: model_type={dgm_model_type}, arch={dgm_arch}, "
+          f"num_classes={num_classes}, image_size={dgm_size}x{dgm_size}")
 
 # Set up optimizer and training loop
 optimizer = optim.Adam(model.parameters(), lr=args.learning_rate, amsgrad=True)
@@ -111,7 +131,6 @@ results = {
 
 import time
 start_time = time.time()
-step_times = []
 
 
 def train():
@@ -122,13 +141,14 @@ def train():
     # Calculate steps per epoch for logging reconstructions
     steps_per_epoch = len(training_loader)
     print(f"Steps per epoch: {steps_per_epoch}")
+    print(f"Logging metrics every step, reconstructions every epoch")
+    
+    global_step = 0  # Initialize global step counter
 
     for i in range(args.n_updates):
         (x, _) = next(iter(training_loader))
         x = x.to(device)
         optimizer.zero_grad()
-
-        step_start_time = time.time()
         
         embedding_loss, x_hat, perplexity = model(x)
         recon_loss = torch.mean((x_hat - x)**2) / x_train_var
@@ -137,14 +157,12 @@ def train():
         # Add DGM loss if enabled
         dgm_loss = torch.tensor(0.0).to(device)
         if args.use_dgm_loss and dgm_model is not None:
-            dgm_loss = utils.compute_dgm_loss(x, x_hat, dgm_model, loss_type=args.dgm_loss_type)
+            dgm_loss = utils.compute_dgm_loss(x, x_hat, dgm_model, loss_type=args.dgm_loss_type, 
+                                             dgm_size=dgm_size, model_type=dgm_model_type)
             loss = loss + args.dgm_loss_weight * dgm_loss
 
         loss.backward()
         optimizer.step()
-        
-        step_time = time.time() - step_start_time
-        step_times.append(step_time)
 
         results["recon_errors"].append(recon_loss.cpu().detach().numpy())
         results["perplexities"].append(perplexity.cpu().detach().numpy())
@@ -152,7 +170,26 @@ def train():
         results["dgm_losses"].append(dgm_loss.cpu().detach().numpy())
         results["embedding_losses"].append(embedding_loss.cpu().detach().numpy())
         results["n_updates"] = i
+        
+        # Calculate current epoch
+        current_epoch = i / steps_per_epoch
+        
+        # Log to wandb EVERY step with simplified metrics
+        if args.use_wandb and WANDB_AVAILABLE:
+            log_dict = {
+                "train/recon_error": recon_loss.cpu().detach().item(),
+                "train/total_loss": loss.cpu().detach().item(),
+                "train/embedding_loss": embedding_loss.cpu().detach().item(),
+                "train/perplexity": perplexity.cpu().detach().item(),
+                "train/epoch": current_epoch,
+            }
+            if args.use_dgm_loss:
+                log_dict["train/dgm_loss"] = dgm_loss.cpu().detach().item()
+            
+            wandb.log(log_dict, step=global_step)
+            global_step += 1
 
+        # Print to console every log_interval steps
         if i % args.log_interval == 0:
             # save model and print values
             if args.save:
@@ -167,37 +204,16 @@ def train():
             recon_error_mean = np.mean(results["recon_errors"][-args.log_interval:])
             loss_mean = np.mean(results["loss_vals"][-args.log_interval:])
             perplexity_mean = np.mean(results["perplexities"][-args.log_interval:])
-            embedding_loss_mean = np.mean(results["embedding_losses"][-args.log_interval:])
-            dgm_loss_mean = np.mean(results["dgm_losses"][-args.log_interval:]) if args.use_dgm_loss else 0
-            step_time_mean = np.mean(step_times[-args.log_interval:]) if step_times else 0
-            current_epoch = i / steps_per_epoch
-            elapsed_time = time.time() - start_time
             
             print('Update #', i, 'Recon Error:',
                   recon_error_mean,
                   'Loss', loss_mean,
                   'Perplexity:', perplexity_mean,
                   dgm_loss_str)
-            
-            # Log to wandb
-            if args.use_wandb and WANDB_AVAILABLE:
-                log_dict = {
-                    "train/recon_error": recon_error_mean,
-                    "train/total_loss": loss_mean,
-                    "train/embedding_loss": embedding_loss_mean,
-                    "train/perplexity": perplexity_mean,
-                    "train/learning_rate": args.learning_rate,
-                    "train/epoch": current_epoch,
-                    "timing/step_time": step_time_mean,
-                    "timing/elapsed_time": elapsed_time,
-                    "timing/steps_per_second": 1.0 / step_time_mean if step_time_mean > 0 else 0,
-                }
-                if args.use_dgm_loss:
-                    log_dict["train/dgm_loss"] = dgm_loss_mean
-                wandb.log(log_dict, step=i)
         
         # Log reconstructions and validation metrics every epoch
-        if i % steps_per_epoch == 0 and i > 0:
+        if i > 0 and i % steps_per_epoch == 0:
+            current_epoch_int = int(i / steps_per_epoch)
             if args.use_wandb and WANDB_AVAILABLE:
                 with torch.no_grad():
                     model.eval()
@@ -218,7 +234,10 @@ def train():
                         val_loss = val_recon_loss + val_embedding_loss
                         
                         if args.use_dgm_loss and dgm_model is not None:
-                            val_dgm_loss = utils.compute_dgm_loss(x_val, x_val_recon, dgm_model, loss_type=args.dgm_loss_type)
+                            val_dgm_loss = utils.compute_dgm_loss(x_val, x_val_recon, dgm_model, 
+                                                                 loss_type=args.dgm_loss_type,
+                                                                 dgm_size=dgm_size, 
+                                                                 model_type=dgm_model_type)
                             val_loss = val_loss + args.dgm_loss_weight * val_dgm_loss
                             val_dgm_losses.append(val_dgm_loss.cpu().detach().numpy())
                         
@@ -233,6 +252,7 @@ def train():
                         "val/total_loss": np.mean(val_losses),
                         "val/embedding_loss": np.mean(val_embedding_losses),
                         "val/perplexity": np.mean(val_perplexities),
+                        "val/epoch": current_epoch_int,
                     }
                     if args.use_dgm_loss and val_dgm_losses:
                         val_log_dict["val/dgm_loss"] = np.mean(val_dgm_losses)
@@ -242,14 +262,19 @@ def train():
                     x_vis = x_vis.to(device)
                     _, x_vis_recon, _ = model(x_vis)
                     
-                    # Create grid of original and reconstructed images
+                    # Create separate grids for inputs and reconstructions (like VQGAN)
                     n_images = min(8, x_vis.shape[0])
-                    comparison = torch.cat([x_vis[:n_images], x_vis_recon[:n_images]])
-                    grid = torchvision.utils.make_grid(comparison, nrow=n_images, normalize=True, value_range=(-1, 1))
+                    input_grid = torchvision.utils.make_grid(x_vis[:n_images], nrow=4, normalize=True, value_range=(-1, 1))
+                    recon_grid = torchvision.utils.make_grid(x_vis_recon[:n_images], nrow=4, normalize=True, value_range=(-1, 1))
                     
-                    val_log_dict["reconstructions"] = wandb.Image(grid, caption=f"Top: Original, Bottom: Reconstructed (Step {i})")
+                    val_log_dict["val/inputs"] = wandb.Image(input_grid, caption=f"Epoch {current_epoch_int} - Inputs")
+                    val_log_dict["val/reconstructions"] = wandb.Image(recon_grid, caption=f"Epoch {current_epoch_int} - Reconstructions")
                     
-                    wandb.log(val_log_dict, step=i)
+                    wandb.log(val_log_dict, step=global_step)
+                    global_step += 1
+                    
+                    print(f"\n[Epoch {current_epoch_int}] Validation - Recon Error: {val_log_dict['val/recon_error']:.6f}, "
+                          f"Loss: {val_log_dict['val/total_loss']:.6f}, Perplexity: {val_log_dict['val/perplexity']:.2f}")
                     model.train()
 
 

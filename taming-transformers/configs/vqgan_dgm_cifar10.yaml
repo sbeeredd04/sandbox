@@ -33,6 +33,8 @@ model:
         dgm_model_path: '../Deep-Geometric-Moment/cifar10/chkpt/model_best.pth.tar'
         dgm_num_classes: 10
         dgm_hw: 32
+        dgm_model_type: 'cifar'
+        dgm_arch: 'resnet18'
 
 data:
   target: main.DataModuleFromConfig
