@@ -1,17 +1,54 @@
 # Vector Quantized Variational Autoencoder
 
-This is a PyTorch implementation of the vector quantized variational autoencoder (https://arxiv.org/abs/1711.00937). 
+This is a PyTorch implementation of the vector quantized variational autoencoder (https://arxiv.org/abs/1711.00937) with support for Deep Geometric Moments (DGM) auxiliary loss.
 
 You can find the author's [original implementation in Tensorflow here](https://github.com/deepmind/sonnet/blob/master/sonnet/python/modules/nets/vqvae.py) with [an example you can run in a Jupyter notebook](https://github.com/deepmind/sonnet/blob/master/sonnet/examples/vqvae_example.ipynb).
 
 ## Installing Dependencies
 
-To install dependencies, create a conda or virtual environment with Python 3 and then run `pip install -r requirements.txt`. 
+To install dependencies, create a conda or virtual environment with Python 3 and then run `pip install -r requirements.txt`.
+
+## Dataset Support
+
+This implementation supports multiple datasets:
+- **CIFAR10**: Small 32x32 RGB images (10 classes)
+- **CIFAR100**: Small 32x32 RGB images (100 classes)
+- **ImageNet**: Large-scale dataset with 1000 classes
+  - **IMAGENET_VAL**: Validation set only (50K images) - for quick experiments
+  - **IMAGENET_FULL**: Full training set (1.28M images) + validation set
+
+### ImageNet Setup
+
+For detailed instructions on setting up and using ImageNet, see **[IMAGENET_SETUP.md](IMAGENET_SETUP.md)**.
+
+Quick start:
+1. Extract ImageNet dataset to `/scratch/sbeeredd/imagenet/`
+2. Organize validation set: `python organize_imagenet_val.py`
+3. Train: `bash train_imagenet_val.sh` or `bash train_imagenet_full_baseline.sh` 
 
 ## Running the VQ VAE
 
-To run the VQ-VAE simply run `python3 main.py`. Make sure to include the `-save` flag if you want to save your model. You can also add parameters in the command line. The default values are specified below:
+### Quick Start
 
+For CIFAR10:
+```bash
+bash train_cifar10_baseline.sh  # Baseline training
+bash train_cifar10.sh           # With DGM loss
+```
+
+For ImageNet:
+```bash
+bash train_imagenet_val.sh            # Val set, baseline
+bash train_imagenet_val_dgm.sh        # Val set, with DGM
+bash train_imagenet_full_baseline.sh  # Full training, baseline
+bash train_imagenet_full_dgm.sh       # Full training, with DGM
+```
+
+### Manual Execution
+
+To run the VQ-VAE manually: `python3 main.py [options]`. Make sure to include the `-save` flag if you want to save your model.
+
+**Core Parameters:**
 ```python
 parser.add_argument("--batch_size", type=int, default=32)
 parser.add_argument("--n_updates", type=int, default=5000)
@@ -23,6 +60,27 @@ parser.add_argument("--n_embeddings", type=int, default=512)
 parser.add_argument("--beta", type=float, default=.25)
 parser.add_argument("--learning_rate", type=float, default=3e-4)
 parser.add_argument("--log_interval", type=int, default=50)
+parser.add_argument("--dataset", type=str, default='CIFAR10')
+parser.add_argument("--data_root", type=str, default=None)
+parser.add_argument("--image_size", type=int, default=None)
+```
+
+**DGM Loss Parameters:**
+```python
+parser.add_argument("--use_dgm_loss", action="store_true")
+parser.add_argument("--dgm_model_path", type=str, default="...")
+parser.add_argument("--dgm_loss_weight", type=float, default=0.01)
+parser.add_argument("--dgm_loss_type", type=str, default='mse')
+parser.add_argument("--dgm_model_type", type=str, default='imagenet')
+parser.add_argument("--dgm_arch", type=str, default='resnet34')
+parser.add_argument("--dgm_image_size", type=int, default=256)
+```
+
+**Logging Parameters:**
+```python
+parser.add_argument("--use_wandb", action="store_true")
+parser.add_argument("--wandb_project", type=str, default="vqvae-dgm")
+parser.add_argument("--wandb_run_name", type=str, default=None)
 ```
 
 ## Models
@@ -44,6 +102,36 @@ models/
     - quantizer.py -> VectorQuantizer
     - residual.py -> ResidualLayer, ResidualStack
     - vqvae.py -> VQVAE
+```
+
+## Deep Geometric Moments (DGM) Loss
+
+This implementation supports an optional auxiliary loss based on Deep Geometric Moments (DGM). The DGM loss helps preserve spatial structure and global statistics during reconstruction by matching features from a pretrained classifier.
+
+**How it works:**
+1. A pretrained ResNet model (trained on ImageNet or CIFAR) extracts features from both original and reconstructed images
+2. The loss compares geometric moment representations between original and reconstruction
+3. This encourages the VQVAE to preserve important visual structure beyond pixel-level similarity
+
+**Benefits:**
+- Better preservation of spatial structure
+- Improved visual quality
+- More semantically meaningful latent codes
+
+**Usage:**
+```bash
+python main.py \
+    --dataset IMAGENET_VAL \
+    --use_dgm_loss \
+    --dgm_model_path /path/to/pretrained/model.pth \
+    --dgm_loss_weight 0.01 \
+    --dgm_model_type imagenet \
+    --dgm_arch resnet34
+```
+
+The DGM model checkpoint should be available at:
+```
+/scratch/sbeeredd/sandbox/Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar
 ```
 
 ## PixelCNN - Sampling from the VQ VAE latent space 

@@ -67,7 +67,16 @@ def load_imagenet():
                            ]))
     return train, val
 
-def load_imagenet_val(data_root='/scratch/sbeeredd/sandbox/imagenet_val', image_size=256):
+def load_imagenet_val(data_root='/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC', image_size=256):
+    """Load ImageNet validation set organized by class folders.
+    
+    Args:
+        data_root: Path to CLS-LOC directory containing organized val/ folder
+        image_size: Target image size (default 256)
+    
+    Returns:
+        train_dataset, val_dataset (both point to val set for val-only training)
+    """
     val = datasets.ImageFolder(root=os.path.join(data_root, 'val'),
                               transform=transforms.Compose([
                                   transforms.Resize(image_size),
@@ -79,10 +88,19 @@ def load_imagenet_val(data_root='/scratch/sbeeredd/sandbox/imagenet_val', image_
     # Use val for both train and val (we're just training on val set)
     return val, val
 
-def load_imagenet_full(train_root='/scratch/sbeeredd/sandbox/imagenet/train',
-                       val_root='/scratch/sbeeredd/sandbox/imagenet_val/val',
+def load_imagenet_full(train_root='/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/train',
+                       val_root='/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/val',
                        image_size=256):
-    """Load full ImageNet training and validation datasets"""
+    """Load full ImageNet training and validation datasets.
+    
+    Args:
+        train_root: Path to training data directory with class folders (1000 classes)
+        val_root: Path to validation data directory with class folders (organized)
+        image_size: Target image size (default 256)
+    
+    Returns:
+        train_dataset, val_dataset
+    """
     train = datasets.ImageFolder(root=train_root,
                                 transform=transforms.Compose([
                                     transforms.Resize(image_size),
@@ -177,9 +195,9 @@ def load_data_and_data_loaders(dataset, batch_size, data_root=None, image_size=N
 
     elif dataset == 'IMAGENET_VAL':
         if data_root is None:
-            data_root = '/scratch/sbeeredd/sandbox/imagenet_val'
+            data_root = '/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC'
         if image_size is None:
-            image_size = 32  # Default to 32 for DGM compatibility
+            image_size = 256  # Default to 256 for ImageNet
         training_data, validation_data = load_imagenet_val(data_root, image_size)
         training_loader, validation_loader = data_loaders(
             training_data, validation_data, batch_size)
@@ -189,8 +207,8 @@ def load_data_and_data_loaders(dataset, batch_size, data_root=None, image_size=N
         # Full ImageNet with separate train and val directories
         if image_size is None:
             image_size = 256
-        train_root = '/scratch/sbeeredd/sandbox/imagenet/train'
-        val_root = '/scratch/sbeeredd/sandbox/imagenet_val/val'
+        train_root = '/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/train'
+        val_root = '/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/val'
         training_data, validation_data = load_imagenet_full(train_root, val_root, image_size)
         training_loader, validation_loader = data_loaders(
             training_data, validation_data, batch_size)
