@@ -461,7 +461,7 @@ class MyResNet1(nn.Module):
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
-    def forward(self, x):
+    def forward(self, x, return_moments=True):
         #x =  gm_transform_in(x)
         #x = self.do(x)
         #x = x.clamp(min=0.0, max=1.0)
@@ -542,6 +542,9 @@ class MyResNet1(nn.Module):
         #cl = torch.square(xy1.view(-1, 256, 1)- self.wg).sum(dim=1)
         # return gm_transform_out(imgr)
         # return cl, imgr, grid
+        if return_moments:
+            return cl, (grid, xy1)
+        
         return cl, imgr
 
 

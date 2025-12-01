@@ -331,19 +331,19 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
         dgm_loss = xb_loss + 100.0 * moment_loss
         
     elif model_type == 'imagenet':
-        # ImageNet model: returns (cl, imgr) where imgr is the geometric moment map
+        # ImageNet model: now supports return_moments=True -> (xb, m)
         with torch.no_grad():
-            _, imgr_x = dgm_model(x_resized)
+            _, (xb_x, m_x) = dgm_model(x_resized, return_moments=True)
         
-        _, imgr_x_hat = dgm_model(x_hat_resized)
+        _, (xb_x_hat, m_x_hat) = dgm_model(x_hat_resized, return_moments=True)
         
-        # Compute loss on geometric moment maps
+        # Compute loss on weighted features xb (spatial structure)
         if loss_type == 'mse':
-            xb_loss = torch.mean((imgr_x - imgr_x_hat) ** 2)
+            xb_loss = torch.mean((xb_x - xb_x_hat) ** 2)
         elif loss_type == 'l1':
-            xb_loss = torch.mean(torch.abs(imgr_x - imgr_x_hat))
+            xb_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
         elif loss_type == 'l2_norm':
-            xb_loss = torch.mean(torch.sqrt(torch.sum((imgr_x - imgr_x_hat) ** 2, dim=1)))
+            xb_loss = torch.mean(torch.sqrt(torch.sum((xb_x - xb_x_hat) ** 2, dim=1)))
         else:
             raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
         

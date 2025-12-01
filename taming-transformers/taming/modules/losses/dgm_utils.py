@@ -98,16 +98,15 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
         dgm_loss = xb_loss + 1.0 * moment_loss
         
     elif model_type == 'imagenet':
-        # ImageNet model: returns (cl, imgr) where imgr is the geometric moment map
+        # ImageNet model: now supports return_moments=True -> (xb, m)
         with torch.no_grad():
-            _, (xb_x, moment_x) = dgm_model(x_resized, return_moments=True)
+            _, (xb_x, m_x) = dgm_model(x_resized, return_moments=True)
         
-        _, (xb_x_hat, moment_x_hat) = dgm_model(x_hat_resized, return_moments=True)
+        _, (xb_x_hat, m_x_hat) = dgm_model(x_hat_resized, return_moments=True)
         
-        # Compute loss on geometric moment maps
+        # Compute loss on weighted features xb (spatial structure)
         if loss_type == 'mse':
             dgm_loss = torch.mean((xb_x - xb_x_hat) ** 2)
-
         elif loss_type == 'l1':
             dgm_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
         elif loss_type == 'l2_norm':
