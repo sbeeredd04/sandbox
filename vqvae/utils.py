@@ -321,8 +321,11 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
         elif loss_type == 'l1':
             xb_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
             moment_loss = torch.mean(torch.abs(moment_x - moment_x_hat))
+        elif loss_type == 'l2_norm':
+            xb_loss = torch.mean(torch.sqrt(torch.sum((xb_x - xb_x_hat) ** 2, dim=1)))
+            moment_loss = torch.mean(torch.sqrt(torch.sum((moment_x - moment_x_hat) ** 2, dim=1)))
         else:
-            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse' or 'l1'.")
+            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
         
         # Combine both losses: xb captures spatial structure, moment captures global statistics
         dgm_loss = xb_loss + 100.0 * moment_loss
@@ -336,11 +339,16 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
         
         # Compute loss on geometric moment maps
         if loss_type == 'mse':
-            dgm_loss = torch.mean((imgr_x - imgr_x_hat) ** 2)
+            xb_loss = torch.mean((imgr_x - imgr_x_hat) ** 2)
         elif loss_type == 'l1':
-            dgm_loss = torch.mean(torch.abs(imgr_x - imgr_x_hat))
+            xb_loss = torch.mean(torch.abs(imgr_x - imgr_x_hat))
+        elif loss_type == 'l2_norm':
+            xb_loss = torch.mean(torch.sqrt(torch.sum((imgr_x - imgr_x_hat) ** 2, dim=1)))
         else:
-            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse' or 'l1'.")
+            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
+        
+        dgm_loss = xb_loss
+        
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Choose 'cifar' or 'imagenet'")
     

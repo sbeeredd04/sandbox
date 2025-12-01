@@ -100,17 +100,20 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
     elif model_type == 'imagenet':
         # ImageNet model: returns (cl, imgr) where imgr is the geometric moment map
         with torch.no_grad():
-            _, imgr_x = dgm_model(x_resized)
+            _, (xb_x, moment_x) = dgm_model(x_resized, return_moments=True)
         
-        _, imgr_x_hat = dgm_model(x_hat_resized)
+        _, (xb_x_hat, moment_x_hat) = dgm_model(x_hat_resized, return_moments=True)
         
         # Compute loss on geometric moment maps
         if loss_type == 'mse':
-            dgm_loss = torch.mean((imgr_x - imgr_x_hat) ** 2)
+            dgm_loss = torch.mean((xb_x - xb_x_hat) ** 2)
+
         elif loss_type == 'l1':
-            dgm_loss = torch.mean(torch.abs(imgr_x - imgr_x_hat))
+            dgm_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
+        elif loss_type == 'l2_norm':
+            dgm_loss = torch.mean(torch.sqrt(torch.sum((xb_x - xb_x_hat) ** 2, dim=1)))
         else:
-            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse' or 'l1'.")
+            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Choose 'cifar' or 'imagenet'")
     

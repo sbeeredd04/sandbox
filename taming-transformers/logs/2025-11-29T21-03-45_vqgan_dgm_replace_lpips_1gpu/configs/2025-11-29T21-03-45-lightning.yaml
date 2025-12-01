@@ -1,0 +1,21 @@
+lightning:
+  logger:
+    target: pytorch_lightning.loggers.WandbLogger
+    params:
+      name: vqgan_dgm_w1.0_imagenet_full_256x256_1gpu
+      project: vqgan-imagenet
+      save_dir: logs
+      log_model: false
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 500
+        max_images: 8
+        increase_log_steps: false
+  trainer:
+    max_epochs: 100
+    accumulate_grad_batches: 16
+    gradient_clip_val: 1.0
+    strategy: ddp
+    gpus: 0

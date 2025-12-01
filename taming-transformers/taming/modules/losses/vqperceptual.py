@@ -37,13 +37,22 @@ class VQLPIPSWithDiscriminator(nn.Module):
                  perceptual_weight=1.0, use_actnorm=False, disc_conditional=False,
                  disc_ndf=64, disc_loss="hinge",
                  dgm_weight=0.0, dgm_loss_type='mse', dgm_model_path=None, dgm_num_classes=1000, 
-                 dgm_hw=32, dgm_model_type='cifar', dgm_arch='resnet18'):
+                 dgm_hw=32, dgm_model_type='cifar', dgm_arch='resnet18',
+                 replace_lpips_with_dgm=False):
         super().__init__()
         assert disc_loss in ["hinge", "vanilla"]
         self.codebook_weight = codebook_weight
         self.pixel_weight = pixelloss_weight
-        self.perceptual_loss = LPIPS().eval()
-        self.perceptual_weight = perceptual_weight
+        self.replace_lpips_with_dgm = replace_lpips_with_dgm
+        
+        # Only load LPIPS if not replacing with DGM
+        if not replace_lpips_with_dgm:
+            self.perceptual_loss = LPIPS().eval()
+            self.perceptual_weight = perceptual_weight
+        else:
+            self.perceptual_loss = None
+            self.perceptual_weight = 0.0
+            print("LPIPS replaced with DGM loss")
 
         self.discriminator = NLayerDiscriminator(input_nc=disc_in_channels,
                                                  n_layers=disc_num_layers,
@@ -102,7 +111,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
     def forward(self, codebook_loss, inputs, reconstructions, optimizer_idx,
                 global_step, last_layer=None, cond=None, split="train"):
         rec_loss = torch.abs(inputs.contiguous() - reconstructions.contiguous())
-        if self.perceptual_weight > 0:
+        if self.perceptual_weight > 0 and self.perceptual_loss is not None:
             p_loss = self.perceptual_loss(inputs.contiguous(), reconstructions.contiguous())
             rec_loss = rec_loss + self.perceptual_weight * p_loss
         else:

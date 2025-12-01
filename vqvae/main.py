@@ -212,7 +212,7 @@ def train():
                   dgm_loss_str)
         
         # Log reconstructions and validation metrics every epoch
-        if i > 0 and i % steps_per_epoch == 0:
+        if i > 0 and i % 500 == 0:
             current_epoch_int = int(i / steps_per_epoch)
             if args.use_wandb and WANDB_AVAILABLE:
                 with torch.no_grad():
