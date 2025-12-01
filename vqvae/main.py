@@ -42,7 +42,7 @@ parser.add_argument("--image_size", type=int, default=None, help="Image size for
 parser.add_argument("--use_dgm_loss", action="store_true", help="Use DGM auxiliary loss")
 parser.add_argument("--dgm_model_path", type=str, default="/scratch/sbeeredd/sandbox/Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar", help="Path to pretrained DGM model")
 parser.add_argument("--dgm_loss_weight", type=float, default=0.01, help="Weight for DGM loss")
-parser.add_argument("--dgm_loss_type", type=str, default='mse', choices=['mse', 'l1'], help="Type of DGM loss")
+parser.add_argument("--dgm_loss_type", type=str, default='mse', choices=['mse', 'l1', 'l2_norm'], help="Type of DGM loss")
 parser.add_argument("--dgm_model_type", type=str, default='imagenet', choices=['cifar', 'imagenet'], help="DGM model type (cifar or imagenet)")
 parser.add_argument("--dgm_arch", type=str, default='resnet34', choices=['resnet18', 'resnet34'], help="DGM architecture (for imagenet)")
 parser.add_argument("--dgm_image_size", type=int, default=256, help="DGM model image size (32 for CIFAR, 256 for ImageNet, auto if None)")
