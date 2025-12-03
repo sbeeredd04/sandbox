@@ -12,14 +12,12 @@ try:
     CIFAR_DGM_AVAILABLE = True
 except ImportError:
     CIFAR_DGM_AVAILABLE = False
-    print("Warning: CIFAR DGM model (model.py) not available")
 
 try:
     from resnet_gm import ResNet18 as ResNet18_ImageNet, ResNet34 as ResNet34_ImageNet
     IMAGENET_DGM_AVAILABLE = True
 except ImportError:
     IMAGENET_DGM_AVAILABLE = False
-    print("Warning: ImageNet DGM model (resnet_gm.py) not available")
 
 
 def load_dgm_model(model_path, num_classes=1000, hw=256, model_type='imagenet', arch='resnet34', device='cuda'):
@@ -40,7 +38,7 @@ def load_dgm_model(model_path, num_classes=1000, hw=256, model_type='imagenet', 
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Choose 'cifar' or 'imagenet'")
     
-    checkpoint = torch.load(model_path, map_location=device)
+    checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     
     # Handle different checkpoint formats
     if 'state_dict' in checkpoint:
@@ -55,54 +53,67 @@ def load_dgm_model(model_path, num_classes=1000, hw=256, model_type='imagenet', 
     for param in dgm_model.parameters():
         param.requires_grad = False
     
-    print(f"Loaded {model_type} DGM model ({arch}) with num_classes={num_classes}, hw={hw}")
     return dgm_model
 
 
-def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_size=256, model_type='imagenet'):
+def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=256, dgm_size=256, model_type='imagenet', return_reconstruction=False):
+    """
+    Compute DGM loss between input and reconstruction images.
+    
+    Args:
+        x: Input images in VQGAN range [-1, 1]
+        x_hat: Reconstructed images in VQGAN range [-1, 1]
+        dgm_model: Pre-trained DGM ResNet model
+        loss_type: Type of loss ('mse', 'l1', 'l2_norm')
+        input_size: Size of input images (default 256)
+        dgm_size: Size expected by DGM model (256 for ImageNet DGM - gets downsampled to 32 internally)
+        model_type: 'cifar' or 'imagenet'
+        return_reconstruction: Whether to return DGM reconstruction visualization
+        
+    Returns:
+        dgm_loss: Scalar loss value
+        dgm_recon: (optional) DGM reconstruction for visualization
+    """
     # Auto-detect input size if not provided
     if input_size is None:
         input_size = x.shape[-1]  # Assumes square images
     
-    # Resize both to DGM resolution if needed
+    # DGM ResNet expects images in [0, 1] range (RGB pixel values)
+    # Convert from VQGAN range [-1, 1] to [0, 1]
+    x_01 = (x + 1.0) / 2.0
+    x_hat_01 = (x_hat + 1.0) / 2.0
+    
+    # DGM ResNet34 expects 256x256 input (conv02 has stride=8, 256->32)
+    # Change from 32 to 256!
+    dgm_size = 256  # ImageNet DGM expects 256x256, downsamples to 32x32 internally
+    
     if input_size != dgm_size:
         x_resized = torch.nn.functional.interpolate(
-            x, size=(dgm_size, dgm_size), mode='bilinear', align_corners=False
+            x_01, size=(dgm_size, dgm_size), mode='bilinear', align_corners=False
         )
         x_hat_resized = torch.nn.functional.interpolate(
-            x_hat, size=(dgm_size, dgm_size), mode='bilinear', align_corners=False
+            x_hat_01, size=(dgm_size, dgm_size), mode='bilinear', align_corners=False
         )
     else:
-        x_resized = x
-        x_hat_resized = x_hat
+        x_resized = x_01
+        x_hat_resized = x_hat_01
+    
+    # Clamp to ensure [0, 1] range after interpolation
+    x_resized = torch.clamp(x_resized, 0.0, 1.0)
+    x_hat_resized = torch.clamp(x_hat_resized, 0.0, 1.0)
     
     # Different models have different outputs
-    if model_type == 'cifar':
-        # CIFAR model: expects return_moments=True
+    dgm_recon = None
+        
+    if model_type == 'imagenet':
+        # ImageNet model: now supports return_moments=True -> (imgr, (xb, m))
         with torch.no_grad():
-            _, (xb_x, moment_x) = dgm_model(x_resized, return_moments=True)
-        
-        _, (xb_x_hat, moment_x_hat) = dgm_model(x_hat_resized, return_moments=True)
-        
-        # Compute loss on weighted features (xb) - spatial loss
-        if loss_type == 'mse':
-            xb_loss = torch.mean((xb_x - xb_x_hat) ** 2)
-            moment_loss = torch.mean((moment_x - moment_x_hat) ** 2)
-        elif loss_type == 'l1':
-            xb_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
-            moment_loss = torch.mean(torch.abs(moment_x - moment_x_hat))
-        else:
-            raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse' or 'l1'.")
-        
-        # Combine both losses: xb captures spatial structure, moment captures global statistics
-        dgm_loss = xb_loss + 1.0 * moment_loss
-        
-    elif model_type == 'imagenet':
-        # ImageNet model: now supports return_moments=True -> (xb, m)
-        with torch.no_grad():
-            _, (xb_x, m_x) = dgm_model(x_resized, return_moments=True)
-        
-        _, (xb_x_hat, m_x_hat) = dgm_model(x_hat_resized, return_moments=True)
+            _, (xb_x, m_x), imgr_input = dgm_model(x_resized, return_moments=True)
+
+        _, (xb_x_hat, m_x_hat), imgr_hat = dgm_model(x_hat_resized, return_moments=True)
+        if return_reconstruction:
+            dgm_recon = imgr_input.repeat(1, 3, 1, 1)  # Convert to 3-channel for visualization
+            dgm_recon = dgm_recon * 2.0 - 1.0  # Back to VQGAN range [-1, 1]
         
         # Compute loss on weighted features xb (spatial structure)
         if loss_type == 'mse':
@@ -113,7 +124,10 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=None, dgm_
             dgm_loss = torch.mean(torch.sqrt(torch.sum((xb_x - xb_x_hat) ** 2, dim=1)))
         else:
             raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
+        
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Choose 'cifar' or 'imagenet'")
     
+    if return_reconstruction:
+        return dgm_loss, dgm_recon
     return dgm_loss

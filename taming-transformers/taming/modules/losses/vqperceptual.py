@@ -44,6 +44,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
         self.codebook_weight = codebook_weight
         self.pixel_weight = pixelloss_weight
         self.replace_lpips_with_dgm = replace_lpips_with_dgm
+        self.dgm_reconstruction = None  # Store DGM reconstruction for logging
         
         # Only load LPIPS if not replacing with DGM
         if not replace_lpips_with_dgm:
@@ -52,7 +53,6 @@ class VQLPIPSWithDiscriminator(nn.Module):
         else:
             self.perceptual_loss = None
             self.perceptual_weight = 0.0
-            print("LPIPS replaced with DGM loss")
 
         self.discriminator = NLayerDiscriminator(input_nc=disc_in_channels,
                                                  n_layers=disc_num_layers,
@@ -88,11 +88,12 @@ class VQLPIPSWithDiscriminator(nn.Module):
                     model_type=dgm_model_type,
                     arch=dgm_arch
                 )
-                print(f"DGM auxiliary loss enabled: weight={dgm_weight}, type={dgm_loss_type}, "
-                      f"model_type={dgm_model_type}, arch={dgm_arch}, hw={dgm_hw}")
+                # Log DGM configuration
+                print(f"[DGM] Loaded pretrained {dgm_model_type} model ({dgm_arch}) | "
+                      f"loss_type={dgm_loss_type} | hw={dgm_hw} | weight={dgm_weight} | "
+                      f"replace_lpips={replace_lpips_with_dgm}")
             except Exception as e:
-                print(f"Warning: Failed to load DGM model: {e}")
-                print("DGM loss will be disabled.")
+                print(f"[DGM] Failed to load model: {e}")
                 self.dgm_weight = 0.0
 
     def calculate_adaptive_weight(self, nll_loss, g_loss, last_layer=None):
@@ -110,6 +111,7 @@ class VQLPIPSWithDiscriminator(nn.Module):
 
     def forward(self, codebook_loss, inputs, reconstructions, optimizer_idx,
                 global_step, last_layer=None, cond=None, split="train"):
+        # Reconstruction loss (pixel-level L1)
         rec_loss = torch.abs(inputs.contiguous() - reconstructions.contiguous())
         if self.perceptual_weight > 0 and self.perceptual_loss is not None:
             p_loss = self.perceptual_loss(inputs.contiguous(), reconstructions.contiguous())
@@ -147,28 +149,36 @@ class VQLPIPSWithDiscriminator(nn.Module):
                 try:
                     from taming.modules.losses.dgm_utils import compute_dgm_loss
                     # Auto-detect input size and resize to dgm_hw for DGM loss computation
-                    dgm_loss = compute_dgm_loss(inputs, reconstructions, self.dgm_model, 
-                                               self.dgm_loss_type, dgm_size=self.dgm_hw,
-                                               model_type=self.dgm_model_type)
+                    dgm_loss, self.dgm_reconstruction = compute_dgm_loss(
+                        inputs, reconstructions, self.dgm_model, 
+                        self.dgm_loss_type, dgm_size=self.dgm_hw,
+                        model_type=self.dgm_model_type,
+                        return_reconstruction=True
+                    )
                     loss = loss + self.dgm_weight * dgm_loss
                 except Exception as e:
-                    print(f"Warning: DGM loss computation failed: {e}")
+                    print(f"[DGM] Error computing DGM loss: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    self.dgm_reconstruction = None
 
-            # Simplified logging: only essential losses
-            log = {"{}/total_loss".format(split): loss.clone().detach().mean(),
-                   "{}/rec_loss".format(split): rec_loss.detach().mean(),
-                   "{}/perceptual_loss".format(split): p_loss.detach().mean(),
-                   "{}/codebook_loss".format(split): codebook_loss.detach().mean(),
-                   }
+            # Logging: only essential losses
+            log = {
+                "{}/total_loss".format(split): loss.clone().detach().mean(),
+                "{}/rec_loss".format(split): rec_loss.detach().mean(),
+                "{}/perceptual_loss".format(split): p_loss.detach().mean(),
+                "{}/codebook_loss".format(split): codebook_loss.detach().mean(),
+                "{}/gan_loss".format(split): g_loss.detach().mean(),
+            }
             
-            # Add DGM loss if enabled
+            # Add DGM loss to logs if enabled
             if self.dgm_weight > 0:
                 log["{}/dgm_loss".format(split)] = dgm_loss.detach().mean() if isinstance(dgm_loss, torch.Tensor) else torch.tensor(0.0)
             
             return loss, log
 
+        # Discriminator update (optimizer_idx == 1)
         if optimizer_idx == 1:
-            # second pass for discriminator update
             if cond is None:
                 logits_real = self.discriminator(inputs.contiguous().detach())
                 logits_fake = self.discriminator(reconstructions.contiguous().detach())
@@ -179,6 +189,6 @@ class VQLPIPSWithDiscriminator(nn.Module):
             disc_factor = adopt_weight(self.disc_factor, global_step, threshold=self.discriminator_iter_start)
             d_loss = disc_factor * self.disc_loss(logits_real, logits_fake)
 
-            # Simplified logging: only discriminator loss
+            # Logging: discriminator loss only
             log = {"{}/disc_loss".format(split): d_loss.clone().detach().mean()}
             return d_loss, log

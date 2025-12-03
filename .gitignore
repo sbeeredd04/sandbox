@@ -154,5 +154,10 @@ wandb/
 
 
 #all imagenet folders
-*imagenet*
-*ImageNet*
+/imagenet/
+/ImageNet/
+imagenet_val/
+
+sandbox
+
+*logs*

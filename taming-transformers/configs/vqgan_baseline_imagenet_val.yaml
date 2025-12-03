@@ -1,0 +1,78 @@
+model:
+  base_learning_rate: 4.5e-6
+  target: taming.models.vqgan.VQModel
+  params:
+    embed_dim: 256
+    n_embed: 1024
+    ddconfig:
+      double_z: False
+      z_channels: 256
+      resolution: 256
+      in_channels: 3
+      out_ch: 3
+      ch: 128
+      ch_mult: [ 1,1,2,2,4]
+      num_res_blocks: 2
+      attn_resolutions: [16]
+      dropout: 0.0
+
+    lossconfig:
+      target: taming.modules.losses.vqperceptual.VQLPIPSWithDiscriminator
+      params:
+        disc_conditional: False
+        disc_in_channels: 3
+        disc_start: 250001
+        disc_weight: 0.8
+        codebook_weight: 1.0
+        # No DGM - baseline with LPIPS only
+        dgm_weight: 0.0
+        replace_lpips_with_dgm: false
+
+data:
+  target: main.DataModuleFromConfig
+  params:
+    batch_size: 8
+    num_workers: 16
+    train:
+      target: data.imagenet_val_custom.ImageNetValCustomTrain
+      params:
+        data_root: /scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC
+        size: 256
+        train_split: 0.8
+    validation:
+      target: data.imagenet_val_custom.ImageNetValCustomValidation
+      params:
+        data_root: /scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC
+        size: 256
+        train_split: 0.8
+
+lightning:
+  logger:
+    target: pytorch_lightning.loggers.WandbLogger
+    params:
+      name: baseline_dgm_visual
+      project: taming-transformers
+      offline: false
+
+  modelcheckpoint: 
+    params: 
+      save_top_k: -1
+      every_n_epochs: 1
+      save_last: true
+  
+  callbacks:
+    image_logger:
+      target: main.ImageLogger
+      params:
+        batch_frequency: 5
+        max_images: 8
+        increase_log_steps: False
+  
+  trainer:
+    accelerator: "gpu"
+    devices: [0]
+    strategy: "auto"
+    accumulate_grad_batches: 16
+    gradient_clip_val: 1.0
+    max_epochs: 100
+    log_every_n_steps: 1

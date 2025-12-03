@@ -42,15 +42,13 @@ class VQModel(pl.LightningModule):
             self.monitor = monitor
 
     def init_from_ckpt(self, path, ignore_keys=list()):
-        sd = torch.load(path, map_location="cpu")["state_dict"]
+        sd = torch.load(path, map_location="cpu", weights_only=False)["state_dict"]
         keys = list(sd.keys())
         for k in keys:
             for ik in ignore_keys:
                 if k.startswith(ik):
-                    print("Deleting key {} from state_dict.".format(k))
                     del sd[k]
         self.load_state_dict(sd, strict=False)
-        print(f"Restored from {path}")
 
     def encode(self, x):
         h = self.encoder(x)
@@ -171,6 +169,18 @@ class VQModel(pl.LightningModule):
             xrec = self.to_rgb(xrec)
         log["inputs"] = x
         log["reconstructions"] = xrec
+        
+        # Add DGM reconstruction if available
+        if hasattr(self.loss, 'dgm_reconstruction') and self.loss.dgm_reconstruction is not None:
+            dgm_recon = self.loss.dgm_reconstruction
+            # Resize to match input size if needed
+            if dgm_recon.shape[-1] != x.shape[-1]:
+                dgm_recon = torch.nn.functional.interpolate(
+                    dgm_recon, size=(x.shape[-2], x.shape[-1]), 
+                    mode='bilinear', align_corners=False
+                )
+            log["dgm_reconstructions"] = dgm_recon
+        
         return log
 
     def to_rgb(self, x):

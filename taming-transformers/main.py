@@ -1,4 +1,15 @@
 import argparse, os, sys, datetime, glob, importlib
+import warnings
+
+# Global flag to suppress deprecation warnings
+SUPPRESS_WARNINGS = True
+
+if SUPPRESS_WARNINGS:
+    warnings.filterwarnings("ignore", category=DeprecationWarning)
+    warnings.filterwarnings("ignore", category=FutureWarning)
+    warnings.filterwarnings("ignore", category=UserWarning)
+    warnings.filterwarnings("ignore", message=".*deprecated.*")
+
 from omegaconf import OmegaConf
 import numpy as np
 from PIL import Image
@@ -204,13 +215,10 @@ class SetupCallback(Callback):
             os.makedirs(self.ckptdir, exist_ok=True)
             os.makedirs(self.cfgdir, exist_ok=True)
 
-            print("Project config")
-            print(self.config.pretty())
+            # Save configs silently
             OmegaConf.save(self.config,
                            os.path.join(self.cfgdir, "{}-project.yaml".format(self.now)))
 
-            print("Lightning config")
-            print(self.lightning_config.pretty())
             OmegaConf.save(OmegaConf.create({"lightning": self.lightning_config}),
                            os.path.join(self.cfgdir, "{}-lightning.yaml".format(self.now)))
 
@@ -258,6 +266,7 @@ class ImageLogger(Callback):
         if not increase_log_steps:
             self.log_steps = [self.batch_freq]
         self.clamp = clamp
+        self.last_logged_step = -1  # Track last logged global step
 
     @rank_zero_only
     def _wandb(self, pl_module, images, batch_idx, split):
@@ -265,22 +274,75 @@ class ImageLogger(Callback):
             import wandb
         except ImportError:
             return
-        grids = dict()
-        for k in images:
-            grid = torchvision.utils.make_grid(images[k])
-            grids[f"{split}/{k}"] = wandb.Image(grid)
-        pl_module.logger.experiment.log(grids, step=pl_module.global_step)
+        
+        # Combine inputs, reconstructions, and DGM reconstructions into a single image
+        if "inputs" in images and "reconstructions" in images:
+            inputs = images["inputs"]
+            reconstructions = images["reconstructions"]
+            
+            # Check if DGM reconstructions are available
+            if "dgm_reconstructions" in images:
+                dgm_recons = images["dgm_reconstructions"]
+                # Stack vertically: inputs, VQGAN recons, DGM recons
+                combined = torch.cat([inputs, reconstructions, dgm_recons], dim=0)
+                n_images = inputs.shape[0]
+                # Create grid with 3 rows: inputs, VQGAN recons, DGM recons
+                grid = torchvision.utils.make_grid(combined, nrow=n_images)
+                pl_module.logger.experiment.log(
+                    {f"{split}/comparison_input_vqgan_dgm": wandb.Image(grid)}
+                )
+            else:
+                # Stack vertically: inputs on top, reconstructions on bottom
+                combined = torch.cat([inputs, reconstructions], dim=0)
+                n_images = inputs.shape[0]
+                grid = torchvision.utils.make_grid(combined, nrow=n_images)
+                pl_module.logger.experiment.log(
+                    {f"{split}/input_vs_reconstruction": wandb.Image(grid)}
+                )
+        else:
+            # Fallback for other image types
+            grids = dict()
+            for k in images:
+                grid = torchvision.utils.make_grid(images[k])
+                grids[f"{split}/{k}"] = wandb.Image(grid)
+            pl_module.logger.experiment.log(grids)
 
     @rank_zero_only
     def _tensorboard(self, pl_module, images, batch_idx, split):
-        for k in images:
-            grid = torchvision.utils.make_grid(images[k])
-            grid = (grid+1.0)/2.0 # -1,1 -> 0,1; c,h,w
-
-            tag = f"{split}/{k}"
-            pl_module.logger.experiment.add_image(
-                tag, grid,
-                global_step=pl_module.global_step)
+        # Combine inputs, reconstructions, and DGM reconstructions into a single image
+        if "inputs" in images and "reconstructions" in images:
+            inputs = images["inputs"]
+            reconstructions = images["reconstructions"]
+            
+            # Check if DGM reconstructions are available
+            if "dgm_reconstructions" in images:
+                dgm_recons = images["dgm_reconstructions"]
+                # Stack vertically: inputs, VQGAN recons, DGM recons
+                combined = torch.cat([inputs, reconstructions, dgm_recons], dim=0)
+                n_images = inputs.shape[0]
+                grid = torchvision.utils.make_grid(combined, nrow=n_images)
+                grid = (grid+1.0)/2.0  # -1,1 -> 0,1; c,h,w
+                pl_module.logger.experiment.add_image(
+                    f"{split}/comparison_input_vqgan_dgm", grid,
+                    global_step=pl_module.global_step)
+            else:
+                # Stack vertically: inputs on top, reconstructions on bottom
+                combined = torch.cat([inputs, reconstructions], dim=0)
+                n_images = inputs.shape[0]
+                grid = torchvision.utils.make_grid(combined, nrow=n_images)
+                grid = (grid+1.0)/2.0  # -1,1 -> 0,1; c,h,w
+                pl_module.logger.experiment.add_image(
+                    f"{split}/input_vs_reconstruction", grid,
+                    global_step=pl_module.global_step)
+        else:
+            # Fallback for other image types
+            for k in images:
+                grid = torchvision.utils.make_grid(images[k])
+                grid = (grid+1.0)/2.0  # -1,1 -> 0,1; c,h,w
+                tag = f"{split}/{k}"
+                pl_module.logger.experiment.add_image(
+                    tag, grid,
+                    global_step=pl_module.global_step)
 
     @rank_zero_only
     def log_local(self, save_dir, split, images,
@@ -303,10 +365,20 @@ class ImageLogger(Callback):
             Image.fromarray(grid).save(path)
 
     def log_img(self, pl_module, batch, batch_idx, split="train"):
-        if (self.check_frequency(batch_idx) and  # batch_idx % self.batch_freq == 0
+        # Check if we should log based on global_step frequency
+        current_step = pl_module.global_step
+        
+        # Log every batch_freq steps, starting from step batch_freq
+        should_log = (current_step > 0 and 
+                     current_step % self.batch_freq == 0 and 
+                     current_step != self.last_logged_step)
+        
+        if (should_log and
                 hasattr(pl_module, "log_images") and
                 callable(pl_module.log_images) and
                 self.max_images > 0):
+            
+            self.last_logged_step = current_step  # Mark this step as logged
             logger = type(pl_module.logger)
 
             is_train = pl_module.training
@@ -333,22 +405,13 @@ class ImageLogger(Callback):
             if is_train:
                 pl_module.train()
 
-    def check_frequency(self, batch_idx):
-        if (batch_idx % self.batch_freq) == 0 or (batch_idx in self.log_steps):
-            try:
-                self.log_steps.pop(0)
-            except IndexError:
-                pass
-            return True
-        return False
-
     def on_train_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
         self.log_img(pl_module, batch, batch_idx, split="train")
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx=0):
         self.log_img(pl_module, batch, batch_idx, split="val")
-
-
+        
+        
 
 if __name__ == "__main__":
     now = datetime.datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
@@ -410,17 +473,18 @@ if __name__ == "__main__":
         lightning_config = config.pop("lightning", OmegaConf.create())
         # merge trainer cli with config
         trainer_config = lightning_config.get("trainer", OmegaConf.create())
-        # default to ddp
-        trainer_config["distributed_backend"] = "ddp"
         for k in nondefault_trainer_args(opt):
             trainer_config[k] = getattr(opt, k)
-        if not "gpus" in trainer_config:
-            del trainer_config["distributed_backend"]
-            cpu = True
-        else:
+        
+        # Detect if GPU is configured (new format or legacy format)
+        if "gpus" in trainer_config:
             gpuinfo = trainer_config["gpus"]
-            print(f"Running on GPUs {gpuinfo}")
             cpu = False
+        elif "devices" in trainer_config:
+            cpu = False
+        else:
+            cpu = True
+        
         trainer_opt = argparse.Namespace(**trainer_config)
         lightning_config.trainer = trainer_config
 
@@ -473,7 +537,6 @@ if __name__ == "__main__":
             }
         }
         if hasattr(model, "monitor"):
-            print(f"Monitoring {model.monitor} as checkpoint metric.")
             default_modelckpt_cfg["params"]["monitor"] = model.monitor
             default_modelckpt_cfg["params"]["save_top_k"] = 3
 
@@ -531,15 +594,24 @@ if __name__ == "__main__":
         # configure learning rate
         bs, base_lr = config.data.params.batch_size, config.model.base_learning_rate
         if not cpu:
-            ngpu = len(lightning_config.trainer.gpus.strip(",").split(','))
+            # Handle both legacy gpus format and new devices format
+            if "gpus" in lightning_config.trainer:
+                ngpu = len(str(lightning_config.trainer.gpus).strip(",").split(','))
+            elif "devices" in lightning_config.trainer:
+                devices = lightning_config.trainer.devices
+                if isinstance(devices, (list, tuple)):
+                    ngpu = len(devices)
+                elif isinstance(devices, int):
+                    ngpu = devices
+                else:
+                    ngpu = 1
+            else:
+                ngpu = 1
         else:
             ngpu = 1
         accumulate_grad_batches = lightning_config.trainer.accumulate_grad_batches or 1
-        print(f"accumulate_grad_batches = {accumulate_grad_batches}")
         lightning_config.trainer.accumulate_grad_batches = accumulate_grad_batches
         model.learning_rate = accumulate_grad_batches * ngpu * bs * base_lr
-        print("Setting learning rate to {:.2e} = {} (accumulate_grad_batches) * {} (num_gpus) * {} (batchsize) * {:.2e} (base_lr)".format(
-            model.learning_rate, accumulate_grad_batches, ngpu, bs, base_lr))
 
         # allow checkpointing via USR1
         def melk(*args, **kwargs):

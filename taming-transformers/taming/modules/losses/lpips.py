@@ -120,4 +120,3 @@ def normalize_tensor(x,eps=1e-10):
 
 def spatial_average(x, keepdim=True):
     return x.mean([2,3],keepdim=keepdim)
-

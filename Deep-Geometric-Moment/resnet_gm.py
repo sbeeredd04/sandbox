@@ -543,7 +543,7 @@ class MyResNet1(nn.Module):
         # return gm_transform_out(imgr)
         # return cl, imgr, grid
         if return_moments:
-            return cl, (grid, xy1)
+            return cl, (grid, xy1), imgr
         
         return cl, imgr
 
