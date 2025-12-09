@@ -38,6 +38,9 @@ def load_dgm_model(model_path, num_classes=1000, hw=256, model_type='imagenet', 
     else:
         raise ValueError(f"Unknown model_type: {model_type}. Choose 'cifar' or 'imagenet'")
     
+    dgm_model = dgm_model.to(device)
+    
+    # Load checkpoint
     checkpoint = torch.load(model_path, map_location=device, weights_only=False)
     
     # Handle different checkpoint formats
@@ -46,7 +49,13 @@ def load_dgm_model(model_path, num_classes=1000, hw=256, model_type='imagenet', 
     else:
         state_dict = checkpoint
     
-    dgm_model.load_state_dict(state_dict, strict=False)
+    # Remove 'module.' prefix if present (from DataParallel)
+    new_state_dict = {}
+    for k, v in state_dict.items():
+        name = k[7:] if k.startswith('module.') else k  # remove 'module.' prefix
+        new_state_dict[name] = v
+    
+    dgm_model.load_state_dict(new_state_dict)
     dgm_model.eval()
     
     # Freeze all parameters
@@ -66,7 +75,7 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=256, dgm_s
         dgm_model: Pre-trained DGM ResNet model
         loss_type: Type of loss ('mse', 'l1', 'l2_norm')
         input_size: Size of input images (default 256)
-        dgm_size: Size expected by DGM model (256 for ImageNet DGM - gets downsampled to 32 internally)
+        dgm_size: Size expected by DGM model (256 for ImageNet DGM)
         model_type: 'cifar' or 'imagenet'
         return_reconstruction: Whether to return DGM reconstruction visualization
         
@@ -78,14 +87,12 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=256, dgm_s
     if input_size is None:
         input_size = x.shape[-1]  # Assumes square images
     
-    # DGM ResNet expects images in [0, 1] range (RGB pixel values)
     # Convert from VQGAN range [-1, 1] to [0, 1]
     x_01 = (x + 1.0) / 2.0
     x_hat_01 = (x_hat + 1.0) / 2.0
     
-    # DGM ResNet34 expects 256x256 input (conv02 has stride=8, 256->32)
-    # Change from 32 to 256!
-    dgm_size = 256  # ImageNet DGM expects 256x256, downsamples to 32x32 internally
+    # ImageNet DGM expects 256x256 input (gets downsampled to 32x32 internally via stride-8 conv)
+    dgm_size = 256
     
     if input_size != dgm_size:
         x_resized = torch.nn.functional.interpolate(
@@ -102,26 +109,34 @@ def compute_dgm_loss(x, x_hat, dgm_model, loss_type='mse', input_size=256, dgm_s
     x_resized = torch.clamp(x_resized, 0.0, 1.0)
     x_hat_resized = torch.clamp(x_hat_resized, 0.0, 1.0)
     
-    # Different models have different outputs
+    mean = torch.tensor([0.485, 0.456, 0.406], device=x.device).view(1, 3, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=x.device).view(1, 3, 1, 1)
+    
+    x_normalized = (x_resized - mean) / std
+    x_hat_normalized = (x_hat_resized - mean) / std
+    
     dgm_recon = None
         
     if model_type == 'imagenet':
-        # ImageNet model: now supports return_moments=True -> (imgr, (xb, m))
+        # ImageNet model returns: logits, (grid, xy1), imgr
         with torch.no_grad():
-            _, (xb_x, m_x), imgr_input = dgm_model(x_resized, return_moments=True)
+            _, (grid_x, xy1_x), imgr_input = dgm_model(x_normalized, return_moments=True) 
 
-        _, (xb_x_hat, m_x_hat), imgr_hat = dgm_model(x_hat_resized, return_moments=True)
-        if return_reconstruction:
-            dgm_recon = imgr_input.repeat(1, 3, 1, 1)  # Convert to 3-channel for visualization
-            dgm_recon = dgm_recon * 2.0 - 1.0  # Back to VQGAN range [-1, 1]
+        _, (grid_x_hat, xy1_x_hat), imgr_hat = dgm_model(x_hat_normalized, return_moments=True) 
         
-        # Compute loss on weighted features xb (spatial structure)
+        if return_reconstruction:
+            # imgr is the geometric moment feature visualization (1-channel, upsampled to 256x256)
+            # It's already in [0, 1] range from the model (normalized internally in resnet_gm.py lines 537-542)
+            # Convert to 3-channel grayscale for visualization
+            dgm_recon = imgr_input.repeat(1, 3, 1, 1)
+        
+        # Compute loss on grid features (spatial geometric moments)
         if loss_type == 'mse':
-            dgm_loss = torch.mean((xb_x - xb_x_hat) ** 2)
+            dgm_loss = torch.mean((grid_x - grid_x_hat) ** 2)
         elif loss_type == 'l1':
-            dgm_loss = torch.mean(torch.abs(xb_x - xb_x_hat))
+            dgm_loss = torch.mean(torch.abs(grid_x - grid_x_hat))
         elif loss_type == 'l2_norm':
-            dgm_loss = torch.mean(torch.sqrt(torch.sum((xb_x - xb_x_hat) ** 2, dim=1)))
+            dgm_loss = torch.mean(torch.sqrt(torch.sum((grid_x - grid_x_hat) ** 2, dim=1)))
         else:
             raise ValueError(f"Unknown loss type: {loss_type}. Choose 'mse', 'l1', or 'l2_norm'.")
         

@@ -393,7 +393,38 @@ class ImageLogger(Callback):
                 images[k] = images[k][:N]
                 if isinstance(images[k], torch.Tensor):
                     images[k] = images[k].detach().cpu()
-                    if self.clamp:
+                    
+                    # Special handling for DGM reconstructions to match notebook visualization
+                    if k == "dgm_reconstructions":
+                        import matplotlib.cm as cm
+                        
+                        # Prepare tensor for colormap (B, H, W)
+                        x = images[k]
+                        if x.dim() == 4:
+                            if x.shape[1] == 3:
+                                x = x.mean(dim=1) # Convert RGB to grayscale
+                            elif x.shape[1] == 1:
+                                x = x.squeeze(1)
+                        
+                        # Apply colormap per image
+                        colored_imgs = []
+                        for i in range(x.shape[0]):
+                            img = x[i]
+                            # Normalize to [0, 1] (auto-scale like imshow)
+                            img = (img - img.min()) / (img.max() - img.min() + 1e-8)
+                            
+                            # Apply viridis colormap (returns RGBA, keep RGB)
+                            heatmap = cm.viridis(img.numpy())[..., :3]
+                            
+                            # Convert to tensor (3, H, W)
+                            heatmap_t = torch.from_numpy(heatmap).permute(2, 0, 1).float()
+                            colored_imgs.append(heatmap_t)
+                        
+                        images[k] = torch.stack(colored_imgs)
+                        # Rescale [0, 1] -> [-1, 1] for consistency with other images in this logger
+                        images[k] = images[k] * 2.0 - 1.0
+
+                    elif self.clamp:
                         images[k] = torch.clamp(images[k], -1., 1.)
 
             self.log_local(pl_module.logger.save_dir, split, images,

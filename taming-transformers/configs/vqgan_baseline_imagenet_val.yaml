@@ -50,7 +50,7 @@ lightning:
   logger:
     target: pytorch_lightning.loggers.WandbLogger
     params:
-      name: baseline_dgm_visual
+      name: baseline_dgm_visual_normalized
       project: taming-transformers
       offline: false
 

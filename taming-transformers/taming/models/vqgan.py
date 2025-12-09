@@ -82,6 +82,7 @@ class VQModel(pl.LightningModule):
 
     def get_input(self, batch, k):
         x = batch[k]
+        #print the image shape and the min max values
         if len(x.shape) == 3:
             x = x[..., None]
         x = x.permute(0, 3, 1, 2).to(memory_format=torch.contiguous_format)
@@ -173,12 +174,6 @@ class VQModel(pl.LightningModule):
         # Add DGM reconstruction if available
         if hasattr(self.loss, 'dgm_reconstruction') and self.loss.dgm_reconstruction is not None:
             dgm_recon = self.loss.dgm_reconstruction
-            # Resize to match input size if needed
-            if dgm_recon.shape[-1] != x.shape[-1]:
-                dgm_recon = torch.nn.functional.interpolate(
-                    dgm_recon, size=(x.shape[-2], x.shape[-1]), 
-                    mode='bilinear', align_corners=False
-                )
             log["dgm_reconstructions"] = dgm_recon
         
         return log

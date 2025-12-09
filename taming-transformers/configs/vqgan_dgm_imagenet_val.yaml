@@ -26,7 +26,7 @@ model:
         codebook_weight: 1.0
         pixelloss_weight: 1.0
         perceptual_weight: 1.0
-        dgm_weight: 0.1
+        dgm_weight: 0.001
         dgm_loss_type: 'mse'
         dgm_model_path: '/scratch/sbeeredd/sandbox/Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar'
         dgm_num_classes: 1000
@@ -57,7 +57,7 @@ lightning:
   logger:
     target: pytorch_lightning.loggers.WandbLogger
     params:
-      name: dgm_val_dgm_visual
+      name: dgm_val_dgm_0.001_visual_normalized_test
       project: taming-transformers
       offline: false
   
