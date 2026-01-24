@@ -49,7 +49,7 @@ class VQModel(pl.LightningModule):
                 if k.startswith(ik):
                     del sd[k]
         self.load_state_dict(sd, strict=False)
-
+ 
     def encode(self, x):
         h = self.encoder(x)
         h = self.quant_conv(h)
