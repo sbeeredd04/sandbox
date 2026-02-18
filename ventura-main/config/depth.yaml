@@ -1,0 +1,4 @@
+defaults:
+  - dataset: depth/frodo8k
+  - model: depth/marigold
+  - trainer: standard_single

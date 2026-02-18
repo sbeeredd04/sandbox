@@ -1,0 +1,36 @@
+robot_name: ferrite7
+frame_rate: 15 # Hz
+image_height: 240
+image_width: 320
+visualize_path: True
+save_plan: False
+
+camera_topic:       "/{ROBOT_NAME}/camera_front/color/image_raw_throttle/compressed"
+camera_info_topic:  "/{ROBOT_NAME}/camera_front/color/camera_info"
+# camera_topic:       "/{ROBOT_NAME}/camera_rear/color/image_raw_throttle/compressed"
+# camera_info_topic:  "/{ROBOT_NAME}/camera_front/color/camera_info"
+odom_topic:         "/{ROBOT_NAME}/lo_frontend/odometry"
+# cloud_topic:       "/{ROBOT_NAME}/raw_velodyne_points"
+tf_topic:          "/tf"
+action_topic:       "/{ROBOT_NAME}/spinflow/local_planner/plan/offline" 
+image_plan_topic:   "/{ROBOT_NAME}/spinflow/path_image/offline"
+
+# cloud_frame: "{ROBOT_NAME}/os_sensor"
+odom_frame: "{ROBOT_NAME}/odom"
+optical_frame: "{ROBOT_NAME}/camera_front/camera_color_optical_frame"
+base_link_frame: "{ROBOT_NAME}/base_link"
+
+# Robot-specific configuration
+navigation_parameters:
+  robot_width: 0.44
+  robot_length: 0.5
+  obstacle_margin: 0.1 # safety margin
+
+sampler_parameters:
+  sampler: 'Ackermann'
+  num_options: 21
+  max_curvature: 1.0 # 1/m
+  max_free_path_length: 3.0 # meters
+  sample_fraction: 1.0
+  n_steps_vis: 80
+  pixel_margin: 5

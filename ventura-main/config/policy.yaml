@@ -1,0 +1,4 @@
+defaults:
+  - dataset: policy/fai_lhy
+  - model: planning/flowpolicy/nomad_spatial
+  - trainer: standard_single

@@ -1,0 +1,131 @@
+project_name: 'LeLaNPolicy'
+model_name: 'LeLaN_clip'
+run_name: 'lelan_clip'
+save_dir: 'model_ckpts'
+
+# Pretrained public ckpt from LeLaN
+weights_ckpt: "/home/ubuntu/playground/learning-language-navigation/deployment/weights/wo_col_loss_wo_temp.pth"
+
+num_freeze_epochs: 0 # Overrides freeze_unet
+num_actions: &num_actions 8
+action_dim: &action_dim 3
+normalize_actions: True
+
+clip_type: &clip_type "ViT-B/32"
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  - in_key: 'action_label'
+    out_key: 'action_label'
+
+# Input keys used for the app inference
+pipeline:
+  vision_encoder:
+    frozen: False
+    input_keys:
+      - name: "rgb_image"
+        modality: "image"
+      - name: "goal_command"
+        modality: "text"
+  text_encoder:
+    frozen: True
+  dist_pred_net:
+    frozen: False
+
+defaults:
+  - _self_
+
+pretrained:
+  vision_encoder:
+    freeze: False
+  text_encoder: # Freeze clip text encoder
+    freeze: True
+  action_head:
+    freeze: False
+
+vision_encoder:
+  name: 'LeLaN_clip_FiLM'
+  class_name: 'LeLaN_clip'
+  num_goal_features: 4096 # Transformer model dimension size
+  obs_encoding_size: 256
+  goal_encoding_size: 256
+  clip_type: *clip_type
+  image_size: [224, 224]
+  aspect_ratio: 1.0
+
+  context_size: 0
+  mha_num_attention_heads: 4
+  mha_num_attention_layers: 4
+  mha_ff_dim_factor: 4
+
+text_encoder:
+  clip_type: *clip_type
+
+action_head:
+  name: 'DenseNetwork_lelan'
+  kwargs:
+    embedding_dim: 256
+    out_dim: [*num_actions, *action_dim]
+
+validation:
+  num_actions: *num_actions # 8 steps of actions
+  action_range: [-1, 1] # Normalized action range
+  action_stats: [0, -4.8, -1.5, 4.8, 4.8, 1.5] # [xmin, ymin, xmax, ymax]
+  evaluation:
+    vis_config:
+      - name: "bev_actions"
+        type: "bev_actions"
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+        images_per_row: 4
+      - name: "image_actions"
+        type: "image_actions"
+        obs_key: "inputs/rgb_image"
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+        images_per_row: 4
+        in_range: [-1, 1]
+        out_range: [0, 255]
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/action_label"
+        type: "action_xy"
+    metrics:   # Put most important metric first
+      - name: mean_l2_error
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+      - name: mean_asym_hausdorff_distance
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+
+batch_size: 32 # Larger batch size improves convergence
+max_epochs: &max_epochs 100
+accumulate_grad_batches: 8 # Calibrated for 50 epochs @ 100k
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: &base_lr 0.0001
+lr_scheduler:
+  name: HalfCosineLR
+  kwargs:
+    # total_steps: 10000 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    # Single GPU
+    total_steps: 5100 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    warmup_steps: 50 # ~1epoch
+    last_epoch: *max_epochs
+monitor_metric:
+  name: 'val/mean_asym_hausdorff_distance'
+  mode: "min"
+loss:
+  - name: "ActionMatchingLoss" # Bad naming convention, essentially just vpred
+    log_name: 'action_mse_loss'
+    weight: 1.0 # In range of 0-1
+    lab_key: "inputs/action_label"
+    pred_key: "outputs/action_pred"
+    reduction: "mean"

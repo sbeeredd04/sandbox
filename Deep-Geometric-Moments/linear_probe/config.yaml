@@ -1,0 +1,55 @@
+# ============================================================================
+# Linear Probing Config for DGM ResNet34 on ImageNet
+# ============================================================================
+
+# --- Model ---
+model:
+  # Path to the pretrained DGM ResNet34 checkpoint
+  checkpoint: "/scratch/sbeeredd/sandbox/Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar"
+  # Feature dimension of the DGM model (the moment vector size)
+  feature_dim: 256
+  # Number of ImageNet classes
+  num_classes: 1000
+  # Spatial resolution the model expects internally (hw parameter)
+  hw: 32
+
+# --- Data ---
+data:
+  # Root directory for ImageNet (should contain train/ and val/ subfolders)
+  train_dir: "/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/train"
+  val_dir: "/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/val"
+  # Image size to resize/crop to. The model uses 8x8 stride-8 conv,
+  # so input must be 256x256 to produce 32x32 feature maps.
+  image_size: 256
+  # Number of data-loading workers
+  num_workers: 8
+
+# --- Training ---
+training:
+  # Total number of epochs to train the linear head
+  epochs: 30
+  # Batch size — L40 has 45 GB VRAM; backbone is frozen so memory usage is low
+  batch_size: 256
+  # Learning rate for the linear classifier
+  lr: 0.1
+  # SGD momentum
+  momentum: 0.9
+  # Weight decay (only applied to the linear layer)
+  weight_decay: 0.0
+  # Learning rate schedule: reduce LR at these epoch milestones
+  lr_milestones: [10, 20, 25]
+  # Factor to multiply LR by at each milestone
+  lr_gamma: 0.1
+
+# --- Logging ---
+wandb:
+  # Weights & Biases project name
+  project: "dgm-linear-probe"
+  # Run name (set to null for auto-generated name)
+  run_name: "dgm-res34-linprobe-imagenet"
+  # Log metrics every N batches
+  log_interval: 50
+
+# --- Misc ---
+seed: 42
+gpu_id: 0

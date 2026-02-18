@@ -1,0 +1,96 @@
+root_dir: "data/fai_raw"
+out_dir: "data/fai_processed"
+modalities:
+  - "front_camera"
+  - "control"
+  - "odometry"
+
+language_label_dir: "data/fai_raw/language_labels"
+window_length: &window_length 60 # frames (6 seconds at 15 fps)
+num_viz_samples: 10 # Set to -1 to visualize all samples (not recommended)
+need_graphs: False
+
+
+track_params:
+  SAVE_VIDEO_MASKS: False # Save video masks for visualization
+  ACCEPTABLE_RESOLUTIONS: [ [480, 640] ] # Resize images to this size
+  ENHANCE_VIDEO: False # Enhance video for easier tracking (white balance, clache clip, sharpen)
+  APPLY_INTRINSICS: False  # Enable undistorted video tracking
+  SAMPLE_AT_EDGES: True  # Sample queries at the edges of the robot path
+  ROBOT_WIDTH_PCT: 0.25      # Higher is wider
+  ROBOT_HEIGHT_PCT: 0.2      # Higher is taller
+  TEMPORAL_DS_RESOLUTION: 1  # 1 means no downsampling, 2 means downsample by 2x
+  SPATIAL_DS_RESOLUTION: 1   # 1 means no downsampling, 2 means downsample by 2x
+  NUM_FRAMES: 150
+  EDGE_OFFSET_PCT: 0.15
+  ODOMETRY_STEP: 0.10         # Move 15 centimeters from current position
+  FRAME_STEP: 5              # 0.33 seconds increments 
+  WINDOW_SIZE: 3            # window size to sample SIFT queries
+  MAX_QUERY_POINTS: 384
+  MAX_REINITIALIZATION_ITERATIONS: 20 
+
+# Stage 2: Split Sampling
+pipeline:
+  download_maps: False        # Downloads .osm.pbf files (not necessary)
+  download_routing: False     # Enables route downloading (Set to True on first run)
+  apply_prefilters: False    # Applies the filters defined below  (Set to True on first run)
+  visualize_samples: False    # Visualizes some samples after filtering (Set to True When Debug)
+  compute_ride_infos: True   # Extracts necessary training information
+  apply_postfilters: False     # Applies filters to tracking splits
+  download_imagery: False     # Downloads satellite imagery
+  compute_routes: False        # Computes gmap routes and turn by turn
+  compute_entity_masks: False     # Computes target masks
+  sample_splits: False
+
+download_maps:
+  metadata_subdir: "maps/metadata"
+  tile_subdir: "maps/tiles"     # Not used for now
+  graph_subdir: "maps/graphs"
+  graph_lut_path: "maps/metadata/ride_to_graph.csv"
+  use_cache: True               # CAREFUL, set to false if data has changed!
+  viz_clusters: False            # Takes a long time, but useful for debugging
+  padding: 50.0                 # meters
+  max_points_per_ride: 200      # points
+  min_samples_per_cluster: 100  # points
+  subsample_tol: 10.0           # meters for sampling road network
+
+filters:
+  - name: "image_filter"
+    type: "image"
+    params:
+      resolutions: [
+        [480, 640]
+      ] # Resize images to this size
+  - name: "odometry_filter"
+    type: "odometry"
+    effect: "remove"
+    params: # [6 seconds -> 1 meter moved]
+      horizon_frames: 10  
+      min_distance: 0.2
+      max_ang_vel: 50 # deg/s
+      max_ang_disp: 70 # deg
+
+postfilters:
+  # min_area: 10000       # Convex hull of points in pixels
+  # min_mask_area: 20000  # Sum of all pixels in mask
+  min_area: 5000       # Convex hull of points in pixels
+  min_mask_area: 10000  # Sum of all pixels in mask
+  cluster_kwargs:
+    enabled: False
+    eps: 20.0
+    min_samples: 3
+    min_clusters: 3
+  protrusion_kwargs:
+    enabled: False # Post process this later
+    open_radius: 5
+    min_prop_length: 25
+    min_aspect: 2.0
+  window_kwargs:
+    enabled: False
+    K: 1
+    n_min: 1
+    eps: 100
+    min_samples: 1
+    rms_max: 4.0
+    ang_max: 120
+    min_centroid_dist: 12.0

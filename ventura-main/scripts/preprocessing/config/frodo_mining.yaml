@@ -1,0 +1,97 @@
+# root_dir = "data/frodobots8k"
+root_dir: "data/frodobots8k"
+out_dir: "data/frodobots8k_processed"
+modalities:
+  - "front_camera"
+  - "control"
+  - "gps"
+
+window_length: 250 # frames (20 seconds at 20 fps)
+num_viz_samples: 100 # Set to -1 to visualize all samples (not recommended)
+
+# Stage 1: Data Filtering
+# pipeline:
+#   download_maps: False        # Downloads .osm.pbf files (not necessary)
+#   download_routing: True     # Enables route downloading (Set to True on first run)
+#   apply_filters: True         # Applies the filters defined below  (Set to True on first run)
+#   download_imagery: False     # Downloads satellite imagery
+#   visualize_samples: False     # Visualizes some samples after filtering (Set to True When Debug)
+#   sample_splits: False
+
+# Stage 2: Split Sampling
+pipeline:
+  download_maps: False        # Downloads .osm.pbf files (not necessary)
+  download_routing: False     # Enables route downloading (Set to True on first run)
+  apply_prefilters: False     # Applies the filters defined below  (Set to True on first run)
+  visualize_samples: False    # Visualizes some samples after filtering (Set to True When Debug)
+  apply_postfilters: False    # Applies filters to tracking splits
+  download_imagery: False     # Downloads satellite imagery
+  compute_odometry: False
+  compute_routes: False        # Computes gmap routes and turn by turn
+  compute_entity_masks: True     # Computes target masks
+  sample_splits: False
+
+
+download_maps:
+  metadata_subdir: "maps/metadata"
+  tile_subdir: "maps/tiles"     # Not used for now
+  graph_subdir: "maps/graphs"
+  graph_lut_path: "maps/metadata/ride_to_graph.csv"
+  use_cache: True               # CAREFUL, set to false if data has changed!
+  viz_clusters: False            # Takes a long time, but useful for debugging
+  padding: 50.0                 # meters
+  max_points_per_ride: 200      # points
+  min_samples_per_cluster: 100  # points
+  subsample_tol: 10.0           # meters for sampling road network
+
+filters:
+  - name: "time_filter"
+    type: "time"
+    params:
+      max_desync: 2.0 # seconds
+      time_range: ["07:00:00", "18:00:00"]   # Allowable time range
+  - name: "intersection_filter"
+    type: "gps"
+    params:
+      distance: 19.6 # meters
+  # - name: "color_filter" # Too slow and memory intensive
+  #   type: "image"
+  #   params:
+  #     brightness_threshold: [0.1, 0.9] # 10% to 90% brightness
+  #     homogeneous_threshold: 0.7 # 70% image is same color
+  - name: "image_filter"
+    type: "image"
+    params:
+      resolutions: [
+        [576, 1024]
+      ] # Resize images to this size
+  - name: "velocity_filter"
+    type: "controls"
+    effect: "remove"
+    params:
+      low_pass_window: 10 # 10 frames @ 10 hz ~1 seconds
+      linear_velocity: [0.5, 1.0] # True min/max is -1, 1
+      angular_velocity: [-0.25, 0.25] # True min/max is -1,1
+
+postfilters:
+  min_area: 10000       # Convex hull of points in pixels
+  min_mask_area: 20000  # Sum of all pixels in mask
+  cluster_kwargs:
+    enabled: False
+    eps: 20.0
+    min_samples: 3
+    min_clusters: 3
+  protrusion_kwargs:
+    enabled: False # Post process this later
+    open_radius: 5
+    min_prop_length: 25
+    min_aspect: 2.0
+  window_kwargs:
+    enabled: True
+    K: 3
+    n_min: 2
+    eps: 60
+    min_samples: 2
+    rms_max: 4.0
+    ang_max: 120
+    min_centroid_dist: 12.0

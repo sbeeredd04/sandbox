@@ -1,0 +1,116 @@
+# ===========================================================================
+# DGM (Deep Geometric Moments) — Stage 1 Training Configuration
+# ===========================================================================
+#
+# This config trains the RAE decoder with a FROZEN DGM ResNet34 encoder.
+# The encoder produces 256-dim spatial tokens (16×16 = 256 tokens per image).
+# The decoder (ViT-B scale with 512-dim hidden) learns to reconstruct images
+# from these latent representations.
+#
+# Training setup follows the RAE paper (Zheng et al., 2025):
+#   - Frozen encoder + trainable decoder
+#   - L1 reconstruction loss + LPIPS perceptual loss + GAN loss
+#   - GAN discriminator uses DINOv1 ViT-S/8 features
+#   - EMA of decoder weights for stable generation
+#
+# Key adaptations for DGM vs DINOv2:
+#   - hidden_size: 256 (DGM) vs 768 (DINOv2-B) → smaller decoder is sufficient
+#   - Normalization: [0,1] range (DGM) vs ImageNet μ/σ (DINOv2)
+#   - Decoder: DGM_ViTB (decoder_hidden_size=512, 12 layers)
+#   - Input size: 256×256 (DGM) vs 224×224 (DINOv2-B default)
+#
+# ===========================================================================
+
+stage_1:
+  target: stage1.RAE
+  params:
+    # ---- Encoder: Frozen DGM ResNet34 ----
+    encoder_cls: 'DGMEncoder'
+    encoder_config_path: 'none'  # not a HuggingFace model
+    encoder_input_size: 256
+    encoder_params:
+      # Path to pretrained DGM ResNet34 checkpoint (trained on ImageNet)
+      checkpoint_path: '../Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar'
+      num_classes: 1000
+      target_spatial_size: 16   # pool grid features to 16×16 = 256 tokens
+      freeze: true              # encoder is always frozen in RAE
+    # ---- Explicit normalization for DGM ----
+    # DGM expects [0,1] input. mean=0, std=1 → RAE normalization is identity.
+    encoder_mean: [0.0, 0.0, 0.0]
+    encoder_std: [1.0, 1.0, 1.0]
+    # ---- Decoder: ViT-B scale, tuned for 256-dim input ----
+    decoder_config_path: 'configs/decoder/DGM_ViTB'
+    decoder_patch_size: 16
+    # ---- Training-time settings ----
+    noise_tau: 0.8              # add noise to latents during training (regularization)
+    reshape_to_2d: true         # reshape [B, N, C] → [B, C, H, W] for 2D latents
+
+
+# ===========================================================================
+# Training hyperparameters
+# ===========================================================================
+training:
+  epochs: 16                    # same as DINOv2-B training
+  ema_decay: 0.9978
+  global_batch_size: 256        # reduced from 512 due to smaller model
+  num_workers: 8
+  clip_grad: 0.0                # no gradient clipping
+  log_interval: 100
+  checkpoint_interval: 1        # save every epoch
+  sample_every: 2500            # generate samples every 2500 steps
+  global_seed: 42
+  optimizer:
+    lr: 2.0e-4
+    betas: [0.9, 0.95]
+    weight_decay: 0.0
+  scheduler:
+    type: cosine
+    warmup_epochs: 1
+    decay_end_epoch: 16
+    base_lr: 2.0e-4
+    final_lr: 2.0e-5
+    warmup_from_zero: true
+
+
+# ===========================================================================
+# GAN + Perceptual Loss Configuration
+# ===========================================================================
+# Following the RAE paper:
+#   - DINOv1 ViT-S/8 discriminator with spectral normalization
+#   - Hinge discriminator loss + vanilla generator loss
+#   - Perceptual loss (LPIPS) weight = 1.0
+#   - GAN starts at epoch 8 (let decoder learn basic reconstruction first)
+#   - Discriminator weight = 0.75 with adaptive weighting
+# ===========================================================================
+gan:
+  disc:
+    arch:
+      dino_ckpt_path: 'models/discs/dino_vit_small_patch8_224.pth'
+      ks: 9
+      norm_type: 'bn'
+      using_spec_norm: true
+      recipe: 'S_8'
+    optimizer:
+      lr: 2.0e-4
+      betas: [0.9, 0.95]
+      weight_decay: 0.0
+    scheduler:
+      type: cosine
+      warmup_epochs: 1
+      decay_end_epoch: 16
+      base_lr: 2.0e-4
+      final_lr: 2.0e-5
+      warmup_from_zero: true
+    augment:
+      prob: 1.0
+      cutout: 0.0
+  loss:
+    disc_loss: hinge             # hinge loss for discriminator
+    gen_loss: vanilla            # vanilla loss for generator
+    disc_weight: 0.75            # weight for GAN loss in total loss
+    perceptual_weight: 1.0       # weight for LPIPS perceptual loss
+    disc_start: 8                # start GAN training at epoch 8
+    disc_upd_start: 6            # start updating discriminator at epoch 6
+    lpips_start: 0               # use LPIPS from the start
+    max_d_weight: 10000.0        # max adaptive discriminator weight
+    disc_updates: 1              # disc update steps per generator step

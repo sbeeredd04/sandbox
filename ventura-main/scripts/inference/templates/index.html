@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>SpinFlow visualiser</title>
+
+<style>
+  body      { font-family: system-ui,sans-serif; margin:0; padding:1rem; }
+  #imgwrap  { display:flex; flex-wrap:wrap; gap:1rem; }
+  .panel    { border:1px solid #8883; padding:.5rem; border-radius:6px; }
+  img       { max-width:100%; height:auto; border-radius:4px; cursor:copy; }
+  textarea  { width:100%; resize:vertical; font-family:monospace; }
+  #map      { height:400px; min-width:350px; border-radius:6px; }
+</style>
+
+<link rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      crossorigin="anonymous"/>
+<script defer
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        crossorigin="anonymous"></script>
+
+<script>window.INPUT_SCHEMA={{ input_schema|tojson }};</script>
+<script defer src="/static/script.js"></script>
+</head>
+
+<body>
+<h3>Dataset (<span id="len">{{ dataset_len }}</span>)</h3>
+
+<div style="margin-bottom:.5rem">
+  <button id="prev">◀ prev</button>
+  <button id="next">next ▶</button>
+  idx <input id="index" type="number" min="0" style="width:6rem">
+  <button id="go">Go</button>
+  <label style="margin-left:1rem">
+    CFG&nbsp;scale&nbsp;<span id="cfg_val">8</span>
+  </label>
+  <input id="cfg_scale" type="range" min="0" max="20" step="0.5"
+         value="10" style="vertical-align:middle;width:200px">
+
+  <button id="predict" style="margin-left:1rem">Predict</button>
+</div>
+
+<p id="meta"></p>
+
+<!-- dynamic panels (built by JS) -->
+<div id="imgwrap"></div>
+
+<!-- prediction panel (hidden until a prediction arrives) -->
+<div class="panel" id="pred_panel" style="display:none">
+  <h4 style="margin:.2rem 0">Front RGB + Prediction</h4>
+  <img id="front_rgb_pred" alt="prediction overlay">
+</div>
+
+<div class="panel" style="margin-top:1rem">
+  <h4 style="margin:.2rem 0">Satellite map</h4>
+  <div id="map"></div>
+</div>
+</body>
+</html>

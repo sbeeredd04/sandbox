@@ -1,0 +1,397 @@
+# motion_templates.py
+from __future__ import annotations
+import math
+import numpy as np
+from dataclasses import dataclass
+from typing import Optional, Dict, Tuple, List
+
+_EPS = 1e-8
+
+def _project_base_to_uv(X_base: np.ndarray, K: np.ndarray, T_base_to_optical: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    X_base: (N,3) points in base frame (meters).
+    K: 3x3 intrinsics.
+    T_base_to_optical: 4x4 SE3 mapping base -> camera optical frame.
+    Returns:
+      uv: (N,2) pixels
+      z:  (N,) depth in camera frame
+    """
+    assert X_base.ndim == 2 and X_base.shape[1] == 3
+    N = X_base.shape[0]
+    homog = np.concatenate([X_base, np.ones((N,1), dtype=X_base.dtype)], axis=1)  # (N,4)
+    X_opt = (T_base_to_optical @ homog.T).T                                     # (N,4)
+    X, Y, Z = X_opt[:,0], X_opt[:,1], X_opt[:,2]
+
+    # Project
+    fx, fy = K[0,0], K[1,1]
+    cx, cy = K[0,2], K[1,2]
+    # Avoid divide-by-zero
+    Z_safe = np.where(np.abs(Z) < 1e-8, 1e-8, Z)
+    u = fx * (X / Z_safe) + cx
+    v = fy * (Y / Z_safe) + cy
+    uv = np.stack([u, v], axis=-1)
+    return uv, Z
+
+def farthest_visible_points(
+    arcs: List["ConstantCurvatureArc"],
+    tf_infos: Dict,
+    sample_fraction: float = 1.0,     # 0..1 of visible length to use
+    n_steps: int = 80,                # resolution along each arc
+    pixel_margin: int = 2             # keep some margin from image edges
+) -> List[Dict]:
+    """
+    For each arc, sample points along the arc, project into the image,
+    and pick the farthest point that is still visible in the image.
+    Returns a list of dicts (one per arc):
+      {
+        "arc": arc_ref,
+        "frac": f_chosen,              # 0..1 along arc.length
+        "xy": (x, y),                  # base-frame
+        "theta": heading_at_point,     # radians
+        "uv": (u, v),                  # pixel coords
+        "visible_len": s_vis_last      # meters (visible extent)
+      }
+    """
+    K = np.asarray(tf_infos["intrinsics"]["K"], dtype=np.float64)
+    H = int(tf_infos["intrinsics"]["image_height"])
+    W = int(tf_infos["intrinsics"]["image_width"])
+    T_b2o = np.asarray(tf_infos["T_base_to_optical"], dtype=np.float64)
+
+    results: List[Dict] = []
+
+    sample_fraction = float(np.clip(sample_fraction, 0.0, 1.0))
+    for arc in arcs:
+        # If you’ve not run collision checks, arc.length==arc.max_len; that’s fine.
+        L = float(arc.length)
+        if L <= 0.0:
+            results.append({
+                "arc": arc, "frac": 0.0, "xy": (0.0, 0.0), "theta": 0.0,
+                "uv": (np.nan, np.nan), "visible_len": 0.0
+            })
+            continue
+
+        # Sample along the path in [0, L]
+        s = np.linspace(0.0, L, max(2, int(n_steps)), dtype=np.float64)
+
+        # Generate XYZ in base frame (z=0 path assumption)
+        if abs(arc.curvature) < 1e-8:
+            Xb = np.stack([s, np.zeros_like(s), np.zeros_like(s)], axis=-1)  # (N,3)
+        else:
+            r = 1.0 / arc.curvature
+            a = s * arc.curvature
+            xb = r * np.sin(a)
+            yb = r * (1.0 - np.cos(a))
+            Xb = np.stack([xb, yb, np.zeros_like(xb)], axis=-1)
+
+        uv, z = _project_base_to_uv(Xb, K, T_b2o)
+        u, v = uv[:,0], uv[:,1]
+
+        # Visible == in front of camera (z>0) and within image bounds (with margin)
+        vis = (z > 0.0) & (u >= pixel_margin) & (u < (W - pixel_margin)) \
+                        & (v >= pixel_margin) & (v < (H - pixel_margin))
+
+        # Find farthest visible index along s
+        if not np.any(vis):
+            # nothing visible → choose start
+            theta, x, y = arc.pose_at_fraction(0.0)
+            results.append({
+                "arc": arc, "frac": 0.0, "xy": (x, y), "theta": theta,
+                "uv": (float(u[0]), float(v[0])) if np.isfinite(u[0]) else (np.nan, np.nan),
+                "visible_len": 0.0
+            })
+            continue
+
+        last_idx = int(np.where(vis)[0].max())
+        s_vis_last = float(s[last_idx])
+
+        # pick a fraction along the visible segment
+        s_pick = sample_fraction * s_vis_last
+        f_pick = s_pick / L if L > 1e-8 else 0.0
+        f_pick = float(np.clip(f_pick, 0.0, 1.0))
+
+        theta, x, y = arc.pose_at_fraction(f_pick)
+
+        # interpolate uv at s_pick (linear in samples)
+        if last_idx == 0:
+            uv_pick = uv[0]
+        else:
+            # find bounding idx
+            j = int(np.searchsorted(s, s_pick, side="left"))
+            j0 = max(0, min(j-1, len(s)-1))
+            j1 = max(0, min(j,   len(s)-1))
+            t  = 0.0 if j1==j0 else (s_pick - s[j0]) / (s[j1] - s[j0] + 1e-8)
+            uv_pick = (1.0 - t) * uv[j0] + t * uv[j1]
+
+        results.append({
+            "arc": arc,
+            "frac": f_pick,
+            "xy": (float(x), float(y)),
+            "theta": float(theta),
+            "uv": (float(uv_pick[0]), float(uv_pick[1])),
+            "visible_len": s_vis_last
+        })
+
+    return results
+
+
+@dataclass
+class ArcEval:
+    """Holds results of a collision evaluation."""
+    length: float           # final usable path length (after obstacles & bounds)
+    fpl: float              # free path length before stopping dist etc.
+    angular_length: float   # |curvature| * length
+    clearance: float        # min clearance along clipped arc
+    obstruction_xy: Tuple[float, float]  # point causing min length (if any)
+
+class ConstantCurvatureArc:
+    """
+    Constant-curvature arc in the robot base frame.
+    - curvature k (1/m): +left turn, -right turn, 0 → straight.
+    - max_len (m): hard cap on integration length.
+    """
+    __slots__ = ("curvature", "max_len", "length", "fpl",
+                 "angular_length", "clearance", "obstruction_xy")
+
+    def __init__(self, curvature: float, max_len: float):
+        self.curvature = float(curvature)
+        self.max_len   = float(max_len)
+        self.length    = float(max_len)      # will be tightened by collision check
+        self.fpl       = float(max_len)      # free path length (geom-limited)
+        self.angular_length = abs(self.length * self.curvature)
+        self.clearance = float("inf")
+        self.obstruction_xy = (float("nan"), float("nan"))
+
+    # ---------- Geometry along the arc ----------
+    def xy_at_s(self, s: float) -> Tuple[float, float]:
+        """Return (x,y) at path-length s≥0 along the arc (robot base frame)."""
+        k = self.curvature
+        if abs(k) < _EPS:
+            return (s, 0.0)
+        r = 1.0 / k
+        a = s * k     # swept angle
+        # standard bicycle model arc parameterization
+        return (r * math.sin(a), r * (1.0 - math.cos(a)))
+
+    def pose_at_fraction(self, f: float) -> Tuple[float, float, float]:
+        """
+        Return (theta, x, y) at fraction f∈[0,1] of self.length.
+        Matches the C++ GetIntermediateState logic.
+        """
+        f = max(0.0, min(1.0, float(f)))
+        L = self.length
+        k = self.curvature
+        a = math.copysign(1.0, k) * abs(k) * L * f  # heading change sign-consistent
+        if L == 0.0:
+            return (a, 0.0, 0.0)
+        if abs(k) < _EPS:  # straight
+            return (0.0, f * L, 0.0)
+        r = 1.0 / k
+        x = r * math.sin(a)
+        y = r * (1.0 - math.cos(a))
+        return (a, x, y)
+
+    def sample_xy(self, n: int) -> np.ndarray:
+        """Return Nx2 XY samples from s=0→length."""
+        n = max(2, int(n))
+        if self.length <= 0.0:
+            return np.zeros((n, 2), dtype=np.float32)
+        s = np.linspace(0.0, self.length, n, dtype=np.float32)
+        if abs(self.curvature) < _EPS:
+            return np.stack([s, np.zeros_like(s)], axis=-1)
+        r = 1.0 / self.curvature
+        a = s * self.curvature
+        x = r * np.sin(a)
+        y = r * (1.0 - np.cos(a))
+        return np.stack([x, y], axis=-1).astype(np.float32)
+
+    # ---------- Collision checking ----------
+    def collide(
+        self,
+        cloud_xy: np.ndarray,
+        nav_params: Dict,
+        robot_vel_xy: Optional[np.ndarray] = None,
+        max_clearance: Optional[float] = None,
+        clearance_clip_frac: float = 0.5,
+    ) -> ArcEval:
+        """
+        Vectorized collision check, loosely mirroring the C++ logic.
+        cloud_xy: (N,2) points in base frame (meters).
+        nav_params: {
+          'robot_length', 'robot_width', 'base_link_offset', 'obstacle_margin',
+          'max_free_path_length', 'linear_limits': {'max_deceleration': ...}
+        }
+        robot_vel_xy: optional (2,), used only to compute stopping distance.
+        """
+        if cloud_xy.size == 0:
+            # No obstacles → just clamp to max_free_path_length
+            self.fpl = min(self.max_len, float(nav_params['max_free_path_length']))
+            self.length = self.fpl
+            self.angular_length = abs(self.length * self.curvature)
+            self.clearance = nav_params.get('max_clearance', 1e3)
+            return ArcEval(self.length, self.fpl, self.angular_length, self.clearance, self.obstruction_xy)
+
+        # Geometry of robot envelope in base frame (front / width + margins)
+        L = float(nav_params['robot_length'])
+        W = float(nav_params['robot_width'])
+        base_off = float(nav_params['base_link_offset'])
+        margin   = float(nav_params['obstacle_margin'])
+        max_fpl  = float(nav_params['max_free_path_length'])
+
+        l = 0.5 * L - base_off + margin     # front clearance ahead of base
+        w = 0.5 * W + margin                # half-width with margin
+        x_min = -0.5 * L + base_off - margin  # back margin (used in arc case)
+
+        pts = cloud_xy
+        px, py = pts[:, 0], pts[:, 1]
+
+        # Start optimistic; clip by obstacles
+        self.fpl = min(self.max_len, max_fpl)
+        self.length = self.fpl
+        self.clearance = nav_params.get('max_clearance', 1e3)
+        self.obstruction_xy = (float("nan"), float("nan"))
+
+        straight = abs(self.curvature) < _EPS
+
+        if straight:
+            # Consider only forward half-plane and lateral window
+            mask = (px >= 0.0) & (np.abs(py) <= w)
+            if np.any(mask):
+                # Free path length limited by nearest obstacle x - l
+                fpl_candidates = (px[mask] - l)
+                min_fpl = float(np.min(fpl_candidates))
+                if min_fpl < self.fpl:
+                    self.fpl = max(0.0, min_fpl)
+                    # obstruction is the limiting point
+                    arg = int(np.argmin(fpl_candidates))
+                    self.obstruction_xy = (float(px[mask][arg]), float(py[mask][arg]))
+
+            # Clearance: min distance from envelope edges within path extent
+            in_window = (px >= 0.0) & (px <= (l + self.fpl))
+            if np.any(in_window):
+                # lateral clearance from side edges (| |py| - w |)
+                side_clear = np.abs(np.abs(py[in_window]) - w)
+                if side_clear.size:
+                    self.clearance = float(np.minimum(self.clearance, np.min(side_clear)))
+
+            # Clip path length
+            self.length = max(0.0, min(self.length, self.fpl))
+
+        else:
+            r = 1.0 / self.curvature      # signed radius
+            c = np.array([0.0, r], dtype=np.float64)  # circle center in base frame
+            sgn = 1.0 if r > 0 else -1.0
+
+            inner_front = np.array([l,  sgn * w])
+            outer_front = np.array([l, -sgn * w])
+
+            r1 = max(0.0, abs(r) - w)      # inner envelope radius
+            r1_sq = r1 * r1
+            r2_sq = float(np.sum((inner_front - c) ** 2))
+            r3_sq = float(np.sum((outer_front - c) ** 2))
+
+            # Points to consider: forward, finite, within annulus [r1, sqrt(r3_sq)]
+            finite = np.isfinite(px) & np.isfinite(py)
+            fwd    = (px >= 0.0)
+            v = pts - c
+            rad_sq = np.einsum("ij,ij->i", v, v)  # squared radius for each point
+
+            annulus = (rad_sq >= r1_sq) & (rad_sq <= r3_sq)
+            # exclude points inside robot footprint behind base
+            not_inside_body = ~((px > x_min) & (px < l) & (np.abs(py) < w))
+
+            consider = finite & fwd & annulus & not_inside_body
+            if np.any(consider):
+                v_cons = v[consider]
+                px_c   = px[consider]
+                py_c   = py[consider]
+                rad    = np.sqrt(rad_sq[consider])
+
+                # Theta of point around the center (different for L/R turns)
+                if self.curvature > 0.0:  # left turn
+                    theta = np.arctan2(px_c, r - py_c)
+                else:                      # right turn
+                    theta = np.arctan2(px_c, py_c - r)
+
+                # Determine whether we hit side vs front first:
+                # If rad^2 < r2_sq → side first; else front first.
+                side_first = rad_sq[consider] < r2_sq
+
+                # alpha for side hit: acos((|r|-w)/rad) or pi/2 + acos(...)
+                x_side = abs(r) - w
+                # case x_side > 0 → alpha = acos(x_side/rad); else alpha = pi/2 + acos(-x_side/rad)
+                alpha_side = np.where(
+                    x_side > 0.0,
+                    np.arccos(np.clip(x_side / rad, -1.0, 1.0)),
+                    (np.pi / 2.0) + np.arccos(np.clip((-x_side) / rad, -1.0, 1.0))
+                )
+
+                # alpha for front hit: asin(l/rad)
+                alpha_front = np.arcsin(np.clip(l / rad, -1.0, 1.0))
+
+                alpha = np.where(side_first, alpha_side, alpha_front)
+
+                # path length to collision for each candidate
+                # ensure non-negative path length
+                path_len = np.maximum(0.0, abs(r) * (theta - alpha))
+
+                min_idx = int(np.argmin(path_len))
+                min_len = float(path_len[min_idx])
+
+                if min_len < self.fpl:
+                    self.fpl = max(0.0, min_len)
+                    self.obstruction_xy = (float(px_c[min_idx]), float(py_c[min_idx]))
+
+            # Final clip
+            self.length = max(0.0, min(self.length, self.fpl))
+
+            # Clearance along a clipped portion of the arc (0..clip*angle_min)
+            # Use a fraction of the swept angle to measure clearance like the C++.
+            angle_min = min(abs(self.length * self.curvature), np.pi)  # cap for numeric safety
+            clip = float(clearance_clip_frac)
+            if np.any(consider) and angle_min > 0.0:
+                theta_clip = clip * angle_min
+
+                # For all considered points, compute clearance = |rad - |r|| for points
+                # with 0 < theta < theta_clip (sign-aware)
+                if self.curvature > 0.0:
+                    theta_all = np.arctan2(px[consider], r - py[consider])
+                else:
+                    theta_all = np.arctan2(px[consider], py[consider] - r)
+
+                in_clip = (theta_all > 0.0) & (theta_all < theta_clip)
+                if np.any(in_clip):
+                    rad_all = np.sqrt(rad_sq[consider][in_clip])
+                    clr = np.abs(rad_all - abs(r))
+                    self.clearance = float(np.minimum(self.clearance, np.min(clr)))
+
+        # Stopping distance clamp (optional)
+        if robot_vel_xy is not None:
+            max_dec = float(nav_params['linear_limits']['max_deceleration'])
+            v = float(np.linalg.norm(robot_vel_xy))
+            stopping_dist = (v * v) / (2.0 * max_dec) if max_dec > _EPS else 0.0
+            if self.length < stopping_dist + 1e-6:
+                self.length = 0.0
+
+        self.angular_length = abs(self.length * self.curvature)
+        # Cap clearance to reasonable bounds
+        if max_clearance is None:
+            max_clearance = float(nav_params.get('max_clearance', 1e3))
+        self.clearance = max(0.0, min(self.clearance, max_clearance))
+
+        return ArcEval(self.length, self.fpl, self.angular_length, self.clearance, self.obstruction_xy)
+
+
+class MotionTemplateLibrary:
+    """Creates a bank of constant-curvature arcs."""
+    def __init__(self, max_curvature: float, max_path_len: float, num_options: int):
+        assert num_options >= 2
+        self.max_curvature = float(max_curvature)
+        self.max_path_len  = float(max_path_len)
+        self.num_options   = int(num_options)
+
+        # Uniform in curvature like the C++ example
+        self.curvatures = np.linspace(-self.max_curvature, self.max_curvature, self.num_options)
+
+    def arcs(self) -> List[ConstantCurvatureArc]:
+        return [ConstantCurvatureArc(float(k), self.max_path_len) for k in self.curvatures]

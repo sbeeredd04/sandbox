@@ -165,12 +165,14 @@ def main(args):
 
     # Make sure all processes have finished saving their samples before attempting to convert to .npz
     dist.barrier()
+    # Destroy the process group BEFORE building npz to avoid NCCL timeout.
+    # Building the npz is a rank-0-only sequential operation that can take >10 min
+    # for 50k images, which exceeds the default NCCL watchdog timeout (600s).
+    dist.destroy_process_group()
     if rank == 0:
         create_npz_from_sample_folder(sample_folder_dir, args.num_fid_samples)
         shutil.rmtree(sample_folder_dir)
         print("Done.")
-    dist.barrier()
-    dist.destroy_process_group()
 
 
 if __name__ == "__main__":

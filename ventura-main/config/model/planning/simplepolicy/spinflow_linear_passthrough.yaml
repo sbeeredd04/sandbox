@@ -1,0 +1,145 @@
+project_name: 'SimplePolicy'
+model_name: 'WaypointFlowPolicy'
+run_name: 'spinflow_linear_passthrough'
+save_dir: 'model_ckpts'
+
+num_freeze_epochs: 0 # Overrides freeze_unet
+num_actions: &num_actions 8
+action_dim: &action_dim 3
+normalize_actions: True
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  - in_key: 'path_mask'
+    out_key: 'target_pred'
+  - in_key: 'action_label'
+    out_key: 'action_label'
+
+defaults:
+  # - planning@vision_encoder: cfg/fai_controlnet_base_spatial.yaml
+  - _self_
+
+# pretrained:
+  # vision_encoder:
+    # ckpt: 'model_ckpts_awslarge2x/ControlNetPlanning/cotrain_controlnet_base_spatial/20250720/053009/last-0044-0013905.ckpt'
+    # optimize_inference: True
+
+# Add supplementary fields to vision_encoder
+vision_encoder:
+  class_name: 'ConvNetSpatial'
+
+  encoder:
+    name: resnet34
+    in_keys: ["rgb_image", "target_pred"]
+    feat_dims: [3, 1]          # channels per tensor
+    input_res: [240, 320]      # height, width of input after any resize
+    out_key: &enc_out_key target_latent
+    out_dim: 512
+
+  spatial_softmax:
+    num_kp: &num_kps 256
+    temperature: 0.1
+    learnable_temperature: True
+    output_variance: False
+
+  validation:
+    scheduler:
+      ensemble_size: 1
+  # END OVERRIDE KWARGS
+
+  aggregation:
+    strategy: vitsimple                   # (kept from before)
+    hidden_dim: *num_kps
+    out_key: *enc_out_key
+
+    attn_enabled: False
+    attn_kwargs:
+      num_heads: 4
+      num_layers: 4
+      # in_keys:
+        # - name: target_latent # latent plan
+        #   type: 2d  
+        #   feat_dim: 64
+        #   token_dim: [6, 8]   
+
+        # - name: txt_cond      # text
+        #   type: 1d
+        #   feat_dim: 1024
+
+flow_sampler:
+  name: 'VanillaBC' # Use direct behavior cloning for simple policy
+
+action_head:
+  name: 'DenseNetwork' # Use a simple dense network for action prediction
+  kwargs:
+    embedding_dim: 512 # num_kps*2
+    out_dim: [*num_actions, *action_dim] # [T, xy] coordinates
+
+distance_head:
+  embedding_dim: 1024
+
+validation:
+  num_actions: *num_actions # 8 steps of actions
+  action_range: [-1, 1] # Normalized action range
+  action_stats: [0, -4.8, -1.5, 4.8, 4.8, 1.5] # [xmin, ymin, xmax, ymax]
+  integrator:
+    kwargs:
+      integration_method: 'euler'
+      dt: 1.0 # 1 second integration
+      total_steps: 10 # Number of integration steps
+  evaluation:
+    vis_config:
+      - name: "bev_actions"
+        type: "bev_actions"
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+        images_per_row: 4
+      - name: "image_actions"
+        type: "image_actions"
+        obs_key: "inputs/rgb_image"
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+        images_per_row: 4
+        in_range: [-1, 1]
+        out_range: [0, 255]
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/action_label"
+        type: "action_xy"
+    metrics:   # Put most important metric first
+      - name: mean_l2_error
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+      - name: mean_asym_hausdorff_distance
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+
+batch_size: 64 # Larger batch size improves convergence
+max_epochs: &max_epochs 100
+accumulate_grad_batches: 8
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: &base_lr 0.0001
+lr_scheduler:
+  name: HalfCosineLR
+  kwargs:
+    total_steps: 4750 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    warmup_steps: 50 # ~1epoch
+    last_epoch: *max_epochs
+monitor_metric:
+  name: 'val/mean_asym_hausdorff_distance'
+  mode: "min"
+loss:
+  - name: "ActionMatchingLoss" # Static SAM
+    log_name: 'action_mse_loss'
+    weight: 1.0 # In range of 0-1
+    lab_key: "inputs/action_label"
+    pred_key: "outputs/action_pred"
+    reduction: "mean"

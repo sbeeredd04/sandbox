@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<title>Dataset viewer with drawing</title>
+
+<style>
+  body{font-family:system-ui,sans-serif;margin:0;padding:1rem}
+  #bar button{margin-right:.4rem}
+  #imgwrap{margin-top:.5rem}
+  #drawwrap{position:relative;display:inline-block}
+  #front_rgb{display:block;max-width:100%;height:auto;border-radius:4px}
+  #draw{position:absolute;left:0;top:0;cursor:crosshair}
+  #plist{list-style:none;padding:0;margin:.5rem 0}
+  #plist li{margin:.2rem 0}
+  .pill{background:#eee;padding:.1em .5em;border-radius:9999px}
+  .gbtn.selected{background:#3af;color:#000}
+  .gbtn{margin-right:.4rem}
+  .modebtn{margin-right:.4rem}
+  .modebtn.selected{background:#3af;color:#000}   /* same blue as goal buttons */
+</style>
+
+<script defer src="/static/script.js"></script>
+</head><body>
+
+<h3>Dataset (<span id="len">{{ dataset_len }}</span>)</h3>
+
+<div id="bar">
+  <button id="prev">◀ prev</button>
+  <button id="next">next ▶</button>
+  idx <input id="index" type="number" min="0" style="width:6rem">
+  <button id="go">Go</button>
+  <button id="save">💾 Save</button>
+  <button id="modePath" class="modebtn selected">✏︎ Draw path</button>
+  <button id="modeMask" class="modebtn">🩺 Draw mask</button>
+  <button id="clearMask">🗑 Clear mask</button>
+  <span id="msg"></span>
+</div>
+
+<p id="meta"></p>
+
+<div id="goalBtns" style="margin:.4rem 0">
+  <button class="gbtn" data-goal="Turn left">Turn&nbsp;left</button>
+  <button class="gbtn selected" data-goal="Continue straight">Continue&nbsp;straight</button>
+  <button class="gbtn" data-goal="Turn right">Turn&nbsp;right</button>
+</div>
+
+<!-- optional free-form command -->
+<input id="goalBox" type="text" placeholder="Custom command (leave empty to use buttons)"
+       style="width:60%;margin:.3rem 0;padding:.2rem">
+
+<div id="imgwrap">
+  <div id="drawwrap">
+    <img   id="front_rgb">
+    <img   id="entity_front_rgb" style="display:none">
+    <canvas id="draw"></canvas>   <!-- sits on top -->
+  </div>
+
+  <h4>Splines</h4>
+  <ul id="plist"></ul>
+</div>
+
+</body></html>

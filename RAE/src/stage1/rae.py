@@ -21,6 +21,13 @@ class RAE(nn.Module):
         encoder_config_path: str = 'facebook/dinov2-base',
         encoder_input_size: int = 224,
         encoder_params: dict = {},
+        # ---- optional explicit normalization (for non-HuggingFace encoders like DGM) ----
+        # If encoder_mean and encoder_std are provided, they are used directly
+        # instead of loading from AutoImageProcessor. This allows non-HF models
+        # (e.g., DGM ResNet34) to specify their own normalization.
+        # DGM expects [0,1] input, so use mean=[0,0,0], std=[1,1,1].
+        encoder_mean: Optional[list] = None,
+        encoder_std: Optional[list] = None,
         # ---- decoder configs ----
         decoder_config_path: str = 'vit_mae-base',
         decoder_patch_size: int = 16,
@@ -35,10 +42,22 @@ class RAE(nn.Module):
         encoder_cls = ARCHS[encoder_cls]
         self.encoder: Stage1Protocal = encoder_cls(**encoder_params)
         print(f"encoder_config_path: {encoder_config_path}")
-        proc = AutoImageProcessor.from_pretrained(encoder_config_path)
-        self.encoder_mean = torch.tensor(proc.image_mean).view(1, 3, 1, 1)
-        self.encoder_std = torch.tensor(proc.image_std).view(1, 3, 1, 1)
-        encoder_config = AutoConfig.from_pretrained(encoder_config_path)
+        # ----------------------------------------------------------------
+        # Normalization stats: support both HuggingFace and custom encoders
+        # ----------------------------------------------------------------
+        # For HuggingFace encoders (DINOv2, MAE, SigLIP2), we load mean/std
+        # from AutoImageProcessor. For custom encoders (DGM), explicit
+        # encoder_mean and encoder_std can be provided in the config.
+        if encoder_mean is not None and encoder_std is not None:
+            # Custom normalization (e.g., DGM uses mean=0, std=1 for [0,1] input)
+            self.encoder_mean = torch.tensor(encoder_mean).float().view(1, 3, 1, 1)
+            self.encoder_std = torch.tensor(encoder_std).float().view(1, 3, 1, 1)
+            print(f"Using explicit normalization: mean={encoder_mean}, std={encoder_std}")
+        else:
+            # HuggingFace normalization (original behavior)
+            proc = AutoImageProcessor.from_pretrained(encoder_config_path)
+            self.encoder_mean = torch.tensor(proc.image_mean).view(1, 3, 1, 1)
+            self.encoder_std = torch.tensor(proc.image_std).view(1, 3, 1, 1)
         # see if the encoder has patch size attribute            
         self.encoder_input_size = encoder_input_size
         self.encoder_patch_size = self.encoder.patch_size

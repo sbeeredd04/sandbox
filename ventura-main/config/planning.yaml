@@ -1,0 +1,6 @@
+defaults:
+  - dataset: frodo8k
+  - ? dataset@dataset_small
+  - model: planning/marigold_xygoal_nosat
+  - trainer: standard_single
+  - _self_

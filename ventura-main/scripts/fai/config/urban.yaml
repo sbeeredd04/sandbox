@@ -1,0 +1,190 @@
+root_dir: "./data/fai_raw"
+s3_bucket: "ai4h-datasets"
+s3_path: "aih"
+s3_cache: "/data/fai_raw/s3_cache"
+n_jobs: 32
+robots:
+  - ferrite1
+  - ferrite2
+  - ferrite3
+  - ferrite4
+  - ferrite5
+  - ferrite6
+  - ferrite7
+sites: # unused currently
+  - seattle
+
+topics:
+  ferrite1:
+    cmd:
+      ros_topic: "/ferrite1/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite1/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite1/camera_front/color/image_raw/compressed", 
+        "/ferrite1/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static"]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite1/base_link", "ferrite1/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite2:
+    cmd:
+      ros_topic: "/ferrite2/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite2/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite2/camera_front/color/image_raw/compressed", 
+        "/ferrite2/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite2/base_link", "ferrite2/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite3:
+    cmd:
+      ros_topic: "/ferrite3/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite3/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite3/camera_front/color/image_raw/compressed", 
+        "/ferrite3/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite3/base_link", "ferrite3/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite4:
+    cmd:
+      ros_topic: "/ferrite4/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite4/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite4/camera_front/color/image_raw/compressed", 
+        "/ferrite4/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite4/base_link", "ferrite4/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite5:
+    cmd:
+      ros_topic: "/ferrite5/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite5/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite5/camera_front/color/image_raw/compressed", 
+        "/ferrite5/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite5/base_link", "ferrite5/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite6:
+    cmd:
+      ros_topic: "/ferrite6/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite6/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite6/camera_front/color/image_raw/compressed", 
+        "/ferrite6/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite6/base_link", "ferrite6/camera_front/camera_color_optical_frame" ],
+      ]
+  ferrite7:
+    cmd:
+      ros_topic: "/ferrite7/control_interface/cmd_vel"
+      save_prefix: "control"
+    state: 
+      ros_topic: "/ferrite7/lo_frontend/odometry"
+      save_prefix: "odometry"
+    vision_xavier:
+      ros_topic: [
+        "/ferrite7/camera_front/color/image_raw/compressed", 
+        "/ferrite7/camera_front/color/camera_info"
+      ]
+      save_prefix: [
+        "front_camera", 
+        "front_camera_info"
+      ]
+    tf:
+      ros_topic: [ "/tf_static" ]
+      save_prefix: "tf_static"
+      frames: [
+        [ "ferrite7/base_link", "ferrite7/camera_front/camera_color_optical_frame" ],
+      ]
+
+filters:
+  # - name: "velocity_filter"
+  #   type: "controls"
+  #   effect: "remove"
+  #   params:
+  #     allow_turns: True
+  #     low_pass_window: 20 # 20 frames @ 40 hz ~1 seconds
+  #     linear_velocity: [0.01, 2.0] # True min/max is -1, 1
+  #     angular_velocity: [-2.0, 2.0] # True min/max is -1,1
+  #     min_length: 150
+  - name: "odometry_filter"
+    type: "odometry"
+    effect: "remove"
+    params:
+      horizon_frames: 10  
+      min_distance: 0.2
+      max_ang_vel: 50 # deg/s
+      max_ang_disp: 70 # deg

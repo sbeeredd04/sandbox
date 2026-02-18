@@ -1,0 +1,109 @@
+project_name: 'MarigoldDepth'
+run_name: 'vanilla_sd2'
+save_dir: 'model_ckpts'
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'front_depth_label'
+    out_key: 'depth_label'
+
+# Set to freeze model components
+pipeline: 
+  unet: # Denoising UNet
+    frozen: False
+  vae:  # Variational Autoencoder
+    frozen: True
+  text_encoder: # Text Encoder
+    frozen: True
+
+backbone_ckpt: &backbone_ckpt "checkpoint/marigold-depth-v1-1"
+
+backbone:
+  name: 'UNet2DConditionModel'
+  pretrained_ckpt: *backbone_ckpt
+
+encoder:
+  name: 'AutoencoderKL'
+  pretrained_ckpt: *backbone_ckpt
+  kwargs:
+    latent_scale_factor: 0.18215
+
+text:
+  text_encoder: "CLIPTextModel"
+  text_encoder_ckpt: *backbone_ckpt
+  tokenizer: "CLIPTokenizer"
+  tokenizer_ckpt: *backbone_ckpt
+
+diffusion:
+  scheduler:
+    name: "DDPMScheduler"
+    kwargs:
+      num_train_timesteps: 1000
+      # beta_schedule: "squaredcos_cap_v2"
+      # rescale_betas_zero_snr: True
+      # timestep_spacing: "trailing"
+      # variance_type: "fixed_small"
+      # prediction_type: "v_prediction" # Used in the marigold paper
+  multi_res_noise:
+    strength: 0.9
+    annealed: true
+    downscale_strategy: original
+
+# Validation settings
+validation:
+  scheduler:
+    name: "DDIMScheduler"
+    pretrained_ckpt: *backbone_ckpt
+    kwargs:
+      denoising_steps: 1
+      ensemble_size: 1
+      processing_res: 0
+      match_input_res: false
+      resample_method: bilinear
+      # 
+      scale_invariant: true
+      shift_invariant: true
+      default_denoising_steps: 4
+      default_processing_resolution: 512
+  evaluation:
+    alignment: least_square
+    align_max_res: null
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/depth_label"
+        type: "depth"
+      - name: "outputs/depth_pred"
+        type: "depth"
+    metrics:   # Put most important metric first
+      - name: "squared_relative_difference"
+        lab_key: "inputs/depth_label"
+        pred_key: "outputs/depth_pred"
+      - name: "abs_relative_difference"
+        lab_key: "inputs/depth_label"
+        pred_key: "outputs/depth_pred"
+
+batch_size: 16 # smaller batch size improves convergence
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: 0.00003
+lr_scheduler:
+  name: LambdaLR
+  lr_lambda: IterExponential
+  kwargs:
+    total_iter_length: 25000
+    final_ratio: 0.01
+    warmup_steps: 100
+monitor_metric:
+  name: 'val/squared_relative_difference'
+  mode: "min"
+loss:
+  - name: "DepthMSELoss" # Static SAM
+    weight: 1.0 # In range of 0-1
+    lab_key: "inputs/depth_velocity_label"
+    pred_key: "outputs/depth_velocity_pred"
+    reduction: "mean"

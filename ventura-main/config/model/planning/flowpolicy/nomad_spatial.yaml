@@ -1,0 +1,143 @@
+project_name: 'FlowPolicy'
+run_name: 'flownav_spatial'
+save_dir: 'model_ckpts'
+
+num_freeze_epochs: 0 # Overrides freeze_unet
+num_actions: &num_actions 8
+action_dim: &action_dim 3
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  - in_key: 'action_label'
+    out_key: 'action_label'
+
+defaults:
+  - _self_
+  # - vision_encoder: planning/cfg/fai_controlnet_base_spatial.yaml
+
+vision_encoder:
+  class_name: 'NoMaD_ViNT'
+
+  pipeline: 
+    obs_encoder:  # Variational Autoencoder
+      frozen: True
+    goal_encoder:
+      frozen: False # Adapt to image/goal stack
+    text_encoder: # Text Encoder
+      frozen: True
+
+  vision_encoder_ckpt: &vision_encoder_ckpt "stabilityai/stable-diffusion-2"
+  obs_encoding_size: &obs_encoding_size 4
+  goal_encoding_size: &goal_encoding_size 4
+  context_size: 1
+
+  aggregation:
+    strategy: vitsimple                   # (kept from before)
+    hidden_dim: 1024
+    num_heads: 4
+    num_layers: 4
+
+    # keys to include in the context
+    in_keys:
+      - name: rgb_cond      # input rgb
+        type: 2d
+        feat_dim: *obs_encoding_size
+        token_dim: [6, 8]
+
+      - name: goal_cond     # goal rgb
+        type: 2d
+        feat_dim: *goal_encoding_size
+        token_dim: [6, 8]
+
+      - name: txt_cond      # text
+        type: 1d
+        feat_dim: 1024 
+  
+  encoder:
+    name: 'AutoencoderKL'
+    goal_in_channels: 6   # Current + Goal
+    pretrained_ckpt: *vision_encoder_ckpt
+    kwargs:
+      latent_scale_factor: 0.18215
+
+  text:
+    text_encoder: "CLIPTextModel"
+    text_encoder_ckpt: *vision_encoder_ckpt
+    tokenizer: "CLIPTokenizer"
+    tokenizer_ckpt: *vision_encoder_ckpt
+    text_embedding_dim: 1024
+
+flow_sampler:
+  name: 'ConditionalFlowMatcher'
+  kwargs:
+    sigma: 1.0 # Somewhere in range of [0.5-1.0]
+
+action_head:
+  name: 'ConditionalUnet1D'
+  kwargs:
+    input_dim: *action_dim # [x, y, z] coordinates
+    global_cond_dim: 1024
+    diffusion_step_embed_dim: 128   
+    cond_predict_scale: True
+
+distance_head:
+  embedding_dim: 1024
+
+validation:
+  num_actions: *num_actions # 8 steps of actions
+  action_range: [-1, 1] # Normalized action range
+  action_stats: [0, -4.8, -1.5, 4.8, 4.8, 1.5] # [xmin, ymin, zmin, xmax, ymax, zmax]
+  integrator:
+    kwargs:
+      integration_method: 'euler'
+      dt: 1.0 # 1 second integration
+      total_steps: 10 # Number of integration steps
+  evaluation:
+    vis_config:
+      - name: "bev_actions"
+        type: "bev_actions"
+        obs_key: "inputs/rgb_image"
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+        images_per_row: 8
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/action_label"
+        type: "action_xy"
+    metrics:   # Put most important metric first
+      - name: mean_l2_error
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+      - name: mean_asym_hausdorff_distance
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+
+batch_size: 64 # Larger batch size improves convergence
+max_epochs: &max_epochs 50
+accumulate_grad_batches: 4
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: &base_lr 0.0001
+lr_scheduler:
+  name: HalfCosineLR
+  kwargs:
+    total_steps: 2443 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    warmup_steps: 50 # ~2epochs
+    last_epoch: *max_epochs
+monitor_metric:
+  name: 'val/mean_asym_hausdorff_distance'
+  mode: "min"
+loss:
+  - name: "PathMaskMSELoss" # Bad naming convention, essentially just vpred
+    log_name: 'action_mse_loss'
+    weight: 1.0 # In range of 0-1
+    lab_key: "outputs/action_vt_target"
+    pred_key: "outputs/action_vt_pred"
+    reduction: "mean"

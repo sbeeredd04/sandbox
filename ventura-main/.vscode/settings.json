@@ -1,0 +1,60 @@
+{
+  "files.exclude": {
+    "**/.git": true,
+    "**/__pycache__/**": true,
+    // "**/data/**": true,
+    // "**/model_evals/**": true,
+    // "**/model_ckpts_awslarge/**": true,
+    // "**/model_ckpts/**": true
+  },
+  "search.exclude": {
+    "**/.git": true,
+    "**/__pycache__/**": true,
+    // "**/data/**": true,
+    // "**/model_evals/**": true,
+    // "**/model_ckpts_awslarge/**": true,
+    // "**/model_ckpts/**": true
+  },
+  "files.watcherExclude": {
+    "**/.git/**": true,
+    "**/__pycache__/**": true,
+    // "**/data/**": true,
+    // "**/model_evals/**": true,
+    // "**/model_ckpts_awslarge/**": true,
+    // "**/model_ckpts/**": true
+  },
+  "python.analysis.exclude": [
+    "**/__pycache__",
+    "**/data",
+    "**/model_evals",
+    "**/model_ckpts",
+    "**/model_ckpts_awslarge"
+  ],
+  // Only format changed lines when supported (Black, clang-format, Prettier new versions)
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modificationsIfAvailable",
+  // Put a sensible upper bound on save actions
+  "editor.codeActionsOnSaveTimeout": 1500,
+
+  // Scope heavy fixers to specific languages and make them explicit
+  "[python]": {
+    "editor.defaultFormatter": "ms-python.black-formatter",
+    "editor.codeActionsOnSave": {}
+  },
+  "[cpp]": {
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+    "editor.codeActionsOnSave": {}
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    }
+  }
+}

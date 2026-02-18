@@ -1,0 +1,44 @@
+# ===========================================================================
+# DGM (Deep Geometric Moments) — Pretrained RAE Configuration
+# ===========================================================================
+#
+# This config defines a pre-trained RAE using DGM ResNet34 as the encoder.
+# It is used for INFERENCE ONLY (noise_tau=0, normalization stats provided).
+#
+# Key differences from DINOv2-B.yaml:
+#   - encoder_cls: DGMEncoder (CNN + geometric moments) instead of Dinov2withNorm
+#   - encoder_config_path: not a HuggingFace model; set to 'none'
+#   - encoder_mean/std: [0,0,0]/[1,1,1] (DGM expects [0,1] input, no ImageNet norm)
+#   - encoder_input_size: 256 (DGM downsamples with stride-8 conv → 32×32 grid)
+#   - hidden_size: 256 (DGM) vs 768 (DINOv2-B)
+#   - decoder: DGM_ViTB (smaller decoder suited for 256-dim latents)
+#
+# The pretrained decoder path should point to a trained decoder checkpoint.
+# ===========================================================================
+
+stage_1:
+  target: stage1.RAE
+  params:
+    # ---- Encoder: DGM ResNet34 ----
+    encoder_cls: 'DGMEncoder'
+    # encoder_config_path is unused for DGM (not a HuggingFace model),
+    # but required by RAE.__init__. Set to 'none' — we use explicit mean/std instead.
+    encoder_config_path: 'none'
+    encoder_input_size: 256
+    encoder_params:
+      # Path to the pretrained DGM ResNet34 checkpoint
+      checkpoint_path: '../Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar'
+      num_classes: 1000
+      target_spatial_size: 16
+      freeze: true
+    # ---- Explicit normalization for DGM ----
+    # DGM expects input in [0, 1] range (from transforms.ToTensor()).
+    # Setting mean=0, std=1 means RAE's normalization is a no-op.
+    encoder_mean: [0.0, 0.0, 0.0]
+    encoder_std: [1.0, 1.0, 1.0]
+    # ---- Decoder ----
+    decoder_config_path: 'configs/decoder/DGM_ViTB'
+    # pretrained_decoder_path: 'models/decoders/dgm/DGM_ViTB/model.pt'  # uncomment after training
+    noise_tau: 0.0  # no noising at inference
+    reshape_to_2d: true
+    # normalization_stat_path: 'models/stats/dgm/imagenet1k/stat.pt'  # uncomment after computing stats

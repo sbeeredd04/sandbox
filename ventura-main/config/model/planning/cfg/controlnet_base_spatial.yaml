@@ -1,0 +1,147 @@
+project_name: 'ControlNetPlanning'
+run_name: 'controlnet_base_spatial'
+save_dir: 'model_ckpts'
+
+stage: 'pretrain'          # "pretrain"  or  "finetune"
+finetune_lr: 0.000003    # only used during finetuning
+finetune_loss_weight: 1.0 # used to weight the small dataset loss during finetuning
+resume_ckpt: ''
+weights_ckpt: ''
+
+freeze_unet: &freeze_unet False # Set to True to freeze the UNet weights
+num_freeze_epochs: 0 # Overrides freeze_unet
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  - in_key: 'path_mask'
+    out_key: 'path_mask_label'
+
+# Set to freeze model components
+pipeline: 
+  unet: # Denoising UNet
+    frozen: *freeze_unet
+    input_keys:
+      - name: "rgb_image"
+        modality: "image"
+        dropout_prob: 0.0 # Never drop out input
+      - name: "goal_command"
+        modality: "text"
+        dropout_prob: 0.5
+  vae:  # Variational Autoencoder
+    frozen: True
+  text_encoder: # Text Encoder
+    frozen: True
+
+backbone_ckpt: &backbone_ckpt "stabilityai/stable-diffusion-2"
+backbone:
+  name: 'UNet2DConditionModel'
+  cond_method: "Marigold"
+  pretrained_ckpt: *backbone_ckpt
+  kwargs:
+    cond_encoder: "none"
+    # cond_channels: 3 # Change to 4 if not using tiny encoder
+    # cond_scale: 1.0  # Multiresolution CFG Scale
+    # downscale_cond: False        # Don't set to true usually
+    freeze_unet: *freeze_unet
+    input_keys:
+      - name: "goal_command"
+        modality: "text"
+
+encoder:
+  name: 'AutoencoderKL'
+  pretrained_ckpt: *backbone_ckpt
+  kwargs:
+    latent_scale_factor: 0.18215
+
+text:
+  text_encoder: "CLIPTextModel"
+  text_encoder_ckpt: *backbone_ckpt
+  tokenizer: "CLIPTokenizer"
+  tokenizer_ckpt: *backbone_ckpt
+
+diffusion:
+  scheduler:
+    name: "DDPMScheduler"
+    kwargs:
+      num_train_timesteps: 1000
+      # beta_schedule: "squaredcos_cap_v2"
+      # rescale_betas_zero_snr: True
+      # timestep_spacing: "trailing"
+      # variance_type: "fixed_small"
+      # prediction_type: "v_prediction" # Used in the marigold paper
+  multi_res_noise:
+    strength: 0.9
+    annealed: true
+    downscale_strategy: original
+
+# Validation settings
+validation:
+  scheduler:
+    name: "DDIMScheduler"
+    pretrained_ckpt: *backbone_ckpt
+    kwargs:
+      cfg_scale: 8.0
+      guidance_rescale: 0.5 # 0 to disable, >0 to time over saturated predictions
+      ensemble_size: 3 # Sample more to see diversity
+      denoising_steps: 10
+      processing_res: 0
+      match_input_res: false
+      resample_method: bilinear
+      scale_invariant: true
+      shift_invariant: true
+      default_denoising_steps: 10
+      default_processing_resolution: 512
+  postprocess:
+    path_mask:
+      in_range: &in_range [-1, 1]
+      out_range: &out_range [0, 1]
+  evaluation:
+    num_bins: 100
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/path_mask_label"
+        type: "path_mask"
+      - name: "outputs/path_mask_pred"
+        type: "path_mask"
+    metrics:   # Put most important metric first
+      - name: intersection_over_union
+        lab_key: "inputs/path_mask_label"
+        pred_key: "outputs/path_mask_pred"
+      - name: precision_recall
+        lab_key: "inputs/path_mask_label"
+        pred_key: "outputs/path_mask_pred"
+        kwargs:
+          return_counts: True
+          num_bins: 20
+          gt_threshold: 0.5
+
+batch_size: 16 # Larger batch size improves convergence
+max_epochs: 50
+accumulate_grad_batches: 4
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: 0.00003
+lr_scheduler:
+  name: LambdaLR
+  lr_lambda: IterExponential
+  kwargs:
+    total_iter_length: 10000 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    final_ratio: 0.01
+    warmup_steps: 200 # Every 200 optimizer steps
+monitor_metric:
+  name: 'val/intersection_over_union'
+  mode: "min"
+loss:
+  - name: "PathMaskMSELoss" # Static SAM
+    log_name: 'path_mask_mse_loss'
+    weight: 1.0 # In range of 0-1
+    lab_key: "inputs/path_mask_velocity_label"
+    pred_key: "outputs/path_mask_velocity_pred"
+    reduction: "mean"

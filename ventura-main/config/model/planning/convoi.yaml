@@ -1,0 +1,14 @@
+# Mirrors model config 
+model_name: "ConvoiPlannerNode"
+weights_ckpt: ""
+
+num_actions: &num_actions 8
+action_dim: &action_dim 3
+  
+dataloader_inputs:
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  # - in_key: 'velodyne_points'
+  #   out_key: 'cloud_points'

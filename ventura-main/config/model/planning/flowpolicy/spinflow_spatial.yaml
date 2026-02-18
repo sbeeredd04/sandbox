@@ -1,0 +1,126 @@
+project_name: 'FlowPolicy'
+run_name: 'flownav_spatial'
+save_dir: 'model_ckpts'
+
+num_freeze_epochs: 0 # Overrides freeze_unet
+num_actions: &num_actions 8
+action_dim: &action_dim 3
+
+# Maps dataloader inputs to model inputs and outputs
+dataloader_inputs: 
+  - in_key: 'front_rgb'
+    out_key: 'rgb_image'
+  - in_key: 'goal_caption'
+    out_key: 'goal_command'
+  - in_key: 'action_label'
+    out_key: 'action_label'
+
+defaults:
+  - planning@vision_encoder: cfg/fai_controlnet_base_spatial.yaml
+  - _self_
+
+pretrained:
+  vision_encoder:
+    # ckpt: 'model_ckpts/ControlNetPlanning/cotrain_controlnet_base_spatial/20250720/053009/last-0044-0013905.ckpt'
+    ckpt: ''
+    optimize_inference: True
+
+# Add supplementary fields to vision_encoder
+vision_encoder:
+  class_name: 'MarigoldModel'
+
+  # BEGIN OVERRIDE KWARGS
+  freeze_unet: True
+
+  validation:
+    scheduler:
+      ensemble_size: 1
+  # END OVERRIDE KWARGS
+
+  aggregation:
+    strategy: vitsimple                   # (kept from before)
+    hidden_dim: 1024
+    num_heads: 4
+    num_layers: 2
+
+    # keys to include in the context
+    in_keys:
+      - name: rgb_cond      # input rgb
+        type: 2d
+        feat_dim: 4
+        token_dim: [6, 8]
+
+      - name: target_latent # latent plan
+        type: 2d  
+        feat_dim: 4
+        token_dim: [6, 8]   
+
+      # - name: txt_cond      # text
+      #   type: 1d
+      #   feat_dim: 1024
+
+flow_sampler:
+  name: 'ConditionalFlowMatcher'
+  kwargs:
+    sigma: 1.0 # Somewhere in range of [0.5-1.0]
+
+action_head:
+  name: 'ConditionalUnet1D'
+  kwargs:
+    input_dim: *action_dim # [x, y, z] coordinates
+    global_cond_dim: 1024
+    diffusion_step_embed_dim: 128   
+    cond_predict_scale: True
+
+distance_head:
+  embedding_dim: 1024
+
+validation:
+  num_actions: *num_actions # 8 steps of actions
+  action_range: [-1, 1] # Normalized action range
+  action_stats: [0, -4.8, -1.5, 4.8, 4.8, 1.5] # [xmin, ymin, xmax, ymax]
+  integrator:
+    kwargs:
+      integration_method: 'euler'
+      dt: 1.0 # 1 second integration
+      total_steps: 10 # Number of integration steps
+  evaluation:
+    log_config:
+      - name: "inputs/rgb_image"
+        type: "rgb"
+      - name: "inputs/action_label"
+        type: "action_xy"
+    metrics:   # Put most important metric first
+      - name: mean_l2_error
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+      - name: mean_asym_hausdorff_distance
+        lab_key: "inputs/action_label"
+        pred_key: "outputs/action_pred"
+
+batch_size: 32 # Larger batch size improves convergence
+max_epochs: &max_epochs 50
+accumulate_grad_batches: 4
+optimizer:
+  name: Adam
+  kwargs:
+    betas: [0.9, 0.999]
+    lr: &base_lr 0.0001
+lr_scheduler:
+  name: HalfCosineLR
+  kwargs:
+    # total_steps: 10000 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    # Single GPU
+    total_steps: 5860 # dataset size * max_epochs / batch_size / accumulate_grad_batches
+    warmup_steps: 100 # ~1epoch
+    last_epoch: *max_epochs
+monitor_metric:
+  name: 'val/mean_asym_hausdorff_distance'
+  mode: "min"
+loss:
+  - name: "PathMaskMSELoss" # Bad naming convention, essentially just vpred
+    log_name: 'action_mse_loss'
+    weight: 1.0 # In range of 0-1
+    lab_key: "outputs/action_vt_target"
+    pred_key: "outputs/action_vt_pred"
+    reduction: "mean"

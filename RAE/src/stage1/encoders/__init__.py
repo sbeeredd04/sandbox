@@ -34,3 +34,4 @@ def register_encoder(cls: Optional[Type] = None, *, name: Optional[str] = None) 
 from . import dinov2  
 from . import siglip2
 from . import mae
+from . import dgm  # Deep Geometric Moments encoder (CNN + geometric basis functions)

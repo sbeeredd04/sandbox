@@ -1,0 +1,9 @@
+default_root_dir: 'model_ckpts'
+strategy: "ddp"
+accelerator: "gpu"
+devices: [0, 1, 2, 3, 4, 5, 6, 7]
+num_workers: 4 # number of workers for each dataloader
+log_every_n_steps: 20 
+use_distributed_sampler: true 
+check_val_every_n_epoch: 5
+seed: 42 # set a seed for reproducibility

@@ -1,0 +1,23 @@
+robot_name: ferrite7
+frame_rate: 15 # Hz
+image_height: 240
+image_width: 320
+visualize_path: True
+save_plan: False
+
+path_smoothing:
+  enable: False
+  window_size: 3 # Number of past actions to consider for smoothing
+
+camera_topic:       "/{ROBOT_NAME}/camera_front/color/image_raw_throttle/compressed"
+# camera_topic:       "/{ROBOT_NAME}/camera_front/color/image_raw/compressed"
+camera_info_topic:  "/{ROBOT_NAME}/camera_front/color/camera_info"
+odom_topic:         "/{ROBOT_NAME}/lo_frontend/odometry"
+tf_topic:          "/{ROBOT_NAME}/tf"
+
+image_plan_topic:   "/{ROBOT_NAME}/spinflow/path_image"
+action_topic:       "/{ROBOT_NAME}/spinflow/local_planner/plan" 
+
+odom_frame: "{ROBOT_NAME}/odom"
+optical_frame: "{ROBOT_NAME}/camera_front/camera_color_optical_frame"
+base_link_frame: "{ROBOT_NAME}/base_link"

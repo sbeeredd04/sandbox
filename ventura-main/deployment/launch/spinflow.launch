@@ -1,0 +1,6 @@
+<!-- launch the navigation node -->
+<node pkg="spinflow" type="navigate.py" name="navigate_node" output="screen">
+    <param name="robot_name" value="$(arg robot_name)"/>
+    <param name="device" value="$(arg device)"/>
+    <param name="num_denoising_steps" value="$(arg num_denoising_steps)"/>
+</node>

@@ -1,0 +1,12 @@
+[submodule "external/co-tracker"]
+	path = external/co-tracker
+	url = git@github.com:artzha/co-tracker.git
+[submodule "external/Grounded-SAM-2"]
+	path = external/Grounded-SAM-2
+	url = git@github.com:IDEA-Research/Grounded-SAM-2.git
+[submodule "external/BLIP3o"]
+	path = external/BLIP3o
+	url = git@github.com:artzha/BLIP3o.git
+[submodule "external/pymlg"]
+	path = external/pymlg
+	url = git@github.com:decargroup/pymlg.git

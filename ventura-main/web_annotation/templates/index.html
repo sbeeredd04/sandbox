@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<title>Video Scenario Annotator</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<style>
+  :root { --blue:#3af; --bg:#f7f7f9; --muted:#888; --line:#ddd; --tick:#bbb; }
+  body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#fff;color:#111}
+  header{padding:.8rem 1rem;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:1rem}
+  header h3{margin:0;font-weight:600}
+  #bar button,#bar select,#bar input{margin-right:.4rem}
+  main{padding:1rem}
+  .panel{background:#fff;border:1px solid var(--line);border-radius:8px;padding:0.8rem}
+  #videoWrap{max-width:1200px;margin:0 auto}
+
+  #controls{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-top:.4rem}
+  #controls button{padding:.3rem .6rem;border:1px solid var(--line);background:#fafafa;border-radius:6px;cursor:pointer}
+  #controls button:hover{background:#f0f7ff}
+  #timeDisp{font-variant-numeric:tabular-nums;color:#333}
+
+  #scenarioBar{display:flex;gap:.5rem;align-items:center;margin-top:.4rem;flex-wrap:wrap}
+  #scenarioInput{flex:1;min-width:240px;padding:.35rem .5rem;border:1px solid var(--line);border-radius:6px}
+  #setStart,#setEnd{padding:.35rem .6rem;border:1px solid var(--line);border-radius:6px;background:#fafafa;cursor:pointer}
+  #setStart.selected,#setEnd.selected{background:var(--blue);color:#000;border-color:#09f}
+  #msg{color:#059;margin-left:.5rem}
+
+  #timelineWrap{margin-top:1rem}
+  #timelineHeader{display:flex;justify-content:space-between;align-items:center;margin-bottom:.4rem}
+  #zoom{width:220px}
+  #zoomHint{color:var(--muted);font-size:12px;margin-left:.4rem}
+
+  #timeline{position:relative;height:120px;background:var(--bg);border:1px solid var(--line);border-radius:8px;overflow:auto}
+  #track{position:relative;height:100%;min-width:600px}
+  .tick{position:absolute;top:0;height:100%;width:1px;background:var(--tick);opacity:.6}
+  .tick small{position:absolute;top:2px;left:2px;color:var(--muted);background:#fff8;padding:0 .25rem;border-radius:4px;pointer-events:none} /* allow dragging through labels */
+
+  /* Playhead: make visible + draggable cursor */
+  .playhead{position:absolute;top:0;bottom:0;width:2px;background:#e11;cursor:ew-resize}
+
+  /* Prevent text-selection while dragging UI */
+  #timeline, #track, .block, .handle, .playhead { user-select: none; }
+
+  /* Active row highlight */
+  tr.row-active { background: #fff4d6; } /* light yellow */
+
+  .block{
+    position:absolute;
+    height:56px;
+    top:32px;
+    border-radius:6px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#000;
+    font-size:12px;
+    padding:0 .5rem;
+    cursor:grab;
+    border:1px solid #0002;
+    /* ensure style.width is the OUTER width (incl. padding & border) */
+    box-sizing: border-box;
+  }
+  .block:active{cursor:grabbing}
+  .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:260px}
+  .handle{position:absolute;top:0;bottom:0;width:8px;cursor:ew-resize;background:linear-gradient(#fff6,#fff0);opacity:.7}
+  .handle.left{left:0;border-top-left-radius:6px;border-bottom-left-radius:6px}
+  .handle.right{right:0;border-top-right-radius:6px;border-bottom-right-radius:6px}
+
+  /* Table below the timeline in same panel */
+  #tableWrap{margin-top:1rem}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{border-bottom:1px solid var(--line);padding:.4rem .3rem;text-align:left}
+  .pill{background:#eee;padding:.1em .5em;border-radius:9999px}
+  #saveBtn{padding:.45rem .8rem;border:1px solid var(--line);border-radius:6px;background:#f5fff7;cursor:pointer}
+  #saveBtn:hover{background:#e9ffef}
+  .muted{color:var(--muted)}
+</style>
+
+<!-- Cache-bust during dev -->
+<script defer src="/static/script.js?v={{ default_basename or '' }}"></script>
+</head>
+<body>
+
+<header>
+  <h3>Video Scenario Annotator</h3>
+  <div id="bar">
+    <select id="videoSel" title="Choose video">
+      {% for disp, url, base in videos %}
+      <option value="{{ base }}" data-url="{{ url }}">{{ disp }}</option>
+      {% endfor %}
+    </select>
+    <button id="saveBtn">💾 Save</button>
+    <span id="msg"></span>
+  </div>
+</header>
+
+<main>
+  <div class="panel" id="videoWrap">
+
+    <video id="player"
+           controls
+           playsinline
+           preload="metadata"
+           style="max-width:100%;border-radius:8px"
+           src="{{ default_url if default_url else '' }}"></video>
+
+    <div id="controls">
+      <button id="back1">◀ 1s</button>
+      <button id="fwd1">1s ▶</button>
+      <button id="playPause">⏯</button>
+      <label class="muted">Speed
+        <select id="speed">
+          <option>0.25</option><option>0.5</option><option selected>1.0</option>
+          <option>3.0</option>
+          <option>5.0</option>
+          <option>10.0</option>
+        </select>
+      </label>
+      <span id="timeDisp" class="pill">00:00.0 / 00:00.0</span>
+    </div>
+
+    <div id="scenarioBar">
+      <input id="scenarioInput" type="text" placeholder="Scenario label (e.g., 'Avoid puddle')" />
+      <button id="setStart">Set Start (S)</button>
+      <button id="setEnd">Set End (E)</button>
+      <span class="muted">←/→ = ±1s • Shift+←/→ = ±0.1s • Space = Play/Pause</span>
+    </div>
+
+    <div id="timelineWrap">
+      <div id="timelineHeader">
+        <div class="muted">Timeline (drag playhead or background; drag/resize blocks)</div>
+        <div>
+          <label class="muted">Zoom
+            <!-- 0 = show full video, 1 = ~5 seconds across viewport -->
+            <input id="zoom" type="range" min="0" max="1" step="0.01" value="0"/>
+          </label>
+          <span id="zoomHint">(Full ⇄ ~5s)</span>
+        </div>
+      </div>
+      <div id="timeline">
+        <div id="track"></div>
+      </div>
+    </div>
+
+    <div id="tableWrap">
+      <h4 style="margin:.2rem 0;">Annotations</h4>
+      <table>
+        <thead>
+          <tr><th>ID</th><th>Start</th><th>End</th><th>Label</th><th></th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  // Inject defaults from server
+  window.__DEFAULT_URL__ = "{{ default_url }}";
+  window.__DEFAULT_BASE__ = "{{ default_basename }}";
+  window.__HAS_VIDEOS__ = {{ 1 if videos|length > 0 else 0 }};
+</script>
+
+</body></html>

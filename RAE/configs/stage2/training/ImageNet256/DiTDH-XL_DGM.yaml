@@ -1,0 +1,140 @@
+# ===========================================================================
+# DGM (Deep Geometric Moments) — Stage 2 Diffusion Training Configuration
+# ===========================================================================
+#
+# This config trains a Stage-2 diffusion transformer (DiT) on latent codes
+# produced by the DGM-based RAE encoder. The diffusion model learns to
+# generate DGM latent representations conditioned on class labels.
+#
+# Architecture:
+#   Stage-1 (frozen): DGM ResNet34 encoder + ViT-B decoder
+#   Stage-2 (trained): DiT with dual-head (DDT) for velocity prediction
+#
+# Key adaptations for DGM latents (vs DINOv2):
+#   - in_channels: 256 (DGM hidden_size) vs 768 (DINOv2-B)
+#   - latent_size: [256, 16, 16] (C, H, W) vs [768, 16, 16]
+#   - input_size: 16 (16×16 spatial tokens)
+#   - DiT hidden_size adjusted for smaller input channels
+#
+# Generation pipeline:
+#   1. Sample noise z ~ N(0, I) of shape [B, 256, 16, 16]
+#   2. Denoise with DiT: z_t → z_0 (velocity prediction)
+#   3. Decode with RAE decoder: z_0 → image
+#
+# ===========================================================================
+
+stage_1:
+  target: stage1.RAE
+  params:
+    # ---- Frozen DGM Encoder ----
+    encoder_cls: 'DGMEncoder'
+    encoder_config_path: 'none'
+    encoder_input_size: 256
+    encoder_params:
+      checkpoint_path: '../Deep-Geometric-Moment/checkpoints/res34_model_best.pth.tar'
+      num_classes: 1000
+      target_spatial_size: 16
+      freeze: true
+    encoder_mean: [0.0, 0.0, 0.0]
+    encoder_std: [1.0, 1.0, 1.0]
+    # ---- Trained Decoder (from Stage 1) ----
+    decoder_config_path: 'configs/decoder/DGM_ViTB'
+    pretrained_decoder_path: 'models/decoders/dgm/DGM_ViTB/model.pt'  # trained in stage 1
+    noise_tau: 0.0          # no noising during stage-2
+    reshape_to_2d: true
+    normalization_stat_path: 'models/stats/dgm/imagenet1k/stat.pt'  # computed after stage-1
+
+stage_2:
+  target: stage2.models.DDT.DiTwDDTHead
+  params:
+    input_size: 16          # 16×16 spatial resolution of DGM latents
+    patch_size: 1           # each latent token is one DiT patch
+    in_channels: 256        # DGM hidden_size (256-dim features)
+    hidden_size: [768, 1024]  # DiT hidden sizes [main, DDT-head]
+    depth: [24, 2]          # Transformer depth [main blocks, DDT-head blocks]
+    num_heads: [12, 8]      # Attention heads [main, DDT-head]
+    mlp_ratio: 4.0
+    class_dropout_prob: 0.1 # label dropout for classifier-free guidance
+    num_classes: 1000
+    use_qknorm: false
+    use_swiglu: true
+    use_rope: true
+    use_rmsnorm: true
+    wo_shift: false
+    use_pos_embed: true
+
+# ===========================================================================
+# Transport (Flow Matching)
+# ===========================================================================
+transport:
+  params:
+    path_type: 'Linear'        # linear interpolation path
+    prediction: 'velocity'     # predict velocity field
+    loss_weight: null           # uniform time weighting
+    time_dist_type: 'logit-normal_0_1'
+
+# ===========================================================================
+# Sampling
+# ===========================================================================
+sampler:
+  mode: ODE
+  params:
+    sampling_method: 'euler'
+    num_steps: 50
+    atol: 1.0e-6
+    rtol: 1.0e-3
+    reverse: false
+
+# ===========================================================================
+# Guidance
+# ===========================================================================
+guidance:
+  method: 'cfg'
+  scale: 1.0               # set > 1.0 for classifier-free guidance at inference
+  t_min: 0.0
+  t_max: 1.0
+
+# ===========================================================================
+# Misc
+# ===========================================================================
+misc:
+  latent_size: [256, 16, 16]   # [C, H, W] — DGM latent shape
+  num_classes: 1000
+  # time_dist_shift_dim = 16 * 16 * 256 = 65536
+  time_dist_shift_dim: 65536
+  time_dist_shift_base: 4096
+
+# ===========================================================================
+# Evaluation
+# ===========================================================================
+eval:
+  eval_interval: 25000
+  eval_model: true
+  data_path: 'data/imagenet/val/'
+  reference_npz_path: 'data/imagenet/VIRTUAL_imagenet256_labeled.npz'
+
+# ===========================================================================
+# Training
+# ===========================================================================
+training:
+  epochs: 1400
+  global_batch_size: 512       # reduced from 1024 due to smaller latents
+  grad_accum_steps: 1
+  ema_decay: 0.9995
+  num_workers: 16
+  log_interval: 100
+  checkpoint_interval: 10
+  sample_every: 10000
+  clip_grad: 1.0
+  global_seed: 42
+  optimizer:
+    lr: 2.0e-4
+    betas: [0.9, 0.95]
+    weight_decay: 0.0
+  scheduler:
+    type: linear
+    warmup_epochs: 40
+    decay_end_epoch: 800
+    base_lr: 2.0e-4
+    final_lr: 2.0e-5
+    warmup_from_zero: false
