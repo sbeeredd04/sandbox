@@ -46,6 +46,7 @@ echo "GPU: ${CUDA_VISIBLE_DEVICES}"
 echo ""
 
 # --- Run the linear probing script ---
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
 python "${SCRIPT_DIR}/linear_probe.py" \
     --config "${CONFIG_PATH}" \
     2>&1 | tee "${SCRIPT_DIR}/linear_probe.log"

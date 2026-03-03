@@ -12,6 +12,8 @@ model:
   num_classes: 1000
   # Spatial resolution the model expects internally (hw parameter)
   hw: 32
+  # layer to probe (0-based index; -1 for final layer)
+  probe_layer: 0
 
 # --- Data ---
 data:
@@ -22,14 +24,14 @@ data:
   # so input must be 256x256 to produce 32x32 feature maps.
   image_size: 256
   # Number of data-loading workers
-  num_workers: 8
+  num_workers: 12
 
 # --- Training ---
 training:
   # Total number of epochs to train the linear head
   epochs: 30
-  # Batch size — L40 has 45 GB VRAM; backbone is frozen so memory usage is low
-  batch_size: 256
+  # Batch size — A100 has 80 GB VRAM; backbone is frozen so memory usage is moderate
+  batch_size: 1024
   # Learning rate for the linear classifier
   lr: 0.1
   # SGD momentum
@@ -45,10 +47,10 @@ training:
 wandb:
   # Weights & Biases project name
   project: "dgm-linear-probe"
-  # Run name (set to null for auto-generated name)
-  run_name: "dgm-res34-linprobe-imagenet"
+  # Run name set to the proble layer number automatically
+  run_name: "dgm_linear_probe_layer_{probe_layer}"
   # Log metrics every N batches
-  log_interval: 50
+  log_interval: 10
 
 # --- Misc ---
 seed: 42

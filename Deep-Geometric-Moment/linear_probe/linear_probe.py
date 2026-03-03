@@ -1,519 +1,303 @@
 """
 Linear Probing on ImageNet using a pretrained DGM ResNet34 backbone.
-
-What is linear probing?
------------------------
-Linear probing is a simple way to evaluate how good the features learned by a
-neural network are.  The idea is:
-  1. Load a pretrained model (our DGM ResNet34).
-  2. FREEZE all the backbone weights — we do NOT update them.
-  3. Throw away the old classification head and add a fresh linear layer.
-  4. Train ONLY that new linear layer on ImageNet.
-  5. The accuracy tells us how "linearly separable" the learned features are.
-
-If it's high, the backbone learned really useful features!
-
-Usage:
-------
-    python linear_probe.py --config config.yaml
-
-Requirements:
--------------
-    torch, torchvision, wandb, pyyaml
-    (All available in the 'myenv' conda environment)
+Caches features once, then trains linear head on cached tensors (very fast).
+Logs imgr reconstructions to wandb as 2×5 grids (originals + reconstructions).
 """
 
-# =============================================================================
-# Imports
-# =============================================================================
-import os
-import sys
-import time
-import random
-import argparse
-import yaml
-
+import os, sys, time, random, argparse, yaml
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.backends.cudnn as cudnn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-
 import wandb
+from tqdm import tqdm
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 
-# We need to import the DGM model definition from the project.
-# Add the Deep-Geometric-Moment directory to Python's path so we can import it.
-DGM_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                       "..", "..", "Deep-Geometric-Moment")
-sys.path.insert(0, DGM_DIR)
-from resnet_gm import ResNet34  # The DGM ResNet34 model factory
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", ".."))
+from resnet_gm import ResNet34
+
+# ImageNet class names (index → human-readable) — load directly from known path
+import importlib.util as _ilu
+_classes_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "ImageFolder", "imagenet_classes.py")
+_spec = _ilu.spec_from_file_location("imagenet_classes", _classes_path)
+_mod = _ilu.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+IDX2CLASS = _mod.imagenet_idx2classname
 
 
-# =============================================================================
-# Helper: Load config from YAML file
-# =============================================================================
-def load_config(config_path):
-    """Read the YAML config file and return a dictionary."""
-    with open(config_path, "r") as f:
-        cfg = yaml.safe_load(f)
-    return cfg
+def load_config(path):
+    with open(path) as f:
+        return yaml.safe_load(f)
 
 
-# =============================================================================
-# Helper: Build ImageNet data loaders
-# =============================================================================
-def build_dataloaders(cfg):
-    """
-    Create PyTorch DataLoaders for ImageNet train and val sets.
-
-    The DGM model uses an 8×8 stride-8 conv as its first layer, so it
-    expects 256×256 input images to produce 32×32 internal feature maps.
-
-    Train transforms: RandomResizedCrop(256) + RandomHorizontalFlip + Normalize
-    Val transforms:   Resize(292) + CenterCrop(256) + Normalize
-    """
-    image_size = cfg["data"]["image_size"]  # 256
-
-    # Standard ImageNet normalization values
-    normalize = transforms.Normalize(
-        mean=[0.485, 0.456, 0.406],
-        std=[0.229, 0.224, 0.225],
-    )
-
-    # --- Training transforms ---
-    # RandomResizedCrop: randomly crop and resize to 256×256
-    # RandomHorizontalFlip: flip horizontally 50% of the time
-    train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(image_size),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        normalize,
-    ])
-
-    # --- Validation transforms ---
-    # Resize to 292, then center-crop to 256 (standard practice)
-    val_transform = transforms.Compose([
+def build_image_loader(cfg, split):
+    """Deterministic image loader for one-time feature extraction."""
+    image_size = cfg["data"]["image_size"]
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    tf = transforms.Compose([
         transforms.Resize(292),
         transforms.CenterCrop(image_size),
         transforms.ToTensor(),
         normalize,
     ])
-
-    # Use torchvision's ImageFolder — it reads from folders named by class
-    print(f"Loading training data from: {cfg['data']['train_dir']}")
-    train_dataset = datasets.ImageFolder(
-        root=cfg["data"]["train_dir"],
-        transform=train_transform,
-    )
-
-    print(f"Loading validation data from: {cfg['data']['val_dir']}")
-    val_dataset = datasets.ImageFolder(
-        root=cfg["data"]["val_dir"],
-        transform=val_transform,
-    )
-
-    print(f"  Train samples: {len(train_dataset)}")
-    print(f"  Val samples:   {len(val_dataset)}")
-    print(f"  Num classes:   {len(train_dataset.classes)}")
-
-    # Create DataLoaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=cfg["training"]["batch_size"],
-        shuffle=True,
-        num_workers=cfg["data"]["num_workers"],
-        pin_memory=True,
-        drop_last=True,
-    )
-
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=cfg["training"]["batch_size"],
-        shuffle=False,
-        num_workers=cfg["data"]["num_workers"],
-        pin_memory=True,
-    )
-
-    return train_loader, val_loader
+    root = cfg["data"]["train_dir"] if split == "train" else cfg["data"]["val_dir"]
+    ds = datasets.ImageFolder(root, transform=tf)
+    print(f"{split.capitalize()} samples: {len(ds)}, Classes: {len(ds.classes)}")
+    return DataLoader(ds, batch_size=cfg["training"]["batch_size"],
+                      shuffle=False, num_workers=cfg["data"]["num_workers"], pin_memory=True)
 
 
-# =============================================================================
-# Helper: Load pretrained DGM backbone (frozen) + new linear head
-# =============================================================================
+@torch.no_grad()
+def extract_features(model, loader, device, probe_layer, desc="Extracting",
+                     save_first_batch=False):
+    """Run frozen DGM backbone once. Returns (moments, labels) on CPU.
+    If save_first_batch=True, also returns (images_cpu, imgr_cpu) for viz."""
+    all_moments, all_labels = [], []
+    first_batch = None
+    with torch.amp.autocast("cuda"):
+        for batch_idx, (images, targets) in enumerate(tqdm(loader, desc=desc)):
+            images = images.to(device, non_blocking=True)
+            _, moments, imgr = model(images, return_moments=False, layer=probe_layer)
+            all_moments.append(moments.cpu())
+            all_labels.append(targets)
+            if save_first_batch and batch_idx == 0:
+                first_batch = (images.cpu(), imgr.cpu())
+    return torch.cat(all_moments).float(), torch.cat(all_labels), first_batch
+
+
 def build_model(cfg, device):
-    """
-    1. Create a DGM ResNet34 model.
-    2. Load the pretrained checkpoint weights.
-    3. Freeze all backbone parameters.
-    4. Replace the classification head with a fresh linear layer.
+    model = ResNet34(device=device, num_classes=cfg["model"]["num_classes"])
+    ckpt = torch.load(cfg["model"]["checkpoint"], map_location="cpu")
+    cleaned = {k.replace("module.", ""): v for k, v in ckpt["state_dict"].items()}
+    model.load_state_dict(cleaned, strict=True)
+    print(f"Loaded checkpoint (epoch {ckpt.get('epoch','?')}, acc {ckpt.get('best_acc','?')}%)")
 
-    Returns:
-        model:       The full model (backbone frozen, head trainable)
-        linear_head: Reference to the new linear layer (for the optimizer)
-    """
-    num_classes = cfg["model"]["num_classes"]
+    for p in model.parameters():
+        p.requires_grad = False
 
-    # --- Step 1: Create the model architecture ---
-    print("Creating DGM ResNet34 model...")
-    model = ResNet34(device=device, num_classes=num_classes)
-
-    # --- Step 2: Load pretrained weights ---
-    ckpt_path = cfg["model"]["checkpoint"]
-    print(f"Loading pretrained weights from: {ckpt_path}")
-    checkpoint = torch.load(ckpt_path, map_location="cpu")
-
-    # The checkpoint was saved with DataParallel, so keys have 'module.' prefix.
-    # We need to remove that prefix to load into a non-DataParallel model.
-    state_dict = checkpoint["state_dict"]
-    cleaned_state_dict = {}
-    for key, value in state_dict.items():
-        # Remove "module." prefix if present
-        new_key = key.replace("module.", "") if key.startswith("module.") else key
-        cleaned_state_dict[new_key] = value
-
-    # Load the weights (strict=True ensures all keys match)
-    model.load_state_dict(cleaned_state_dict, strict=True)
-    print(f"  Checkpoint epoch: {checkpoint.get('epoch', '?')}")
-    print(f"  Checkpoint accuracy: {checkpoint.get('best_acc', '?')}%")
-
-    # --- Step 3: Freeze ALL parameters ---
-    # This means no gradients will be computed for the backbone during training.
-    for param in model.parameters():
-        param.requires_grad = False
-    print("Froze all backbone parameters.")
-
-    # --- Step 4: Replace the linear head with a fresh one ---
-    feature_dim = cfg["model"]["feature_dim"]  # 256
-    model.linear = nn.Linear(feature_dim, num_classes)
-    # The new linear layer's parameters are trainable by default (requires_grad=True)
-    print(f"Replaced classification head: Linear({feature_dim} -> {num_classes})")
-
-    # Move model to GPU
+    model.linear = nn.Linear(cfg["model"]["feature_dim"], cfg["model"]["num_classes"])
     model = model.to(device)
+    model.eval()  # Keep backbone in eval mode (correct BN stats)
+    return model
 
-    # Return the model and a reference to the trainable linear head
-    return model, model.linear
 
-
-# =============================================================================
-# Helper: Compute accuracy (top-1 and top-5)
-# =============================================================================
-def compute_accuracy(output, target, topk=(1, 5)):
+def accuracy(output, target, topk=(1, 5)):
     with torch.no_grad():
         maxk = max(topk)
-        batch_size = target.size(0)
-
-        # Get the indices of the top-k predictions
-        _, pred = output.topk(maxk, dim=1, largest=True, sorted=True)
-        pred = pred.t()  # shape: (maxk, batch_size)
-
-        # Check which predictions match the target
+        bs = target.size(0)
+        _, pred = output.topk(maxk, 1, True, True)
+        pred = pred.t()
         correct = pred.eq(target.view(1, -1).expand_as(pred))
-
-        results = []
+        res = []
         for k in topk:
-            # For each k, count how many of the top-k predictions are correct
-            correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-            acc = correct_k.mul_(100.0 / batch_size)
-            results.append(acc.item())
-
-        return results
+            c = correct[:k].reshape(-1).float().sum(0)
+            res.append(c.mul_(100.0 / bs).item())
+        return res
 
 
-# =============================================================================
-# Training: One epoch
-# =============================================================================
-def train_one_epoch(model, train_loader, criterion, optimizer, device, epoch, cfg):
-    model.train()  # Set to train mode (affects dropout, batchnorm in backbone)
-
-    # Tracking variables
-    running_loss = 0.0
-    running_top1 = 0.0
-    running_top5 = 0.0
-    num_samples = 0
-    log_interval = cfg["wandb"]["log_interval"]
-
-    start_time = time.time()
-
-    for batch_idx, (images, targets) in enumerate(train_loader):
-        # Move data to GPU
-        images = images.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
-
-        # Forward pass through the frozen backbone + trainable linear head
-        # The model's forward returns: (logits, (grid, moments), imgr)
-        # when return_moments=True (default). We only need the logits.
-        with torch.no_grad():
-            # Run backbone with no gradient tracking (saves memory)
-            output, (grid, moments), imgr = model(images, return_moments=True)
-
-        # Re-run ONLY the linear head with gradients enabled
-        # moments is the 256-dim feature vector we want to classify
-        logits = model.linear(moments)
-
-        # Compute cross-entropy loss
-        loss = criterion(logits, targets)
-
-        # Backward pass — only updates the linear layer
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        # Track metrics
-        batch_size = targets.size(0)
-        top1, top5 = compute_accuracy(logits, targets, topk=(1, 5))
-        running_loss += loss.item() * batch_size
-        running_top1 += top1 * batch_size
-        running_top5 += top5 * batch_size
-        num_samples += batch_size
-
-        # Print and log progress every N batches
-        if (batch_idx + 1) % log_interval == 0:
-            avg_loss = running_loss / num_samples
-            avg_top1 = running_top1 / num_samples
-            avg_top5 = running_top5 / num_samples
-            elapsed = time.time() - start_time
-            imgs_per_sec = num_samples / elapsed
-
-            print(
-                f"  Epoch [{epoch+1}] Batch [{batch_idx+1}/{len(train_loader)}] "
-                f"Loss: {avg_loss:.4f}  Top-1: {avg_top1:.2f}%  Top-5: {avg_top5:.2f}%  "
-                f"Speed: {imgs_per_sec:.0f} img/s"
-            )
-
-            # Log to wandb
-            wandb.log({
-                "train/loss": avg_loss,
-                "train/top1_acc": avg_top1,
-                "train/top5_acc": avg_top5,
-                "train/lr": optimizer.param_groups[0]["lr"],
-                "train/imgs_per_sec": imgs_per_sec,
-                "epoch": epoch + 1,
-                "global_step": epoch * len(train_loader) + batch_idx,
-            })
-
-    # End-of-epoch averages
-    epoch_loss = running_loss / num_samples
-    epoch_top1 = running_top1 / num_samples
-    epoch_top5 = running_top5 / num_samples
-    return epoch_loss, epoch_top1, epoch_top5
+def get_class_name(idx):
+    """Get human-readable ImageNet class name for a given index."""
+    if IDX2CLASS is not None:
+        name = IDX2CLASS.get(idx, str(idx))
+        # Shorten long class names (take first part before comma)
+        return name.split(",")[0] if len(name) > 25 else name
+    return str(idx)
 
 
-# =============================================================================
-# Validation: One epoch
-# =============================================================================
-@torch.no_grad()
-def validate(model, val_loader, criterion, device, epoch):
+# ImageNet normalization constants
+MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
+STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
+
+
+def log_reconstruction_grid(images, imgr, logits, targets):
     """
-    Evaluate the model on the validation set.
-    Everything runs with torch.no_grad() since we're just evaluating.
+    Build a matplotlib 2-row × 5-col grid:
+      Row 1: original images
+      Row 2: imgr reconstructions
+    Each column has GT and Pred class name as title.
+    Returns a wandb.Image ready to log.
     """
-    model.eval()  # Set to eval mode
+    n = min(5, images.size(0))
+    device = images.device
 
-    running_loss = 0.0
-    running_top1 = 0.0
-    running_top5 = 0.0
-    num_samples = 0
+    mean = MEAN.to(device)
+    std = STD.to(device)
+    orig = (images[:n] * std + mean).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()
+    recon = imgr[:n].repeat(1, 3, 1, 1).clamp(0, 1).cpu().permute(0, 2, 3, 1).numpy()
 
-    start_time = time.time()
+    _, preds = logits[:n].topk(1, dim=1)
+    pred_names = [get_class_name(p.item()) for p in preds.squeeze(-1)]
+    gt_names = [get_class_name(t.item()) for t in targets[:n]]
 
-    for batch_idx, (images, targets) in enumerate(val_loader):
-        images = images.to(device, non_blocking=True)
-        targets = targets.to(device, non_blocking=True)
+    fig, axes = plt.subplots(2, n, figsize=(3 * n, 7))
+    for i in range(n):
+        axes[0, i].imshow(orig[i])
+        axes[0, i].axis("off")
+        axes[0, i].set_title(f"GT: {gt_names[i]}", fontsize=8, color="green", wrap=True)
 
-        # Forward pass
-        output, (grid, moments), imgr = model(images, return_moments=True)
-        logits = model.linear(moments)
+        axes[1, i].imshow(recon[i])
+        axes[1, i].axis("off")
+        axes[1, i].set_title(f"Pred: {pred_names[i]}", fontsize=8, color="red", wrap=True)
 
-        loss = criterion(logits, targets)
+    fig.suptitle("Top: Original  |  Bottom: imgr Reconstruction", fontsize=10)
+    plt.tight_layout()
 
-        batch_size = targets.size(0)
-        top1, top5 = compute_accuracy(logits, targets, topk=(1, 5))
-        running_loss += loss.item() * batch_size
-        running_top1 += top1 * batch_size
-        running_top5 += top5 * batch_size
-        num_samples += batch_size
-
-        # Print progress every 100 batches
-        if (batch_idx + 1) % 100 == 0:
-            print(
-                f"  Val Batch [{batch_idx+1}/{len(val_loader)}] "
-                f"Top-1: {running_top1/num_samples:.2f}%  "
-                f"Top-5: {running_top5/num_samples:.2f}%"
-            )
-
-    elapsed = time.time() - start_time
-    val_loss = running_loss / num_samples
-    val_top1 = running_top1 / num_samples
-    val_top5 = running_top5 / num_samples
-
-    print(
-        f"  === Validation Results ===  "
-        f"Loss: {val_loss:.4f}  Top-1: {val_top1:.2f}%  Top-5: {val_top5:.2f}%  "
-        f"Time: {elapsed:.1f}s"
-    )
-
-    # Log to wandb
-    wandb.log({
-        "val/loss": val_loss,
-        "val/top1_acc": val_top1,
-        "val/top5_acc": val_top5,
-        "epoch": epoch + 1,
-    })
-
-    return val_loss, val_top1, val_top5
+    wandb_img = wandb.Image(fig)
+    plt.close(fig)
+    return wandb_img
 
 
-# =============================================================================
-# Main training loop
-# =============================================================================
 def main():
-    # --- Parse command-line arguments ---
-    parser = argparse.ArgumentParser(description="DGM Linear Probing on ImageNet")
-    parser.add_argument(
-        "--config", type=str, default="config.yaml",
-        help="Path to YAML config file (default: config.yaml)",
-    )
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", default="config.yaml")
     args = parser.parse_args()
-
-    # --- Load config ---
     cfg = load_config(args.config)
-    print("=" * 60)
-    print("DGM ResNet34 — Linear Probing on ImageNet")
-    print("=" * 60)
-    print(f"Config loaded from: {args.config}")
 
-    # --- Set random seed for reproducibility ---
     seed = cfg["seed"]
-    random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    cudnn.deterministic = True
-    cudnn.benchmark = True  # Faster convolutions when input sizes don't change
-    print(f"Random seed: {seed}")
+    random.seed(seed); torch.manual_seed(seed); torch.cuda.manual_seed_all(seed)
+    cudnn.benchmark = True
 
-    # --- Set GPU ---
-    gpu_id = cfg["gpu_id"]
-    device = torch.device(f"cuda:{gpu_id}" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
-    if torch.cuda.is_available():
-        print(f"  GPU: {torch.cuda.get_device_name(gpu_id)}")
-        print(f"  VRAM: {torch.cuda.get_device_properties(gpu_id).total_memory / 1e9:.1f} GB")
+    device = torch.device(f"cuda:{cfg['gpu_id']}" if torch.cuda.is_available() else "cpu")
+    probe_layer = cfg["model"]["probe_layer"]
 
-    # --- Initialize wandb ---
-    wandb.init(
-        project=cfg["wandb"]["project"],
-        name=cfg["wandb"]["run_name"],
-        config=cfg,  # Log all our hyperparameters
-    )
-    print(f"wandb project: {cfg['wandb']['project']}")
-
-    # --- Build data loaders ---
-    print("\n--- Data ---")
-    train_loader, val_loader = build_dataloaders(cfg)
-
-    # --- Build model ---
-    print("\n--- Model ---")
-    model, linear_head = build_model(cfg, device)
-
-    # Count parameters
-    total_params = sum(p.numel() for p in model.parameters())
-    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"  Total parameters:     {total_params:,}")
-    print(f"  Trainable parameters: {trainable_params:,} (linear head only)")
-    print(f"  Frozen parameters:    {total_params - trainable_params:,}")
-
-    # --- Optimizer: only optimize the linear head ---
-    optimizer = optim.SGD(
-        linear_head.parameters(),  # ONLY the linear layer
-        lr=cfg["training"]["lr"],
-        momentum=cfg["training"]["momentum"],
-        weight_decay=cfg["training"]["weight_decay"],
-    )
-    print(f"\n  Optimizer: SGD(lr={cfg['training']['lr']}, "
-          f"momentum={cfg['training']['momentum']}, "
-          f"wd={cfg['training']['weight_decay']})")
-
-    # --- Learning rate scheduler: MultiStepLR ---
-    scheduler = optim.lr_scheduler.MultiStepLR(
-        optimizer,
-        milestones=cfg["training"]["lr_milestones"],
-        gamma=cfg["training"]["lr_gamma"],
-    )
-    print(f"  LR schedule: milestones={cfg['training']['lr_milestones']}, "
-          f"gamma={cfg['training']['lr_gamma']}")
-
-    # --- Loss function ---
-    criterion = nn.CrossEntropyLoss().to(device)
-
-    # --- Training loop ---
-    print("\n" + "=" * 60)
-    print("Starting training...")
     print("=" * 60)
+    print(f"DGM ResNet34 — Linear Probe (layer {probe_layer}) on ImageNet (train→val)")
+    print("=" * 60)
+
+    run_name = cfg["wandb"]["run_name"].format(probe_layer=probe_layer)
+    wandb.init(project=cfg["wandb"]["project"], name=run_name, config=cfg)
+
+    # ── extract & cache features (one-time backbone pass) ───────────
+    model = build_model(cfg, device)
+    linear_head = model.linear
+
+    print("\nCaching features (runs backbone once over each split)...")
+    train_feats, train_labels, _ = extract_features(
+        model, build_image_loader(cfg, "train"), device, probe_layer, "Cache train")
+    val_feats, val_labels, first_val_batch = extract_features(
+        model, build_image_loader(cfg, "val"), device, probe_layer, "Cache val",
+        save_first_batch=True)
+    print(f"  Train: {train_feats.shape}  Val: {val_feats.shape}")
+
+    # keep first val batch images+imgr for reconstruction grid, free the rest
+    viz_images, viz_imgr = first_val_batch
+    del model          # free backbone VRAM (linear_head stays)
+    torch.cuda.empty_cache()
+    print("Backbone freed from GPU — training on cached features\n")
+
+    # tensor dataloaders (pure tensor copies, very fast)
+    train_loader = DataLoader(TensorDataset(train_feats, train_labels),
+                              batch_size=cfg["training"]["batch_size"],
+                              shuffle=True, num_workers=0, pin_memory=True)
+    val_loader = DataLoader(TensorDataset(val_feats, val_labels),
+                            batch_size=cfg["training"]["batch_size"],
+                            shuffle=False, num_workers=0, pin_memory=True)
+
+    optimizer = optim.SGD(linear_head.parameters(), lr=cfg["training"]["lr"],
+                          momentum=cfg["training"]["momentum"],
+                          weight_decay=cfg["training"]["weight_decay"])
+    scheduler = optim.lr_scheduler.MultiStepLR(optimizer,
+                                                milestones=cfg["training"]["lr_milestones"],
+                                                gamma=cfg["training"]["lr_gamma"])
+    criterion = nn.CrossEntropyLoss()
 
     best_top1 = 0.0
     save_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "checkpoints")
     os.makedirs(save_dir, exist_ok=True)
 
     for epoch in range(cfg["training"]["epochs"]):
-        print(f"\n--- Epoch {epoch+1}/{cfg['training']['epochs']} "
-              f"(LR: {optimizer.param_groups[0]['lr']:.6f}) ---")
+        # ── train on cached features ────────────────────────────────
+        linear_head.train()
+        running_loss = running_t1 = running_t5 = 0.0
+        n = 0
 
-        # Train
-        train_loss, train_top1, train_top5 = train_one_epoch(
-            model, train_loader, criterion, optimizer, device, epoch, cfg
-        )
+        pbar = tqdm(train_loader, desc=f"Train E{epoch+1:02d}/{cfg['training']['epochs']}",
+                     bar_format="{l_bar}{bar:30}{r_bar}")
 
-        # Validate
-        val_loss, val_top1, val_top5 = validate(
-            model, val_loader, criterion, device, epoch
-        )
+        for batch_idx, (feats, targets) in enumerate(pbar):
+            feats   = feats.to(device,   non_blocking=True)
+            targets = targets.to(device, non_blocking=True)
 
-        # Step the learning rate scheduler
+            logits = linear_head(feats)
+            loss = criterion(logits, targets)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            bs = targets.size(0)
+            t1, t5 = accuracy(logits, targets)
+            running_loss += loss.item() * bs
+            running_t1 += t1 * bs
+            running_t5 += t5 * bs
+            n += bs
+
+            global_step = epoch * len(train_loader) + batch_idx
+
+            pbar.set_postfix(loss=f"{loss.item():.3f}", t1=f"{t1:.1f}",
+                             avg=f"{running_t1/n:.1f}")
+
+            if batch_idx % cfg["wandb"]["log_interval"] == 0:
+                wandb.log({"batch/loss": loss.item(), "batch/top1": t1, "batch/top5": t5,
+                            "batch/avg_top1": running_t1/n, "epoch": epoch+1},
+                           step=global_step)
+
+        pbar.close()
         scheduler.step()
 
-        # Log epoch summary to wandb
-        wandb.log({
-            "epoch_summary/train_loss": train_loss,
-            "epoch_summary/train_top1": train_top1,
-            "epoch_summary/train_top5": train_top5,
-            "epoch_summary/val_loss": val_loss,
-            "epoch_summary/val_top1": val_top1,
-            "epoch_summary/val_top5": val_top5,
-            "epoch_summary/lr": optimizer.param_groups[0]["lr"],
-            "epoch": epoch + 1,
-        })
+        train_loss = running_loss / n
+        train_t1 = running_t1 / n
+        train_t5 = running_t5 / n
+        print(f"  Epoch {epoch+1:02d} Train | Loss: {train_loss:.4f} | Top-1: {train_t1:.2f}% | Top-5: {train_t5:.2f}%")
 
-        # Save checkpoint if this is the best validation accuracy so far
-        is_best = val_top1 > best_top1
-        if is_best:
-            best_top1 = val_top1
-            save_path = os.path.join(save_dir, "linear_probe_best.pth")
-            torch.save({
-                "epoch": epoch + 1,
-                "linear_head_state_dict": linear_head.state_dict(),
-                "best_top1": best_top1,
-                "optimizer": optimizer.state_dict(),
-            }, save_path)
-            print(f"  ** New best! Top-1: {best_top1:.2f}% — saved to {save_path}")
+        # ── evaluate on cached val features ─────────────────────────
+        linear_head.eval()
+        val_t1_sum = val_t5_sum = val_n = 0
 
-        # Also save latest checkpoint every epoch
-        save_path = os.path.join(save_dir, "linear_probe_latest.pth")
-        torch.save({
-            "epoch": epoch + 1,
-            "linear_head_state_dict": linear_head.state_dict(),
-            "best_top1": best_top1,
-            "optimizer": optimizer.state_dict(),
-        }, save_path)
+        with torch.no_grad():
+            for feats, targets in tqdm(val_loader, desc=f"Val   E{epoch+1:02d}"):
+                feats   = feats.to(device,   non_blocking=True)
+                targets = targets.to(device, non_blocking=True)
+                logits = linear_head(feats)
+                t1, t5 = accuracy(logits, targets)
+                bs = targets.size(0)
+                val_t1_sum += t1 * bs
+                val_t5_sum += t5 * bs
+                val_n += bs
 
-    # --- Done! ---
-    print("\n" + "=" * 60)
-    print(f"Training complete!  Best validation Top-1 accuracy: {best_top1:.2f}%")
-    print("=" * 60)
+        val_t1 = val_t1_sum / val_n
+        val_t5 = val_t5_sum / val_n
+        print(f"  Epoch {epoch+1:02d} Val   | Top-1: {val_t1:.2f}% | Top-5: {val_t5:.2f}%")
 
-    wandb.log({"best_val_top1": best_top1})
+        # reconstruction grid using cached first val batch
+        with torch.no_grad():
+            viz_feats = val_feats[:viz_images.size(0)].to(device)
+            viz_logits = linear_head(viz_feats)
+        grid_img = log_reconstruction_grid(viz_images, viz_imgr, viz_logits.cpu(),
+                                           val_labels[:viz_images.size(0)])
+
+        wandb.log({"epoch/train_loss": train_loss,
+                    "epoch/train_top1": train_t1, "epoch/train_top5": train_t5,
+                    "epoch/val_top1": val_t1, "epoch/val_top5": val_t5,
+                    "epoch/lr": optimizer.param_groups[0]["lr"],
+                    "reconstruction_grid": grid_img},
+                   step=(epoch + 1) * len(train_loader) - 1)
+
+        if val_t1 > best_top1:
+            best_top1 = val_t1
+            torch.save({"epoch": epoch+1, "state_dict": linear_head.state_dict(),
+                         "best_top1": best_top1}, os.path.join(save_dir, "linear_probe_best.pth"))
+            print(f"  ** New best val Top-1: {best_top1:.2f}%")
+
+    print(f"\nDone! Best Val Top-1: {best_top1:.2f}%")
+    wandb.log({"best_top1": best_top1})
     wandb.finish()
 
 

@@ -1,0 +1,31 @@
+# ============================================================================
+# Linear Probing Config — DINOv2-ViT-B/14 on ImageNet (train→val)
+# ============================================================================
+
+model:
+  name: "dinov2"
+  variant: "vitb14"           # vitb14 | vitl14 | vitg14 | vitb14_reg | ...
+  num_classes: 1000
+
+data:
+  train_dir: "/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/train"
+  val_dir: "/scratch/sbeeredd/imagenet/ILSVRC/Data/CLS-LOC/val"
+  image_size: 224
+  num_workers: 12
+
+training:
+  epochs: 30
+  batch_size: 1024
+  lr: 0.1
+  momentum: 0.9
+  weight_decay: 0.0
+  lr_milestones: [10, 20, 25]
+  lr_gamma: 0.1
+
+wandb:
+  project: "linear-probing"
+  run_name: "dinov2_vitb14_linprobe"
+  log_interval: 50
+
+seed: 42
+gpu_id: 0

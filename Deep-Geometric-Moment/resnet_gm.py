@@ -440,6 +440,8 @@ class MyResNet1(nn.Module):
         # self.layer11 = self._make_layer(BasicBlockG, self.df, 1, stride=1, k=1, p=0)
         # self.layer12 = self._make_layer(block, self.df,1, stride=1, k=1, p=0)
         # #self.in12 = nn.InstanceNorm2d(self.df)
+        
+        self.layers = []
 
         self.sf = nn.Softmax2d()
         self.linear = nn.Linear(self.df, num_classes)
@@ -461,7 +463,9 @@ class MyResNet1(nn.Module):
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
 
-    def forward(self, x, return_moments=True):
+    def forward(self, x, return_moments=True, layer=None):
+        # Clear stored layers from previous forward pass to prevent memory leak
+        self.layers = []
         #x =  gm_transform_in(x)
         #x = self.do(x)
         #x = x.clamp(min=0.0, max=1.0)
@@ -506,11 +510,27 @@ class MyResNet1(nn.Module):
         # im = F.grid_sample(im, g1)
         #print(x.shape)
         x, grid, xy1, box, gridt = self.resgm1(x,xy1,grid, gridt, grid11)
+        
+        # get the layers[0] here for linear probe on xy1 after resgm1
+        self.layers.append((x, grid, xy1, box, gridt))
+        
         x, grid, xy1, box, gridt = self.resgm2(x,xy1,grid, gridt, box)
+
+        #get the layers[1] here for linear probe on xy1 after resgm2
+        self.layers.append((x, grid, xy1, box, gridt))
+
         x, grid, xy1, box, gridt = self.resgm3(x,xy1,grid, gridt, box)
+        #get the layers[2] here for linear probe on xy1 after resgm3
+        self.layers.append((x, grid, xy1, box, gridt))
+        
         feat = xy1
         grid1 = grid
+        
         x, grid, xy1, box, gridt = self.resgm4(x,xy1,grid, gridt, box)
+        
+        # get the layers[3] here for linear probe on xy1 after resgm4
+        self.layers.append((x, grid, xy1, box, gridt))
+        
         #x, grid, xy1, box, gridt = self.resgm5(x,xy1,grid, gridt, box)
         # x, grid, xy1, box, gridt = self.resgm6(x,xy1,grid, gridt, box)
         # x, grid, xy1, box, gridt = self.resgm7(x,xy1,grid, gridt, box)
@@ -527,7 +547,7 @@ class MyResNet1(nn.Module):
         imgr = (imgr.view(-1, 1, self.hw, self.hw))
         imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(imgr)
         # imgr1 = imgr
-        # imgr = box
+    
         # imgr = imgr.view(imgr.size(0), -1)
         # imgr = imgr - imgr.min(1, keepdim=True)[0]
         # imgr = imgr/imgr.max(1, keepdim=True)[0]
@@ -542,6 +562,20 @@ class MyResNet1(nn.Module):
         #cl = torch.square(xy1.view(-1, 256, 1)- self.wg).sum(dim=1)
         # return gm_transform_out(imgr)
         # return cl, imgr, grid
+        
+        #if return layer
+        if layer is not None:
+            layer_data = self.layers[layer]
+            layer_grid = layer_data[1]
+            layer_xy1 = layer_data[2]
+            # Compute imgr for this layer
+            layer_imgr = torch.sum(layer_grid * layer_xy1.view(-1, layer_xy1.shape[1], 1, 1), dim=1, keepdim=True)
+            layer_imgr = layer_imgr.view(layer_imgr.size(0), -1)
+            layer_imgr = layer_imgr - layer_imgr.min(1, keepdim=True)[0]
+            layer_imgr = layer_imgr / (layer_imgr.max(1, keepdim=True)[0] + 1e-8)
+            layer_imgr = layer_imgr.view(-1, 1, self.hw, self.hw)
+            layer_imgr = nn.Upsample(size, mode='bilinear', align_corners=True)(layer_imgr)
+            return cl, self.layers[layer][2], layer_imgr  # (logits, moments, imgr)
         if return_moments:
             return cl, (grid, xy1), imgr
         
